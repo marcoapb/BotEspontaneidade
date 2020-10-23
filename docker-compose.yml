@@ -1,0 +1,48 @@
+version: '3'
+
+services:
+
+  bot:
+    build:
+      context: .
+      dockerfile: ./docker/bot/Dockerfile
+    stdin_open: true # docker run -i
+    tty: true        # docker run -t
+    environment: 
+      TZ: "America/Sao_Paulo"
+    env_file:
+      - config.env      
+    restart: always
+    volumes:
+      - ./log:/Log
+    depends_on:
+      - mysqlsrv  
+
+  mysqlsrv:
+    image: mysql:8.0.21
+    env_file:
+      - config.env    
+    ports:
+      - "3306:3306"
+    volumes:
+      - ./dados:/var/lib/mysql
+
+  botcarga:
+    build:
+      context: .
+      dockerfile: ./docker/carga/Dockerfile
+    #stdin_open: true # docker run -i
+    #tty: true        # docker run -t
+    env_file:
+      - config.env      
+    restart: "no"
+    volumes:
+      - ./log:/Log
+      - ./Excel:/Excel   
+    depends_on:
+      - mysqlsrv        
+
+  adminer:
+    image: adminer
+    ports:
+      - 8080:8080
