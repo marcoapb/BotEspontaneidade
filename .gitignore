@@ -1,9 +1,10 @@
 *crt
 *.key
-dados/
 *.xlsx
 *.env
-/Log
 *.log
 *.docx
 /Apache/cert
+/dados
+/botEnv
+/cargaEnv
