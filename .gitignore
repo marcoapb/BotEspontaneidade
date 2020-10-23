@@ -1,4 +1,4 @@
-*crt
+*.crt
 *.key
 *.xlsx
 *.env
