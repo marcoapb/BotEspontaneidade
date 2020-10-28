@@ -1,0 +1,181 @@
+﻿$(document).ready(function () {	
+	var logado;
+	var informacoes;
+	$.ajax({
+		dataType: 'jsonp',
+		url: 'https://login.esocial.gov.br/api/v1/LoginESocialConsultas.svc/DadosSessao',
+		success: function(data, textStatus) {
+			if (data == null){
+				logado = false;
+			}
+			else{
+				logado = true;
+				informacoes = data;
+			}
+			
+			MontarCabecalho(logado, informacoes);
+		},
+		error: function(xhr, textStatus, errorThrown) {
+			//console.log(textStatus);
+			logado = false;
+		}
+	});
+	
+
+});
+
+function MontarCabecalho(logado, informacoes)
+{
+	var labelTipoLogin = "Titular do Código";
+	var urlLogin = "https://login.esocial.gov.br/";
+	var urlLogout;
+	
+	if(document.URL.indexOf("esocial.desenv") != -1)
+	{
+		urlLogin = "https://login.esocial.desenv.serpro/";
+	}
+	else if (document.URL.indexOf("esocial.val") != -1) {
+	    urlLogin = "https://login.esocial.val.serpro/";
+	}
+	else if (document.URL.indexOf("hom.esocial") != -1)
+	{
+	    urlLogin = "https://login.hom.esocial.gov.br/";
+	}
+	else if (document.URL.indexOf("localhost") != -1)
+	{
+		urlLogin = "https://login.esocial.desenv.serpro/";
+	}
+	
+	urlLogout = urlLogin + "Logout.aspx";
+	
+	if (logado)
+	{
+		if (informacoes.TipoNI == "PESSOA_FISICA")
+		{
+			informacoes.NI = informacoes.NI.substring(0,3) + "." + informacoes.NI.substring(3,6) + "." + informacoes.NI.substring(6,9) + "-" + informacoes.NI.substring(9,11);
+		}
+		else
+		{
+			informacoes.NI = informacoes.NI.substring(0,2) + "." + informacoes.NI.substring(2,5) + "." + informacoes.NI.substring(5,8) + "/" + informacoes.NI.substring(8,12) + "." + informacoes.NI.substring(12,14);
+			
+			if(informacoes.ComProcuracao)
+			{
+				informacoes.NIProcurador = informacoes.NIProcurador.substring(0,2) + "." + informacoes.NIProcurador.substring(2,5) + "." + informacoes.NIProcurador.substring(5,8) + "/" + informacoes.NIProcurador.substring(8,12) + "." + informacoes.NIProcurador.substring(12,14);
+			}
+		}
+	}
+	
+
+	var cabecalho = "<a href='/' id='hplMarca' class='hide-text marca'>eSocial</a> " +
+					"<div class='informacoes'> " +
+					"		<span class='aplicacoes'> " +
+					"			ACESSAR AS APLICAÇÕES " +
+					"		</span> " +
+					"		<select id='Select1'> " +
+					"			<option>Opções</option> " +
+					"		</select> ";
+	if (logado && informacoes.ComCertificadoDigital)
+	{
+		cabecalho += "		<div class='alterar-perfil'> " +
+					 "			<a href='#' class='hide-text'>Alterar</a> " +
+					 "		</div> " ;
+					 
+		labelTipoLogin = "Titular do Certificado";
+	}
+		
+
+	if (logado)
+	{
+		if (informacoes.ComProcuracao)
+		{		
+			cabecalho += "<div class='usuarios'> " +
+						 "	<p class='usuario'> " +
+						 "		<span id='labelTitular'><b>"+labelTipoLogin+"</b><span>: "+informacoes.NIProcurador+" - " + informacoes.NomeProcurador + " " +
+						 "	</p> " +
+						 "	<p id='procurador' class='usuario'> " +
+						 "		<b>Procurador de</b>:  <span id='idProcurado'>"+informacoes.NI+"</span> - <span id='nomeProcurado'>" + informacoes.Nome + "</span> " +
+						 "	</p> " +
+						 "</div> ";
+		}
+		else
+		{
+			cabecalho += "<div class='usuarios'> " +
+						 "	<p class='usuario'> " +
+						 "		<span id='labelTitular'><b>"+labelTipoLogin+"</b><span>: "+informacoes.NI+" - " + informacoes.Nome + " " +
+						 "	</p> " +
+						 "</div> ";
+		}
+	}	
+	
+	cabecalho += "</div> " +
+	  			 "<div class='grafismo deslogado'></div> " +
+				 "<div class='tempo-sessao countdown'></div> " +
+				 "<div class='botao-sair'><a href='#' onclick='AbrirModalHeader(&#39;#sair&#39;);'>SAIR</a></div> " +
+				 "<a href='"+urlLogin+"' class='botao-login hide-text'>Login</a> " +
+				 "</div> " ;
+				 
+				 
+	var modalSair = "<div class='modal-sair hide fade' id='sair' data-backdrop='static' data-keyboard='false'>"+
+					 "	<div class='modal-body'>"+
+					 "		<p>Tem certeza que deseja sair?</p>"+
+					 "	</div>"+
+					 "	<div class='modal-footer'>"+
+					 "		<a href='#' class='btn btn-cancelar' onclick='FecharModalHeader(&#39;#sair&#39;);'>Não</a>"+
+					 "		<a href='"+urlLogout+"' class='btn btn-primary'>Sim</a>"+
+					 "	</div>"+
+					 "</div>";
+				 
+	$("#header").html(cabecalho);
+	$("#header").after(modalSair);
+
+	if (logado)
+	{
+		$('#header .botao-login').hide();
+		IniciaTimerSessao(informacoes.Timeout);
+		$('#header .informacoes').show();
+		$('#header .tempo-sessao').show();
+		$('#header .botao-sair a').show();
+	}
+}
+
+function IniciaTimerSessao(timeout) {
+    var timeoutMinutos = timeout;
+
+    var timeoutSegundos = timeoutMinutos * 60;
+    var duration = moment.duration(timeoutSegundos, 'seconds');
+    var interval = 1000;
+
+    window.idIntervalo = setInterval(function () {
+        if (duration.asSeconds() <= 0) {
+            clearInterval(window.idIntervalo);
+            $('.countdown').text("Sessão expirada");
+        }
+        else {
+            duration = moment.duration(duration.asSeconds() - 1, 'seconds');
+            var text = (duration.hours() > 0) ? (duration.hours() < 10) ? '0' + duration.hours() + ':' : duration.hours() + ':' : '';
+            text += (duration.minutes() > 0) ? (duration.minutes() < 10) ? '0' + duration.minutes() + ':' : duration.minutes() + ':' : '00:';
+            text += (duration.seconds() > 0) ? (duration.seconds() < 10) ? '0' + duration.seconds() : duration.seconds() : '00';
+            $('.countdown').text(text);
+            $('.countdown').fadeIn('slow');
+        }
+    }, interval);
+}
+
+function AbrirModalHeader(id, width, width_px) {
+    //var modalWidth = !width ? (!width_px ? $(window).width() * 0.7 : width_px) : $(window).width() * (width / 100);
+        
+    $(id).modal('show').css({
+        //'width': modalWidth,
+        //'margin-left': -(modalWidth / 2),
+        //'top': 100 + window.pageYOffset
+        //'margin-top': function () { return $(this).height() >= $(window).height() ? window.pageYOffset + $(window).height() * 0.05 : window.pageYOffset - ($(this).height() / 2); }
+    });
+}
+
+function FecharModalHeader(id) {
+    $(id).modal('hide');
+
+    if ($('.modal-backdrop').hasClass('in')) {
+        $('.modal-backdrop').remove();
+    }
+}

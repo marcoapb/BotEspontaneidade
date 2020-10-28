@@ -1,0 +1,266 @@
+﻿body {
+}
+
+/**********************************************************
+    Formulário de geração de novo código de acesso
+***********************************************************/
+#form-geracao {
+    
+    border-radius: 8px;
+    margin: 15px auto;
+    padding: 20px 25px;
+    width: 600px;
+}
+
+    #form-geracao legend {
+        color: #4F647B;
+        font: 15px arial,sans-serif;
+        width: auto;
+        border: none;
+        padding: 0 10px;
+        margin-bottom: 0px;
+    }
+
+    #form-geracao label {        
+        margin-bottom: 0px;
+    }   
+
+div.mensagens div {
+    width: 500px;
+    margin: auto;
+    font-size: 1.2em;
+    text-align: center;
+    padding: 10px 2px;
+}
+
+div.erro {
+    border-radius: 3px;
+    margin: 15px auto;
+    width: 690px;
+    border: 1px solid #D2ABAD;
+    color: #C87C7F;
+    padding: 5px 30px;
+    background: #F9E2E3 url("../img/icon_erro.png") no-repeat 5px center;
+}
+
+div.logout-sucesso {
+    width: 675px;
+    padding: 5px 30px 5px 45px;
+    border-radius: 3px;
+    margin: 15px auto;
+    color: #759778;
+    border: 1px solid #d1e1d4;
+    background-image: none;
+    background: #E5F1E7 url("../img/icon_sucesso.png") no-repeat 5px center;
+}
+
+input[type="submit"] {
+    background-color: #bcd5bf;
+    border: none;
+    font: 13px arial,sans-serif;
+    color: #3f5f3f;
+    height: 30px;
+    width: 130px;
+    -webkit-border-radius: 5px;
+    -moz-border-radius: 5px;
+    border-radius: 5px;
+    margin: 10px 0 0 0;
+}
+
+#form-geracao input#rbcpf {
+    width: inherit;
+}
+    
+#form-geracao input#rbcnpj {
+    width: inherit;
+}
+
+
+/**********************************************************
+    Janela modal de confirmação de geração de novo código
+***********************************************************/
+#confirma-geracao, #mensagem-sucesso {
+    background-color: #FFF;
+}
+
+.ui-widget-header {
+    border: none;
+    background: #CCE2D0;
+    font: 16px arial,sans-serif;
+    color: #003A75;
+}
+
+.ui-icon-alert {
+    display: none;
+}
+
+div#mensagem-sucesso {
+    padding: 25px 10px 0 15px;
+}
+
+    div#mensagem-sucesso p {
+        margin-left: 50px;
+    }
+
+    div#mensagem-sucesso .novo-codigo {
+        font-size: 20px;
+    }
+
+    div#mensagem-sucesso .ui-icon-success {
+        display: block;
+        background: transparent url(/img/icon_sucesso.png) no-repeat;
+        height: 27px;
+        width: 36px;
+        float: left;
+    }
+
+.ui-dialog {
+    padding: 0;
+}
+
+    .ui-dialog p {
+        font: 14px arial,sans-serif;
+        color: #416D96;
+    }
+
+    .ui-dialog button[type="button"].ui-button.ui-widget.ui-state-default {
+        background: #bcd5bf;
+        border: none;
+        font: 13px arial,sans-serif;
+        color: #3f5f3f;
+        height: 30px;
+        width: 130px;
+        -webkit-border-radius: 5px;
+        -moz-border-radius: 5px;
+        border-radius: 5px;
+        margin: 0px 5px;
+    }
+
+.ui-corner-all {
+    border-radius: 0;
+}
+
+.ui-widget-content {
+    background-color: #FFF;
+    border: none;
+}
+
+.no-close .ui-dialog-titlebar-close {
+    display: none;
+}
+
+
+/**********************************************************
+    Tela de login
+***********************************************************/
+#login-texto {
+    float: left;
+    width: 325px;
+    margin: 0 20px;
+    text-align:justify;
+}
+    #login-texto #titulo-acesso-seguro {
+        background: #FFF url(../img/imgs_recortadas_login/box_acesso_seguro.png) center top no-repeat;
+        height: 52px;
+        margin-bottom:20px;
+    }
+
+#login-texto-producao-restrita {
+    text-align: center;
+    color: black;
+    font-size: medium;
+}
+#login-texto-link-producao-restrita {
+    text-decoration: underline;
+}
+#login-acoes {
+margin-left: 370px;
+background: #FFF url(../img/imgs_recortadas_login/img_divisoria.png) left top repeat-y;
+padding: 10px 0 20px 20px;
+margin-top: -10px;
+}
+    #login-acoes #titulo-certificado-digital {
+        background: #FFF url(../img/imgs_recortadas_login/box_certificado_digital.png) center top no-repeat;
+        height: 32px;
+        margin-bottom:20px;
+    }
+        #login-acoes #titulo-codigo-acesso {
+            background: #FFF url(../img/imgs_recortadas_login/box_codigo_de_acesso.png) center top no-repeat;
+            height: 32px;
+            margin-bottom: 15px;
+    }
+                #login-acoes #divisoria-ou {
+        background: #FFF url(../img/imgs_recortadas_login/img_divisoria_ou.png) center top no-repeat;
+        height: 19px;
+        margin:15px 0;
+    }
+
+#login-codigo-acesso {
+    padding: 0 0 0 7px;
+position: relative;
+}
+
+#login-codigo-acesso .btn{
+width: 70px;
+height: 24px;
+position: absolute;
+right: 0;
+font-weight: bold;
+margin-right: 4px;
+}
+
+#login-codigo-acesso .text{
+height: 20px;
+width: 192px;
+}
+
+    #login-codigo-acesso div.captcha {
+        width: 500px;
+    }
+
+    #form-geracao label,
+    #login-codigo-acesso label {
+        margin-top: 4px;
+    }
+
+div#login-certificado-digital {
+    height: 140px;
+    text-align: center;
+}
+
+div#login-certificado-digital #info-certificado {
+    font-size:10px;
+}
+
+    div#login-certificado-digital a#caixa-login-certificado {
+        background: transparent url("../img/certificadoOff.png") no-repeat left top;
+        display: block;
+        width: 127px;
+        height: 56px;
+        text-indent: -9000px;
+        margin: 20px auto 5px auto;
+        overflow: hidden;
+    }
+
+        div#login-certificado-digital a#caixa-login-certificado:hover {
+            background-image: url("../img/certificadoOn.png");
+        }
+
+.links-tela-login {
+margin-top: 38px;
+}
+.links-tela-login div  {
+height: 14px;
+}
+.links-tela-login div a {
+font-size: 10px;
+}
+.alterar-papel
+{
+	float: left;
+    width: 450px;
+}
+
+.mobile-only-login {
+    display:none
+}

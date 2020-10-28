@@ -1,0 +1,508 @@
+﻿@media(max-width:991px) {
+    body {
+        margin:0 0 4em;
+        padding:0;
+    }
+
+    #barra-brasil, #barra-governo-container {
+        display:none !important;
+    }
+
+
+	.divMiolo {
+		min-width: 0;
+		background-image: none;
+		-webkit-box-shadow: none;
+		box-shadow: none;
+	}
+
+	#header {
+		/*background: #EEF3F1 url(../img/bkg_cabecalho.png) no-repeat -130px center;*/
+        background-position: -130px center;
+		filter: none;
+		height: 48px;
+		border: none;
+		box-shadow: none;
+		position: relative;
+		border-bottom: solid 1px #a5c3ad;
+		font-family: Arial;
+	}
+
+	#header .marca {
+		display: block;
+		background: transparent url(../img/mobile-logo.png) no-repeat center center;
+		width: 110px;
+		height: 27px;
+		margin: 10px 0 0 10px;
+		float: left;
+	}
+
+	#header .grafismo {
+		display: none;
+	}
+
+    #divisoria-ou {
+        display:none;
+    }
+
+    #titulo-codigo-acesso {
+        display:none;
+    }
+
+    #titulo-certificado-digital {
+        display:none;
+    }
+
+    #login-acoes {
+        margin-left: auto;
+        background: none;
+        padding: initial;
+        margin-top: auto;
+    }
+
+    .btn-toggle-menu,
+    .btn-toggle-user, 
+    #header .botao-login {
+        position: absolute;
+        right: 0;
+        top: 0px;
+        border: none;
+        height: 48px;
+        width: 48px;
+        margin: 0;
+        border-radius:0;
+        z-index: 88;
+        box-shadow: none;
+        z-index: 9;
+        background-position: center center;
+    }
+    .btn-toggle-menu {
+        background:transparent url(img/mobile/mobile-menu.png) no-repeat center center;
+    }
+    .btn-toggle-user {
+        right: 48px;
+        background:transparent url(img/mobile/mobile-user.png) no-repeat center center;
+    }
+
+    .btn-toggle-menu.aberto,
+    .btn-toggle-user.aberto {
+        background-color: #e8f7ea;
+        border-left: 1px solid #a5c3ad;
+    }
+    .btn-toggle-user.aberto {
+        border-right: 1px solid #a5c3ad;
+    }
+
+
+	#header .informacoes {
+		background: transparent none;
+		-moz-border-radius: 0;
+		border-radius: 0; 
+		float: none;
+		position: static;
+		width: auto;
+		margin:0;
+		padding:0;
+		display:block;
+		z-index: 5;
+        display:none;
+	}
+
+	#header .informacoes-conteudo {
+		background: #fff;
+		-moz-border-radius: 0;
+		border-radius: 0; 
+		float: none;
+		position: absolute;
+		color: #0b5b28;
+		right: auto;
+		bottom: auto;
+		width: 100%;
+		margin:0;
+		padding:0;
+		display:none;
+		top:48px;
+        border-bottom:3px solid #ddd;
+		z-index: 5;
+	}
+
+	#header .informacoes p {
+		margin: 0;
+	}
+
+	#header .usuario {
+		font-size: 13px;
+		margin: 0;
+		white-space: normal;
+		text-overflow: normal;
+	}
+
+	#header .informacoes #labelTitular,
+	#header .informacoes .labelProcurado {
+        padding:8px 15px;
+        font-weight: bold;
+        background-color: #e8f7ea;
+        display: block;
+    }
+
+	#header .informacoes .ni,
+	#header .informacoes .nome {
+        padding:0 15px;
+        display: block;
+    }
+	#header .informacoes .ni {
+		padding: 5px 15px 0;
+	}
+   	#header .informacoes .nome {
+   		padding-bottom: 10px;
+   	}
+
+    #header .mobile-botao-sair {
+    	height: 50px;
+    	line-height: 50px;
+    	text-align: center;
+        border-top:1px solid #e8f7ea;
+
+    }
+
+    #header .mobile-botao-sair a {
+        display: inline-block;
+        background: transparent url(img/icon_sair.png) 20px center no-repeat;
+        padding:2px 40px 0 40px;
+        font-size: 13px;
+        font-weight: bold;
+        color: #0b5b28;
+        line-height: 50px;
+        height: 48px;
+    }
+
+    #header .tempo-sessao {
+        position: fixed;
+        width: 100%;
+        height:2.2em;
+        line-height:2.2em;
+        box-sizing:border-box;
+        bottom:0;
+        left:0;
+        top:auto;
+        background: #cbedd4 url(img/icon_ampulheta.png) right 4em center  no-repeat;
+        text-align: right;
+        padding: 0 .8em;
+        z-index:2;
+    }	
+
+    header .tempo-sessao:after {
+    	content:"12:55"
+    }
+
+
+	#breadcrumbs {
+		display: none;
+	}
+
+    #form-geracao {
+       width: auto;
+    }
+
+    #form-geracao input{
+       width: 100%;
+    }
+
+    #form-geracao input.btn{
+       width: 100%;
+    }
+
+    #form-geracao input.text{
+        height: auto;
+       width: 100%;
+       height: 2em;
+    }
+
+    #login-codigo-acesso {
+        padding: 0;
+    }
+
+    #login-codigo-acesso .btn {
+        width: 100%;
+        height: 30px;        
+        position: static;
+        right: auto;
+        font-weight: normal;
+        margin-right: auto;
+    }
+
+    #login-texto {
+        display: none;
+    }
+
+    #titulo-certificado-digital {
+        display: none
+    }
+
+    #login-certificado-digital {
+        display: none
+    }
+
+    .mobile-only-login {
+        display: block;
+    }
+    
+
+    #captchaLink {
+        margin-top: 19px;
+        float: right;
+        /*display: block;*/
+        text-align: center;
+        /*background-color: #08c;*/
+        border-radius: 4px;
+    }
+
+    #ContentPlaceHolder1_captcha:before, #ContentPlaceHolder1_txtCaptcha:before {
+        content:"Digite os caracteres abaixo:";
+        font-size: 14px;
+        font-weight: normal;
+        line-height: 20px;
+        display:block;
+        margin-top: 4px;
+    }
+
+    #ContentPlaceHolder1_captcha label, #ContentPlaceHolder1_txtCaptcha label {
+         display:none;         
+    }
+
+
+    #ContentPlaceHolder1_captcha span,  #ContentPlaceHolder1_txtCaptcha span{
+        display: block;
+        width: 100%;
+        margin-bottom: 5px;
+    }
+
+
+
+	#footer {
+		height:auto;
+		padding:0 10px;
+	}
+
+	.footer-logos {
+		margin:0 auto;
+		width:auto;
+		text-align: center;
+		clear:left;
+	}
+
+	#footer .footer-logos a {
+		float:none;
+		display:inline-block;
+		margin:0 30px;
+		width: 180px;
+		background-position: center center;
+	}
+
+
+	.navbar {
+        width:100%; 
+        position:absolute;
+        z-index:10;
+        margin:0;
+        left:0;
+        top: 48px;
+        background-color: #fff;
+        border:none;
+        border-bottom:3px solid #ddd;
+        display:none;
+	}
+
+	.navabar .container-fluid {
+		padding:0 10px;
+	}
+
+	.navbar .navbar-nav {
+		margin: 0 -25px;
+	}
+
+    .navbar .navbar-nav .dropdown-menu{
+        display: block;
+        position: static;
+        background-color:transparent;
+        border:0 none;
+        box-shadow:none; 
+        margin-top:0;
+        width:100%; 
+    }
+
+	.navbar .navbar-nav,
+	.navbar .navbar-nav > li {
+		float: none;
+	}
+
+    .navbar-nav .dropdown-menu > li > a {
+		padding:8px 15px 8px 25px;
+    }
+
+    .navbar-nav .dropdown-menu .dropdown-header {
+        padding:5px 15px 5px 25px;
+        font-weight: bold;
+        background-color: #e8f7ea;
+
+    }
+    .navbar .dropdown-menu .divider {
+    	margin:0;
+    }
+    .navbar-nav .dropdown-menu > li > a{
+        line-height:20px;
+        white-space: normal;
+	}
+    .navbar-default .navbar-nav .dropdown-menu > li > a{    
+        color:#777;
+    }
+
+    .btn-menu-mobile-close {
+        width:100%;
+        padding:15px 0 10px;
+        height: auto;
+    }
+
+    .ui-dialog {
+        width:100% !important;
+        margin-left:0 !important;
+        margin-right:0 !important;
+        /*Dialog 100% */
+        /* top:0 !important; */
+        /* min-height: 100%; */
+        position:absolute;
+        border-radius: 0;
+    }
+
+    .ui-dialog .ui-dialog-buttonpane {
+        /*Dialog 100% */
+        /*
+    	bottom:0;
+    	position:absolute;
+    	width: 100%;
+        */
+    }
+
+#page-content {
+	padding-left: 1em;
+	padding-right: 1em;
+}
+
+.well {
+	margin-left: -1em;
+	margin-right: -1em;
+}
+
+#conteudo-pagina h1.titulo-pagina {
+    padding-left: 30px;
+    line-height: 30px;
+    margin-bottom: 1.5em;
+}
+
+#conteudo-pagina .botao-voltar-empregados {
+    left: 0;
+    right: auto;
+}
+
+#conteudo-pagina .botao-voltar-empregados a {
+    background: transparent url(img/mobile/mobile-chevron-left-c.png) no-repeat left center;
+    width: 20px;
+    height: 30px;
+    text-indent: -99em;
+    padding: 0;
+    margin: 0;
+}
+
+.ui-dialog .ui-dialog-buttonpane .ui-dialog-buttonset {
+    float:none;
+    text-align:center;
+}
+}
+
+
+/* ------- Painel de Botoes --------*/
+@media(max-width:767px) {
+
+.actions-bar {
+    text-align:center;
+}
+
+.actions-bar .btn {
+    display: inline-block;
+    float: none !important;
+    margin: 10px auto;
+}
+
+.actions-bar.actions-top {
+        /*margin-bottom:15px;*/
+}
+.actions-bar.actions-bottom {
+        /*margin-top:15px;*/
+}
+}
+
+@media(max-width:680px) {
+    .actions-bar.actions-big {
+        min-width: 80%;
+        width: auto;
+    }
+    .actions-bar.actions-big .btn {
+        min-width: 100%;
+        margin-top: 5px;
+    }
+}
+
+    @media(max-width:420px) {
+    .actions-bar.actions-big {
+        min-width: 100%;
+        width: auto;
+        padding: 0;
+        margin-left:auto;
+        margin-right: auto;
+    }
+}
+
+
+/* Abas - Desligamento e Retificacao de Empregado */
+@media(max-width:520px) {
+    .mobile-tabs {
+        margin-left:-10px;
+        margin-right:-10px;
+        margin-top: 10px;
+    }
+    .mobile-tabs .panel-heading,
+    .mobile-tabs .panel-body {
+        margin:0;
+        padding: 0;
+    }
+
+.mobile-tabs .panel-heading .nav-tabs a {
+    font-size:1em;
+}
+
+#idVerbasRescisorias .mobile-tabs .tabs-menu-sub ul {
+padding:0;
+}
+#idVerbasRescisorias .mobile-tabs .tabs-menu-sub ul li {
+margin:0;
+}
+#idVerbasRescisorias .mobile-tabs .tabs-menu-sub ul li a {
+    width: auto;
+    padding: 1em .7em;
+    height: auto;
+}
+
+.mobile-tabs .panel-body .tab-pane {
+    border:none;
+}
+
+    .mobile-tabs .panel-body .tab-pane .well {
+	margin-left: -20px;
+	margin-right: -20px;
+    border-radius: 0;
+    }
+
+.nav-content {
+}
+}
+
