@@ -1,0 +1,121 @@
+def disparaMensagens():
+    global updater, conn, termina
+    logging.info("Acionado o disparo de mensagens - "+datetime.now().strftime('%d/%m/%Y %H:%M'))
+    cursor = conn.cursor()
+    comando = "Select idTelegram, CPF, d1, d2, d3 from Usuarios Where Saida Is Null"
+    cursor.execute(comando)
+    usuarios = cursor.fetchall()
+    dataAtual = datetime.now()
+    totalMsg = 0
+    msgDisparadas = 0
+    tdpfsAvisados = set()
+    for usuario in usuarios: #percorremos os usuários ativos Telegram
+        if termina: #programa foi informado de que é para encerrar (quit)
+            return
+        logging.info("Verificando disparo para "+usuario[1])
+        #if usuario.CPF=="53363833172": #me excluo do envio de mensagens - só para testes
+        #    continue
+        #if usuario.CPF=="05517694675": #exclusão da Juliana
+        #    continue
+        #lista de ciências do usuário vencendo nos prazos por ele estabelecidos ou de TDPFs 
+        #vencendo em prazo <= 8 dias (supondo que a extração ocorrerá a cada 7 dias)         
+        listaUsuario = ""
+        d1 = usuario[2]
+        d2 = usuario[3]
+        d3 = usuario[4]
+        #selecionamos os TDPFs do usuário em andamento e monitorados (ativos) pelo serviço
+        comando = """
+                Select CadastroTDPFs.TDPF as tdpf, Ciencias.Data as data
+                from CadastroTDPFs, TDPFS, Ciencias, Alocacoes
+                Where CadastroTDPFs.Fiscal=%s and CadastroTDPFs.TDPF=Ciencias.TDPF
+                and CadastroTDPFs.TDPF=TDPFS.Numero and CadastroTDPFs.TDPF=Alocacoes.TDPF and  
+                CadastroTDPFs.Fiscal=Alocacoes.CPF and TDPFS.Encerramento Is Null and 
+                CadastroTDPFs.Fim Is Null and Alocacoes.Desalocacao Is Null
+                Order by CadastroTDPFs.TDPF, Ciencias.Data 
+                """
+        cursor.execute(comando, (usuario[1],))        
+        fiscalizacao = cursor.fetchone()
+        if fiscalizacao:
+            tdpfAnt = fiscalizacao[0]
+            dataCiencia = datetime.strptime("01/01/2000", "%d/%m/%Y")
+            while fiscalizacao: #percorremos os TDPFs MONITORADOS do usuário
+                if termina: #foi solicitado o término do bot
+                    return            
+                tdpf = fiscalizacao[0]        
+                if tdpf!=tdpfAnt: #mudou TDPF, então é a última ciência
+                    #dataObjCiencia = datetime.strptime(dataCiencia, '%d/%m/%Y')                
+                    prazoRestante = (dataCiencia.date()+timedelta(days=60)-dataAtual.date()).days                
+                    if prazoRestante==d1 or prazoRestante==d2 or prazoRestante==d3:
+                        if len(listaUsuario)==0:
+                            listaUsuario = "Alertas do dia (TDPF | Dias*):"
+                        listaUsuario = listaUsuario+"\n"+formataTDPF(tdpfAnt)+ " | "+str(prazoRestante)+" (a)"
+                    tdpfAnt = tdpf 
+                dataCiencia = fiscalizacao[1]                         
+                fiscalizacao = cursor.fetchone()            
+            #quando sai do loop, tem que fazer para o último, pois, em relação a ele, não vai haver mudança de TDPF    
+            prazoRestante = (dataCiencia.date()+timedelta(days=60)-dataAtual.date()).days        
+            if prazoRestante==d1 or prazoRestante==d2 or prazoRestante==d3:
+                if len(listaUsuario)==0:
+                    listaUsuario = "Alertas do dia (TDPF | Dias*):"
+                listaUsuario = listaUsuario+"\n"+formataTDPF(tdpf)+ " | "+str(prazoRestante)+" (a)"             
+
+        #selecionamos as datas de vencimento dos TDPFs em que o usuário está alocado, mesmo que não monitorados
+        comando = """
+                Select TDPFs.Numero as tdpf, TDPFs.Vencimento as vencimento, TDPFs.AvisouVencimento as avisou from TDPFs, Alocacoes
+                Where Alocacoes.CPF=%s and TDPFs.Numero=Alocacoes.TDPF and TDPFs.Encerramento Is Null and 
+                Alocacoes.Desalocacao Is Null
+                """
+        cursor.execute(comando, (usuario[1],))                
+        tdpfUsuario = cursor.fetchone()
+        while tdpfUsuario: #percorremos os TDPFs do usuário (TODOS em andamento no qual o usuário esteja atualmente alocado)
+            vencimento = tdpfUsuario[1]
+            avisou = tdpfUsuario[2]
+            tdpf = tdpfUsuario[0]
+            if vencimento: #não deve ser nulo, mas garantimos ...
+                vencimento = vencimento.date()
+                prazoVenctoTDPF = (vencimento-dataAtual.date()).days
+                #não avisamos do vencimento de TDPF recentemente avisado (prazo: 7 dias - depende da carga)
+                if not avisou:
+                    podeAvisar = True
+                else:
+                    avisou = avisou.date()
+                    if (avisou+timedelta(days=7))<dataAtual.date(): #vai depender da periodicidade da extração e carga
+                        podeAvisar = True
+                    else:
+                        podeAvisar = False
+                if (1<prazoVenctoTDPF<=15) and podeAvisar: #verificar este prazos quando for colocar em produção
+                    if len(listaUsuario)==0:
+                        listaUsuario = "Alertas do dia (TDPF | Dias*):"
+                    tdpfsAvisados.add(tdpf)
+                    listaUsuario = listaUsuario+"\n"+formataTDPF(tdpf)+ " | "+str(prazoVenctoTDPF)+" (b)"
+            tdpfUsuario = cursor.fetchone()                    
+
+        if len(listaUsuario)>0:
+            listaUsuario = listaUsuario+"\n*Dias restantes"
+            listaUsuario = listaUsuario+"\n(a) P/ recuperação da espontaneidade tributária."
+            listaUsuario = listaUsuario+"\n(b) P/ vencimento do TDPF no Ação Fiscal."
+            logging.info("Disparando mensagem para "+usuario[1])
+            updater.bot.send_message(usuario[0], text=listaUsuario)   
+            totalMsg+=1
+            msgDisparadas+=1
+            if msgDisparadas>=30:
+                msgDisparadas = 0
+                time.sleep(1) #a cada 30 mensagens, dormimos um segundo (limitação do Bot é 30 por seg - TESTE)
+            logging.info(listaUsuario) 
+
+    logging.info("Total de mensagens disparadas: "+str(totalMsg))        
+    #se avisamos do vencimento do TDPF, colocamos a data na tabela para não avisarmos novamente
+    #todo dia (espera uma semana)            
+    lista = []
+    for tdpf in tdpfsAvisados:
+        tupla = (datetime.today().date(), tdpf)
+        lista.append(tupla)
+    if len(lista)>0:    
+        comando = ("Update TDPFs Set AvisouVencimento=%s Where Numero=%s") 
+        try:
+            cursor.executemany(comando, lista)
+            conn.commit()
+        except:
+            logging.info("Erro ao tentar atualizar as datas de aviso na tabela TDPFs.")
+            conn.rollback()
+    return

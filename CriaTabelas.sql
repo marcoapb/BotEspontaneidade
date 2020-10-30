@@ -59,7 +59,6 @@ CREATE TABLE `TDPFS` (
   `Nome` VARCHAR(150), 
   `NI` VARCHAR(18), 
   `Vencimento` DATETIME, 
-  `AvisouVencimento` DATETIME, 
   PRIMARY KEY (`Codigo`), 
   UNIQUE (`Numero`), 
   UNIQUE (`Numero`, `Grupo`)
@@ -84,4 +83,38 @@ CREATE TABLE `Usuarios` (
   INDEX (`idTelegram`), 
   PRIMARY KEY (`Codigo`), 
   INDEX (`ValidadeChave`)
+) ENGINE=innodb DEFAULT CHARSET=utf8;
+
+DROP TABLE IF EXISTS `Atividades`;
+
+CREATE TABLE `Atividades` (
+  `Codigo` INTEGER NOT NULL AUTO_INCREMENT, 
+  `TDPF` VARCHAR(16), 
+  `Atividade` VARCHAR(50), 
+  `Data` DATETIME, 
+  PRIMARY KEY (`Codigo`), 
+  INDEX (`TDPF`)
+) ENGINE=innodb DEFAULT CHARSET=utf8;
+
+DROP TABLE IF EXISTS `AvisosVencimento`;
+
+CREATE TABLE `AvisosVencimento` (
+  `Codigo` INTEGER NOT NULL AUTO_INCREMENT, 
+  `TDPF` VARCHAR(16), 
+  `CPF` VARCHAR(14), 
+  `Data` DATETIME, 
+  PRIMARY KEY (`Codigo`), 
+  INDEX (`TDPF`),
+  INDEX (`CPF`),
+  UNIQUE (`TDPF`, `CPF`)
+) ENGINE=innodb DEFAULT CHARSET=utf8;
+
+DROP TABLE IF EXISTS `MensagensCofis`;
+
+CREATE TABLE `MensagensCofis` (
+  `Codigo` INTEGER NOT NULL AUTO_INCREMENT, 
+  `Mensagem` VARCHAR(100), 
+  `Data` DATETIME, 
+  PRIMARY KEY (`Codigo`), 
+  INDEX (`Data`)
 ) ENGINE=innodb DEFAULT CHARSET=utf8;

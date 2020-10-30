@@ -44,7 +44,7 @@ def realizaCargaDados():
         dfTdpf = pd.read_excel(dirExcel+"TDPFS.xlsx")
         dfAloc = pd.read_excel(dirExcel+"Alocacoes.xlsx")
     except:
-        logging.error("Arquivos Excel não foram encontrados - TDPFs.xlsx e Alocacoes.xlsx") 
+        logging.info("Arquivos Excel não foram encontrados - TDPFs.xlsx e Alocacoes.xlsx; outra tentativa será feita em 12h") 
         return    
 
     MYSQL_ROOT_PASSWORD = os.getenv("MYSQL_ROOT_PASSWORD", "EXAMPLE")
@@ -65,6 +65,7 @@ def realizaCargaDados():
 
         #CUIDADO com o comando ACIMA - se o BD não aceitar multiplos cursores, é necessário abrir uma conexão dentro de cada função
     except mysql.connector.Error as err:
+        print("Erro na conexão com o BD - veja Log: "+datetime.now().strftime('%d/%m/%Y %H:%M'))
         if err.errno == errorcode.ER_ACCESS_DENIED_ERROR:
             logging.info("Usuário ou senha inválido(s).")
         elif err.errno == errorcode.ER_BAD_DB_ERROR:
