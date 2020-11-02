@@ -30,7 +30,7 @@ def disparaAviso():
             msgCofis = msgCofis+";\n"
         msgCofis = msgCofis+mensagem[0]
     if msgCofis!="":
-        msgCofis = "Mensagens URGENTES Cofis:\n"+msgCofis+"."  
+        msgCofis = "Mensagem URGENTE Cofis:\n"+msgCofis+"."  
     else:
         logging.info("Não há mensagem a ser enviada")      
         return

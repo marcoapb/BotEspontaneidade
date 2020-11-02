@@ -1681,13 +1681,16 @@ def disparaMensagens():
                         listaUsuario = "Alertas do dia (TDPF | Dias*):"
                     listaUsuario = listaUsuario+"\n"+formataTDPF(tdpf)+ " | "+str(prazoVenctoTDPF)+" (c)"                 
 
-        if len(listaUsuario)>0:
-            listaUsuario = listaUsuario+"\n*Dias restantes"
-            listaUsuario = listaUsuario+"\n(a) P/ recuperação da espontaneidade tributária."
-            listaUsuario = listaUsuario+"\n(b) P/ vencimento da Atividade."            
-            listaUsuario = listaUsuario+"\n(c) P/ vencimento do TDPF no Ação Fiscal."
+        if len(listaUsuario)>0 or msgCofis!="":
+            if len(listaUsuario)>0:
+                listaUsuario = listaUsuario+"\n*Dias restantes"
+                listaUsuario = listaUsuario+"\n(a) P/ recuperação da espontaneidade tributária."
+                listaUsuario = listaUsuario+"\n(b) P/ vencimento da Atividade."            
+                listaUsuario = listaUsuario+"\n(c) P/ vencimento do TDPF no Ação Fiscal."
             if msgCofis!="":
-                listaUsuario = listaUsuario+"\n\n"+msgCofis
+                if len(listaUsuario)>0:
+                    listaUsuario = listaUsuario+"\n\n"
+                listaUsuario = listaUsuario+msgCofis
             logging.info("Disparando mensagem para "+cpf)
             updater.bot.send_message(usuario[0], text=listaUsuario)   
             #logging.info(listaUsuario)            

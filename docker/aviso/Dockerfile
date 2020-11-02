@@ -18,7 +18,7 @@ RUN apt-get update \
 RUN pip install --upgrade pip
 COPY ./reqAviso.txt /aviso
 COPY ./AvisoUrgente.py /aviso
-RUN pip install -r /bot/reqAviso.txt
+RUN pip install -r /aviso/reqAviso.txt
 RUN mkdir /Log
 #COPY . .
 CMD ["python", "AvisoUrgente.py"]
