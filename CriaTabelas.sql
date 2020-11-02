@@ -118,3 +118,13 @@ CREATE TABLE `MensagensCofis` (
   PRIMARY KEY (`Codigo`), 
   INDEX (`Data`)
 ) ENGINE=innodb DEFAULT CHARSET=utf8;
+
+DROP TABLE IF EXISTS `AvisosUrgentes`;
+
+CREATE TABLE `AvisosUrgentes` (
+  `Codigo` INTEGER NOT NULL AUTO_INCREMENT, 
+  `Mensagem` VARCHAR(100), 
+  `DataEnvio` DATETIME, 
+  PRIMARY KEY (`Codigo`), 
+  INDEX (`DataEnvio`)
+) ENGINE=innodb DEFAULT CHARSET=utf8;

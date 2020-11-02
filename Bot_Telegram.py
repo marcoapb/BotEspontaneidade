@@ -123,7 +123,7 @@ def converteAMD(data):
 
   
 def registra(update, context): #registra usuário no serviço
-    global pendencias, textoRetorno, conn, d1padrao, d2padrao, d3padrao #, cpfRegistro
+    global pendencias, textoRetorno, d1padrao, d2padrao, d3padrao #, cpfRegistro   
     response_message = ""
     userId = update.message.from_user.id   
     bot = update.effective_user.bot
@@ -151,6 +151,10 @@ def registra(update, context): #registra usuário no serviço
         if response_message!="":
             bot.send_message(userId, text=response_message)
             return 
+        conn = conecta()
+        if not conn:   
+            bot.send_message(userId, text="Erro na conexão - registra")          
+            return
         cursor = conn.cursor(buffered=True)
         cursor.execute("Select Codigo, CPF, Chave, Adesao from Usuarios where CPF=%s", (cpf,))  
         row = cursor.fetchone()
@@ -171,22 +175,32 @@ def registra(update, context): #registra usuário no serviço
                     conn.rollback()
                     response_message = "Erro ao registrar o usuário no serviço."  
                 bot.send_message(userId, text=response_message) 
-                mostraMenuPrincipal(update, context)    
+                mostraMenuPrincipal(update, context)  
+                conn.close()  
                 return
             else:
+                conn.close()
                 response_message = "Gere a chave primeiramente ou digite-a corretamente. Digite novamente o CPF e o código de registro." +textoRetorno                                   
         else:
             eliminaPendencia(userId) #apaga a pendência de informação do usuário            
             response_message = "Usuário (CPF) não foi cadastrado para registro no serviço."
             bot.send_message(userId, text=response_message) 
-            mostraMenuPrincipal(update, context)    
+            mostraMenuPrincipal(update, context)   
+            conn.close() 
             return            
     bot.send_message(userId, text=response_message)
     return
 
 
 def acompanha(update, context): #inicia o monitoramente de um ou de TODOS os TDPFs que o usuário supervisione ou em que esteja alocado
-    global pendencias, textoRetorno, conn
+    global pendencias, textoRetorno
+    conn = conecta()
+    if not conn: 
+        response_message = "Erro na conexão - acompanha."
+        bot.send_message(userId, text=response_message)
+        eliminaPendencia(userId)
+        mostraMenuPrincipal(update, context)
+        return    
     cursor = conn.cursor(buffered=True)    
     userId = update.message.from_user.id   
     bot = update.effective_user.bot
@@ -196,6 +210,7 @@ def acompanha(update, context): #inicia o monitoramente de um ou de TODOS os TDP
         response_message = "Número de informações (parâmetros) inválido. Envie somente o nº do TDPF ou a palavra TODOS."
         response_message = response_message+textoRetorno
         bot.send_message(userId, text=response_message)
+        conn.close()
         return        
     else:  
         comando = "Select CPF, Saida from Usuarios Where idTelegram=%s"
@@ -210,12 +225,14 @@ def acompanha(update, context): #inicia o monitoramente de um ou de TODOS os TDP
                 response_message = "Usuário não está ativo no serviço." #já testado quando acionou o menu
                 bot.send_message(userId, text=response_message) 
                 mostraMenuPrincipal(update, context)
+                conn.close()
                 return                
         if not achou:
             eliminaPendencia(userId) #apaga a pendência de informação do usuário            
             response_message = "Usuário não está registrado no serviço." #tb já foi testado        
             bot.send_message(userId, text=response_message) 
             mostraMenuPrincipal(update, context)
+            conn.close()
             return             
         info = parametros[0]
         if info.upper().strip() in ["TODOS", "TODAS"]:
@@ -230,6 +247,7 @@ def acompanha(update, context): #inicia o monitoramente de um ou de TODOS os TDP
                 response_message = "TDPF ou comando inválido. Envie novamente o nº do TDPF (16 dígitos) ou a palavra TODOS."
                 response_message = response_message+textoRetorno  
                 bot.send_message(userId, text=response_message) 
+                conn.close()
                 return                 
             comando = "Select TDPF from Alocacoes, TDPFs Where Desalocacao Is Null and CPF=%s and TDPF=%s and TDPF=Numero and Encerramento Is Null"
             cursor.execute(comando, (cpf, tdpf))
@@ -240,6 +258,7 @@ def acompanha(update, context): #inicia o monitoramente de um ou de TODOS os TDP
             eliminaPendencia(userId) #apaga a pendência de informação do usuário            
             bot.send_message(userId, text=response_message) 
             mostraMenuPrincipal(update, context)
+            conn.close()
             return
         atualizou = False 
         try:
@@ -271,10 +290,13 @@ def acompanha(update, context): #inicia o monitoramente de um ou de TODOS os TDP
         bot.send_message(userId, text=response_message) 
         eliminaPendencia(userId) #apaga a pendência de informação do usuário        
         mostraMenuPrincipal(update, context)
+        conn.close()
         return  
 
 def efetivaAtividade(userId, tdpf, atividade, data): #tenta efetivar uma atividade para um certo tdpf no BD
-    global conn
+    conn = conecta()
+    if not conn: 
+        return False, "Erro na conexão - efetivaAtividade"
     cursor = conn.cursor(buffered=True)  
     try:
         comando = "Select Encerramento from TDPFS Where Numero=%s"        
@@ -284,8 +306,10 @@ def efetivaAtividade(userId, tdpf, atividade, data): #tenta efetivar uma ativida
         if row:
             achou = True
             if row[0]!=None:
+                conn.close()
                 return False, "TDPF foi encerrado - monitoramento não é mais necessário ou possível, inclusive registro de atividade."
         if not achou:    
+            conn.close()
             return False, "TDPF não foi localizado - não existe ou foi encerrado há um bom tempo e retirado da base deste serviço."
         comando = "Select CPF, Saida from Usuarios Where idTelegram=%s"
         cursor.execute(comando, (userId,))
@@ -295,8 +319,10 @@ def efetivaAtividade(userId, tdpf, atividade, data): #tenta efetivar uma ativida
             achou = True
             cpf = row[0]
             if row[1]!=None: #saida
+                conn.close()
                 return False, "Usuário não está ativo no serviço." #já testado quando acionou o menu
         if not achou:
+            conn.close()
             return False, "Usuário não está registrado no serviço." #tb já foi testado
         comando = "Select Desalocacao from Alocacoes Where CPF=%s and TDPF=%s"
         cursor.execute(comando, (cpf, tdpf))
@@ -305,8 +331,10 @@ def efetivaAtividade(userId, tdpf, atividade, data): #tenta efetivar uma ativida
         if row:
             achou = True
             if row[0]!=None:
+                conn.close()
                 return False, "Usuário não está mais alocado ao TDPF."
         if not achou:
+            conn.close()
             return False, "Usuario não está alocado ao TDPF."
         comando = "Select Codigo, Fim from CadastroTDPFs Where TDPF=%s and Fiscal=%s"
         cursor.execute(comando, (tdpf, cpf))
@@ -320,7 +348,8 @@ def efetivaAtividade(userId, tdpf, atividade, data): #tenta efetivar uma ativida
             #logging.info("TDPF cadastrado")
             
     except:
-       return False, "Erro na consulta (efetivaAtividade)."
+        conn.close()
+        return False, "Erro na consulta (efetivaAtividade)."
     try:
         if isDate(data):
             dataObj = datetime.strptime(data, "%d/%m/%Y")
@@ -338,9 +367,11 @@ def efetivaAtividade(userId, tdpf, atividade, data): #tenta efetivar uma ativida
             comando = "Insert into CadastroTDPFs (Fiscal, TDPF, Inicio) Values (%s, %s, %s)"
             cursor.execute(comando, (cpf, tdpf, datetime.today().date()))
         conn.commit()
+        conn.close()
         return True, msg
     except:
         conn.rollback()
+        conn.close()
         return False, "Erro ao atualizar as tabelas (efetivaAtividade)."
 
 def atividadeTexto(update, context): #obtém a descrição da atividade e chama a função que grava no BD
@@ -425,23 +456,29 @@ def atividade(update, context): #critica e tenta efetivar a realização de uma 
     return 
 
 def efetivaAnulacaoAtividade(userId, tdpf, codigo): #efetiva a anulação (apaga) de uma atividade de um tdpf 
-    global conn
+    conn = conecta()
+    if not conn: 
+        return False, "Erro na conexão - efetivaAnulacaoAtividade"
     cursor = conn.cursor(buffered=True)
     comando = "Select CPF, Saida from Usuarios Where idTelegram=%s"
     try:
         cursor.execute(comando, (userId,))
         row = cursor.fetchone()
         if not row: #não achou usuário
+            conn.close()
             return False, "Usuário Telegram não está registrado no serviço."
         if row[1]!=None:
+            conn.close()
             return False, "Usuário Telegram saiu do serviço em "+row[1].strftime('%d/%m/%Y')+"."
         cpf = row[0]
         comando = "Select Codigo, Fim from CadastroTDPFs Where Fiscal=%s and TDPF=%s"
         cursor.execute(comando, (cpf, tdpf))
         row = cursor.fetchone()
         if not row:
+            conn.close()
             return False, "TDPF não está sendo monitorado para você."
         if row[1]!=None:
+            conn.close()
             return False, "O acompanhamento do TDPF foi finalizado em "+row[1].strftime('%d/%m/%Y')+"."
         if codigo==0:    
             comando = "Select Codigo, TDPF, Data from Atividades Where TDPF=%s Order by Codigo DESC"
@@ -452,20 +489,25 @@ def efetivaAnulacaoAtividade(userId, tdpf, codigo): #efetiva a anulação (apaga
             cursor.execute(comando, (codigo, tdpf))
             rows = cursor.fetchall()       
             if len(rows)==0:
+                conn.close()
                 return False, "Atividade (código) inexistente para o TDPF informado."         
     except:
+        conn.close()
         return False, "Erro na consulta (efetivaAnulacaoAtividade)."
     if len(rows)==0:
+        conn.close()
         return False, "Não há atividade informada para o TDPF." #Não havia data de ciência para o TDPF   
     if codigo == 0:         
         codigo = rows[0][0]    
     try:
         comando = "Delete from Atividades Where Codigo=%s and TDPF=%s"
         cursor.execute(comando, (codigo, tdpf))
-        conn.commit()   
+        conn.commit() 
+        conn.close()  
         return True, ""
     except:
         conn.rollback()
+        conn.close()
         return False, "Erro na atualização das tabelas. Tente novamente mais tarde."
 
 def anulaAtividade(update, context): #anula (apaga) a última atividade cadastrada do TDPF
@@ -505,7 +547,9 @@ def anulaAtividade(update, context): #anula (apaga) a última atividade cadastra
 
             
 def efetivaCiencia(userId, tdpf, data): #tenta efetivar a ciência de um tdpf no BD
-    global conn
+    conn = conecta()
+    if not conn: 
+        return False, "Erro na conexão - efetivaCiencia"
     cursor = conn.cursor(buffered=True)  
     try:
         comando = "Select Encerramento from TDPFS Where Numero=%s"        
@@ -515,8 +559,10 @@ def efetivaCiencia(userId, tdpf, data): #tenta efetivar a ciência de um tdpf no
         if row:
             achou = True
             if row[0]!=None:
+                conn.close()
                 return False, "TDPF foi encerrado - monitoramento não é mais necessário ou possível."
         if not achou:    
+            conn.close()
             return False, "TDPF não foi localizado - não existe ou foi encerrado há um bom tempo e retirado da base deste serviço."
         comando = "Select CPF, Saida from Usuarios Where idTelegram=%s"
         cursor.execute(comando, (userId,))
@@ -526,8 +572,10 @@ def efetivaCiencia(userId, tdpf, data): #tenta efetivar a ciência de um tdpf no
             achou = True
             cpf = row[0]
             if row[1]!=None: #saida
+                conn.close()
                 return False, "Usuário não está ativo no serviço." #já testado quando acionou o menu
         if not achou:
+            conn.close()
             return False, "Usuário não está registrado no serviço." #tb já foi testado
         comando = "Select Desalocacao from Alocacoes Where CPF=%s and TDPF=%s"
         cursor.execute(comando, (cpf, tdpf))
@@ -536,13 +584,16 @@ def efetivaCiencia(userId, tdpf, data): #tenta efetivar a ciência de um tdpf no
         if row:
             achou = True
             if row[0]!=None:
+                conn.close()
                 return False, "Usuário não está mais alocado ao TDPF."
         if not achou:
+            conn.close()
             return False, "Usuario não está alocado ao TDPF."
         comando = "Select Data from Ciencias Where TDPF=%s and Data>=%s Order by Data DESC"
         cursor.execute(comando, (tdpf, datetime.strptime(data, "%d/%m/%Y")))
         row = cursor.fetchone()
         if row:
+            conn.close()
             return False, "Data de ciência informada DEVE ser posterior à ultima informada para o TDPF ("+row[0].strftime('%d/%m/%Y')+")."
         comando = "Select Codigo, Fim from CadastroTDPFs Where TDPF=%s and Fiscal=%s"
         cursor.execute(comando, (tdpf, cpf))
@@ -553,10 +604,10 @@ def efetivaCiencia(userId, tdpf, data): #tenta efetivar a ciência de um tdpf no
             tdpfCadastrado = True  
             chave = row[0]
             fim = row[1]
-            #logging.info("TDPF cadastrado")
-            
+            #logging.info("TDPF cadastrado")           
     except:
-       return False, "Erro na consulta (3)."
+        conn.close()
+        return False, "Erro na consulta (3)."
     try:
         comando = "Insert into Ciencias (TDPF, Data) Values (%s, %s)"
         cursor.execute(comando, (tdpf, datetime.strptime(data, "%d/%m/%Y")))
@@ -570,9 +621,11 @@ def efetivaCiencia(userId, tdpf, data): #tenta efetivar a ciência de um tdpf no
             comando = "Insert into CadastroTDPFs (Fiscal, TDPF, Inicio) Values (%s, %s, %s)"
             cursor.execute(comando, (cpf, tdpf, datetime.today().date()))
         conn.commit()
+        conn.close()
         return True, msg
     except:
         conn.rollback()
+        conn.close()
         return False, "Erro ao atualizar as tabelas (efetivaCiencia)."
             
 
@@ -627,7 +680,9 @@ def ciencia(update, context): #critica e tenta efetivar a ciência de um TDPF (r
     return 
 
 def efetivaPrazos(userId, d): #altera no BD os prazos padrão do usuário (d é uma lista)
-    global conn
+    conn = conecta()
+    if not conn: 
+        return False, "Erro na conexão - efetivaPrazos"
     cursor = conn.cursor(buffered=True) 
     #ordena os prazos (não tem utilidade, mas deixei assim pois pode ser que venha a ter)
     d.sort(reverse = True)
@@ -639,9 +694,11 @@ def efetivaPrazos(userId, d): #altera no BD os prazos padrão do usuário (d é 
         logging.info(comando)
         cursor.execute(comando, (d1, d2, d3, userId))
         conn.commit()
+        conn.close()
         return True, "" #retorna se operação foi um sucesso e mensagem de erro em caso de False no primeiro         
     except:
         conn.rollback()
+        conn.close()
         return False, "Erro de atualização. Tente novamente mais tarde."
         
 def prazos(update, context): #critica e tenta alterar os prazos padrão do usuário
@@ -686,30 +743,38 @@ def prazos(update, context): #critica e tenta alterar os prazos padrão do usuá
     return
 
 def efetivaAnulacao(userId, tdpf): #efetiva a anulação (apaga) de uma data de ciência de um tdpf - a data anterior, se houver, é que será considerada
-    global conn
+    conn = conecta()
+    if not conn: 
+        return False, "Erro na conexão - efetivaAnulacao"
     cursor = conn.cursor(buffered=True)
     comando = "Select CPF, Saida from Usuarios Where idTelegram=%s"
     try:
         cursor.execute(comando, (userId,))
         row = cursor.fetchone()
         if not row: #não achou usuário
+            conn.close()
             return False, "Usuário Telegram não está registrado no serviço."
         if row[1]!=None:
+            conn.close()
             return False, "Usuário Telegram saiu do serviço em "+row[1].strftime('%d/%m/%Y')+"."
         cpf = row[0]
         comando = "Select Codigo, Fim from CadastroTDPFs Where Fiscal=%s and TDPF=%s"
         cursor.execute(comando, (cpf, tdpf))
         row = cursor.fetchone()
         if not row:
+            conn.close()
             return False, "TDPF não está sendo monitorado para você."
         if row[1]!=None:
+            conn.close()
             return False, "O acompanhamento do TDPF foi finalizado em "+row[1].strftime('%d/%m/%Y')+"."
         comando = "Select Codigo, TDPF, Data from Ciencias Where TDPF=%s Order by Data"
         cursor.execute(comando, (tdpf,))
         rows = cursor.fetchall()
     except:
+        conn.close()
         return False, "Erro na consulta (5)."
     if len(rows)==0:
+        conn.close()
         return False, "Não há data de ciência informada para o TDPF." #Não havia data de ciência para o TDPF
     if len(rows)==1:
         dataAnt = "Nenhuma Data Vigente" #não haverá data anterior
@@ -719,10 +784,12 @@ def efetivaAnulacao(userId, tdpf): #efetiva a anulação (apaga) de uma data de 
     try:
         comando = "Delete from Ciencias Where Codigo=%s"
         cursor.execute(comando, (chave,))
-        conn.commit()   
+        conn.commit()  
+        conn.close() 
         return True, dataAnt #retorna se teve sucesso e a data anterior
     except:
         conn.rollback()
+        conn.close()
         return False, "Erro na atualização das tabelas. Tente novamente mais tarde."
 
 def anulaCiencia(update, context): #anula (apaga) a última data de ciência do TDPF
@@ -747,7 +814,7 @@ def anulaCiencia(update, context): #anula (apaga) a última data de ciência do 
                     response_message = "Última data de ciência foi excluída para o TDPF. Retornou para a anterior: "+msgAnulacao
                     try:
                         dateTimeObj = datetime.strptime(msgAnulacao, '%d/%m/%Y')
-                        if dateTimeObj<datetime.now().date()-timedelta(days=59):
+                        if dateTimeObj.date()<datetime.now().date()-timedelta(days=59):
                             response_message = response_message+"\nA data de ciência anterior já está vencida e não irá gerar, na prática, monitoramento."
                     except :
                         response_message = response_message+"\nNa prática, não haverá agora monitoramento para este TDPF por falta de data de ciência."                   
@@ -762,15 +829,19 @@ def anulaCiencia(update, context): #anula (apaga) a última data de ciência do 
     return          
 
 def efetivaFinalizacao(userId, tdpf=""): #finaliza monitoramento de um tdpf (campo Fim da tabela CadastroTDPFs)
-    global conn
+    conn = conecta()
+    if not conn: 
+        return False, "Erro na conexão - efetivaFinalização"
     cursor = conn.cursor(buffered=True)
     comando = "Select CPF, Saida from Usuarios Where idTelegram=%s"
     try:
         cursor.execute(comando, (userId,))
         row = cursor.fetchone()
         if not row: #não achou usuário
+            conn.close()
             return False, "Usuário Telegram não está registrado no serviço."
         if row[1]!=None:
+            conn.close()
             return False, "Usuário Telegram saiu do serviço em "+row[1].strftime('%d/%m/%Y')+"."
         cpf = row[0]
         if tdpf!="":
@@ -782,14 +853,19 @@ def efetivaFinalizacao(userId, tdpf=""): #finaliza monitoramento de um tdpf (cam
         row = cursor.fetchone()
         if not row:
             if tdpf!="":
+                conn.close()
                 return False, "TDPF não está sendo monitorado por você. Envie um novo nº de TDPF:"
             else:
+                conn.close()
                 return True, "Nenhum TDPF está sendo monitorado por você atualmente."
         if row[1]!=None and tdpf!="":
+            conn.close()
             return True, "O acompanhamento do TDPF já havia sido finalizado em "+row[1].strftime('%d/%m/%Y')+"."
         elif tdpf!="":
+            conn.close()
             chave = row[0]
     except:
+        conn.close()
         return False, "Erro na consulta (7). Tente novamente mais tarde."
     try:
         if tdpf!="":
@@ -798,10 +874,12 @@ def efetivaFinalizacao(userId, tdpf=""): #finaliza monitoramento de um tdpf (cam
         else:
             comando = "Update CadastroTDPFs Set Fim=%s Where Fiscal=%s"
             cursor.execute(comando, (datetime.today().date(), cpf))
-        conn.commit()            
+        conn.commit()  
+        conn.close()          
         return True, None
     except:
         conn.rollback()
+        conn.close()
         return False, "Erro na atualização das tabelas (efetivaFinalizacao)."
 
 def fim(update, context): #exclui o TDPF do monitoramento (campo Fim da tabela CadastroTDPFs)
@@ -851,7 +929,7 @@ def verificaEMail(email): #valida o e-mail se o usuário informou um completo
         return False 
 
 def cadastraEMail(update, context): #cadastra o e-mail institucional
-    global pendencias, textoRetorno, conn
+    global pendencias, textoRetorno
     userId = update.message.from_user.id   
     bot = update.effective_user.bot
     msg = update.message.text    
@@ -876,6 +954,9 @@ def cadastraEMail(update, context): #cadastra o e-mail institucional
             response_message = "Nome muito curto (min = 4 caracteres). Envie somente o nome de usuário do endereço @rfb.gov.br."
             response_message = response_message+textoRetorno 
         if response_message=="":    
+            conn = conecta()
+            if not conn: 
+                return 
             comando = "Select Codigo, CPF, email from Usuarios Where Saida Is Null and idTelegram=%s"
             cursor = conn.cursor(buffered=True)
             try:
@@ -884,11 +965,13 @@ def cadastraEMail(update, context): #cadastra o e-mail institucional
             except:
                 response_message = "Erro na consulta (6)."+textoRetorno
                 bot.send_message(userId, text=response_message)  
+                conn.close()
                 return                
             if not row:
                 response_message = "Usuário não registrado ou inativo no serviço."
                 bot.send_message(userId, text=response_message) 
                 mostraMenuPrincipal(update, context)
+                conn.close()
                 return                 
             else:
                 chave = row[0]
@@ -899,6 +982,7 @@ def cadastraEMail(update, context): #cadastra o e-mail institucional
                     response_message = "Usuário não tinha e-mail cadastrado no serviço."
                     bot.send_message(userId, text=response_message) 
                     mostraMenuPrincipal(update, context)
+                    conn.close()
                     return
                 try:
                     if email.upper()=="NULO":
@@ -918,8 +1002,10 @@ def cadastraEMail(update, context): #cadastra o e-mail institucional
                         response_message = response_message+"Email cadastrado com sucesso - {}@rfb.gov.br.".format(email)    
                     bot.send_message(userId, text=response_message) 
                     mostraMenuPrincipal(update, context)
+                    conn.close()
                     return 
                 except:
+                    conn.close()
                     response_message = "Erro na atualização das tabelas."+textoRetorno
     bot.send_message(userId, text=response_message)  
     return
@@ -1014,7 +1100,9 @@ def mostraMenuPrincipal(update, context):
     return  
 
 def tipoOpcao1(userId):
-    global conn
+    conn = conecta()
+    if not conn: 
+        return "Erro na conexão"
     cursor = conn.cursor(buffered=True)
     #comando = "Select CPF, Saida from Usuarios Where idTelegram=?"
     comando = "Select CPF, Saida from Usuarios Where idTelegram="+str(userId)
@@ -1023,6 +1111,7 @@ def tipoOpcao1(userId):
         #cursor.execute(comando, float(userId))
         cursor.execute(comando)
         row = cursor.fetchone()
+        conn.close()
         if not row:
             return "Registra Usuário"
         else:
@@ -1031,21 +1120,28 @@ def tipoOpcao1(userId):
             else:
                 return "Reativa Usuário"
     except:
+        conn.close()
         return "Erro na consulta (tipoOpcao)"            
 
 
 def opcaoUsuario(update, context): #Cadastra usuário
-    global pendencias, conn
+    global pendencias
     
     userId = update.effective_user.id
     bot = update.effective_user.bot     
     eliminaPendencia(userId)     
     msgOpcao1 = tipoOpcao1(userId)
+    conn = None
     if msgOpcao1=="Registra Usuário" or msgOpcao1=="Reativa Usuário":       
         pendencias[userId] = 'registra' #usuário agora tem uma pendência de informação
         response_message = "Envie /menu para ver o menu principal. Envie agora, numa única mensagem, seu CPF e o código de registro (chave) (separe as informações com espaço):"  
         bot.send_message(userId, text=response_message)
     else:
+        conn = conecta()
+        if not conn: 
+            response_message = "Erro na conexão (8)."            
+            bot.send_message(userId, text=response_message)      
+            return             
         cursor = conn.cursor(buffered=True)        
         if msgOpcao1=="Desativa Usuário":
             dataAtual = datetime.now().date()
@@ -1059,28 +1155,37 @@ def opcaoUsuario(update, context): #Cadastra usuário
                 conn.rollback()
                 response_message = "Erro ao atualizar tabelas(8). Tente novamente mais tarde."            
                 bot.send_message(userId, text=response_message)
-            mostraMenuPrincipal(update, context)                                          
+            mostraMenuPrincipal(update, context)  
+    if conn:
+        conn.close()                                                    
     return
 
 def verificaUsuario(userId, bot): #verifica se o usuário está cadastrado e ativo no serviço
-    global conn, textoRetorno
+    global textoRetorno
 
+    conn = conecta()
+    if not conn:
+        response_message = "Erro na conexão (7)"
+        bot.send_message(userId, text=response_message)
+        return False
     cursor = conn.cursor(buffered=True)
     comando = "Select CPF from Usuarios Where Saida Is Null and idTelegram=%s"
     try:
         cursor.execute(comando, (userId,))
         row = cursor.fetchone()
+        conn.close()
         if not row:
             bot.send_message(userId, text="Usuário não está registrado no serviço ou está inativo. "+textoRetorno)  
             return False
         else:
             return True
     except:
+        conn.close()
         bot.send_message(userId, text="Erro na consulta (7).")        
         return False                
 
 def opcaoInformaAtividade(update, context): #informa atividade relativa a TDPF e data de vencimento ou prazo em dias
-    global pendencias, conn    
+    global pendencias    
     userId = update.effective_user.id  
     bot = update.effective_user.bot      
     eliminaPendencia(userId)     
@@ -1094,7 +1199,7 @@ def opcaoInformaAtividade(update, context): #informa atividade relativa a TDPF e
     return    
 
 def opcaoInformaCiencia(update, context): #Informa ciência de TDPF
-    global pendencias, conn    
+    global pendencias
     userId = update.effective_user.id  
     bot = update.effective_user.bot      
     eliminaPendencia(userId)     
@@ -1108,13 +1213,18 @@ def opcaoInformaCiencia(update, context): #Informa ciência de TDPF
     return
         
 def opcaoPrazos(update, context): #Informa prazos para receber avisos
-    global pendencias, conn, textoRetorno  
+    global pendencias, textoRetorno  
     userId = update.effective_user.id 
     bot = update.effective_user.bot     
     eliminaPendencia(userId)     
     comando = "Select d1, d2, d3, Saida from Usuarios Where idTelegram=%s"
     saida = None
     try:
+        conn = conecta()
+        if not conn:
+            response_message = "Erro na conexão (5)"
+            bot.send_message(userId, text=response_message)
+            return 
         cursor = conn.cursor(buffered=True)    
         cursor.execute(comando, (userId,))
         achou = False
@@ -1126,6 +1236,7 @@ def opcaoPrazos(update, context): #Informa prazos para receber avisos
             d3 = row[2]
             saida = row[3] 
     except:
+        conn.close()
         response_message = "Erro na consulta. (5)"
         bot.send_message(userId, text=response_message)
         return             
@@ -1137,7 +1248,8 @@ def opcaoPrazos(update, context): #Informa prazos para receber avisos
         else:    
             pendencias[userId] = 'prazos'   #usuário agora tem uma pendência de informação
             response_message = "Envie /menu para ver o menu principal. Prazos vigentes para receber alertas: {}, {} e {} dias antes de o contribuinte readquirir a espontaneidade.\nEnvie agora, numa única mensagem, três quantidades de dias (1 a 50) distintas antes de o contribuinte readquirir a espontaneidade tributária em que você deseja receber alertas (separe as informações com espaço):".format(d1, d2, d3)
-    bot.send_message(userId, text=response_message)    
+    bot.send_message(userId, text=response_message)  
+    conn.close()  
     return
 
 
@@ -1149,7 +1261,7 @@ def opcaoAnulaAtividade(update, context): #anula informação de atividade
     achou = verificaUsuario(userId, bot)       
     if achou:            
         pendencias[userId] = 'anulaAtividade'  #usuário agora tem uma pendência de informação   
-        response_message = "Envie /menu para ver o menu principal. Envie agora o nº do TDPF (16 dígitos) para o qual você deseja anular a última atividade informada:"
+        response_message = "Envie /menu para ver o menu principal. Envie o nº do TDPF (16 dígitos, sem espaços) e, opcionalmente, o código da atividade a ser excluída (se não for informado, será excluída a última cadastrada) - separe as informa;óes (TDPF e código) com espaço."
         bot.send_message(userId, text=response_message)
     else:
         mostraMenuPrincipal(update, context)         
@@ -1199,13 +1311,16 @@ def opcaoAcompanhaTDPFs(update, context): #acompanha um TDPF ou todos os TDPFs e
     return
         
 def montaListaTDPFs(userId, tipo=1):
-    global conn
+    conn = conecta()
+    if not conn:
+        return  ["Erro na conexão"]
     try:
         cursor = conn.cursor(buffered=True)
         comando = "Select CPF from Usuarios Where idTelegram=%s and Saida Is Null"
         cursor.execute(comando, (userId,))
         row = cursor.fetchone()
         if not row:
+            conn.close()
             return None
         cpf = row[0]
         if tipo==1:
@@ -1219,10 +1334,12 @@ def montaListaTDPFs(userId, tipo=1):
             comando = '''Select Alocacoes.TDPF as tdpf, Vencimento from Alocacoes, TDPFs Where Desalocacao Is Null and Encerramento Is Null 
                         and CPF=%s and TDPF=Numero and Supervisor='S' Order by TDPF'''
         else:
+            conn.close()
             return None
         cursor.execute(comando, (cpf,))
         listaAux = cursor.fetchall()
         if not listaAux:
+            conn.close()
             return None
         result = []
     
@@ -1268,10 +1385,13 @@ def montaListaTDPFs(userId, tipo=1):
             result.append(registro)       
         if len(result)>0:
             logging.info(result)
+            conn.close()
             return result
         else:
+            conn.close()
             return None
     except:
+        conn.close()
         return ["Erro na consulta (6). Tente novamente mais tarde."]
             
         
@@ -1369,7 +1489,7 @@ def opcaoMostraSupervisionados(update, context): #Relação de TDPFs supervision
     return
     
 def opcaoEMail(update, context): #cadastra e-mail para o recebimento de avisos
-    global pendencias, conn
+    global pendencias
     
     userId = update.effective_user.id
     bot = update.effective_user.bot       
@@ -1378,17 +1498,23 @@ def opcaoEMail(update, context): #cadastra e-mail para o recebimento de avisos
     if not achou: 
         mostraMenuPrincipal(update, context)         
         return     
+    conn = conecta()
+    if not conn:
+        bot.send_message(userId, text="Erro na conexão - opcaoEmail")
+        return        
     cursor = conn.cursor(buffered=True)
     comando = "Select CPF, email from Usuarios Where Saida Is Null and idTelegram=%s" 
     try:
         cursor.execute(comando, (userId,))
         row = cursor.fetchone()
+        conn.close()
         if not row:
             bot.send_message(userId, text="Usuário não está registrado no serviço ou está inativo. "+textoRetorno)
             return
-        email = row.email
+        email = row[1]
     except:
-        bot.send_message(userId, text="Erro na consulta (7).")        
+        bot.send_message(userId, text="Erro na consulta (7).")  
+        conn.close()      
         return False     
     pendencias[userId] = 'email'     #usuário agora tem uma pendência de informação
     if email!=None and email!="":
@@ -1420,7 +1546,7 @@ def botTelegram():
     updater.dispatcher.add_handler(MessageHandler(Filters.regex('Reativa Usuário'), opcaoUsuario))
     updater.dispatcher.add_handler(MessageHandler(Filters.regex('Cadastra/Exclui e-Mail'), opcaoEMail))
     updater.dispatcher.add_handler(MessageHandler(Filters.regex('Informa Data de Ciência'), opcaoInformaCiencia))
-    updater.dispatcher.add_handler(MessageHandler(Filters.regex('Anula Data Ciência Informada'), opcaoAnulaCiencia))
+    updater.dispatcher.add_handler(MessageHandler(Filters.regex('Anula Data de Ciência Informada'), opcaoAnulaCiencia))
     updater.dispatcher.add_handler(MessageHandler(Filters.regex('Informa Atividade e Prazo'), opcaoInformaAtividade))
     updater.dispatcher.add_handler(MessageHandler(Filters.regex('Anula Atividade Informada'), opcaoAnulaAtividade))
     updater.dispatcher.add_handler(MessageHandler(Filters.regex('Finaliza Monitoramento de TDPF'), opcaoFinalizaAvisos))
@@ -1437,7 +1563,11 @@ def botTelegram():
 ################################################################################
    
 def disparaMensagens():
-    global updater, conn, termina
+    global updater, termina
+
+    conn = conecta()
+    if not conn:
+        return
     logging.info("Acionado o disparo de mensagens - "+datetime.now().strftime('%d/%m/%Y %H:%M'))
     cursor = conn.cursor()
     dataAtual = datetime.today().date()
@@ -1610,7 +1740,31 @@ def disparador():
         #time.sleep(24*60*60) #dorme por 24 horas até verificar se deve fazer o disparo de mensagens 
         #a cada 24h, inicia um arquivo de log diferente
         #logging.basicConfig(filename=dirLog+datetime.now().strftime('%Y-%m-%d %H_%M')+' Bot'+sistema+'.log', format='%(asctime)s - %(message)s', level=logging.INFO, force=True)       
-    return    
+    return 
+
+def conecta():
+    global MYSQL_DATABASE, MYSQL_USER, MYSQL_PASSWORD, hostSrv
+
+    try:
+        logging.info(MYSQL_DATABASE)
+        #logging.info(MYSQL_PASSWORD)
+        logging.info(MYSQL_USER)
+
+        conn = mysql.connector.connect(user=MYSQL_USER, password=MYSQL_PASSWORD,
+                                    host=hostSrv,
+                                    database=MYSQL_DATABASE)
+        return conn                         
+    except mysql.connector.Error as err:
+        print("Erro na conexão com o BD - veja Log")
+        if err.errno == errorcode.ER_ACCESS_DENIED_ERROR:
+            logging.info("Usuário ou senha inválido(s).")
+        elif err.errno == errorcode.ER_BAD_DB_ERROR:
+            logging.error("Banco de dados não existe.")
+        else:
+            logging.error(err)
+            logging.error("Erro na conexão com o Banco de Dados")
+        return None
+
 
 sistema = sys.platform.upper()
 if "WIN32" in sistema or "WIN64" in sistema or "WINDOWS" in sistema:
@@ -1635,29 +1789,12 @@ if token=="ERRO":
     print("Token não informado")
     sys.exit(1)
 
-try:
-    logging.info("Conectando ao servidor de banco de dados ...")
-    logging.info(MYSQL_DATABASE)
-    #logging.info(MYSQL_PASSWORD)
-    logging.info(MYSQL_USER)
-
-    conn = mysql.connector.connect(user=MYSQL_USER, password=MYSQL_PASSWORD,
-                                host=hostSrv,
-                                database=MYSQL_DATABASE)
-    logging.info("Conexão efetuada com sucesso ao MySql!")                               
-
-    #CUIDADO com o comando ACIMA - se o BD não aceitar multiplos cursores, é necessário abrir uma conexão dentro de cada função
-except mysql.connector.Error as err:
-    print("Erro na conexão com o BD - veja Log")
-    if err.errno == errorcode.ER_ACCESS_DENIED_ERROR:
-        logging.info("Usuário ou senha inválido(s).")
-    elif err.errno == errorcode.ER_BAD_DB_ERROR:
-        logging.error("Banco de dados não existe.")
-    else:
-        logging.error(err)
-        logging.error("Erro na conexão com o Banco de Dados")
+logging.info("Conectando ao servidor de banco de dados ...")
+conn = conecta() #não será utilizada - apenas conectamos para ver se está ok
+if not conn:
     sys.exit(1)
-
+logging.info("Conexão efetuada com sucesso ao MySql!")
+conn.close() #cada função criará sua conexão (aqui é só um teste para inicializarmos o Bot)
 #dias de antecedência padrão para avisar
 d1padrao = 30
 d2padrao = 20
@@ -1666,7 +1803,7 @@ d3padrao = 5
 atividadeTxt = {} #guarda o tdpf e o prazo de uma atividade pendente de informação do texto de sua descrição (id: [tdpf, data])
 
 pendencias = {} #indica que próxima função deve ser chamada para analisar entrada de dados
-#cpfRegistro = {} #guarda o cpf do usuário que está se registrando (será usado após validação da chave)
+
 #encaminha a pendência para a função adequada para tratar o input do usuário
 dispatch = { 'registra': registra, 'ciencia': ciencia, 'prazos': prazos, 'acompanha': acompanha,
              'anulaCiencia': anulaCiencia, 'fim': fim, 'email': cadastraEMail,
@@ -1685,5 +1822,4 @@ while not termina:
         if entrada.strip().upper()=="QUIT":
             termina = True
 updater.stop() 
-schedule.clear()        
-conn.close()       
+schedule.clear()            

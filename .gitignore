@@ -4,6 +4,7 @@
 *.env
 *.log
 *.docx
+Dispara*.txt
 /Apache/cert
 /dados
 /botEnv
