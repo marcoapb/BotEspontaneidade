@@ -3,7 +3,7 @@
 *.xlsx
 *.env
 *.log
-*.docx
+*mail*.docx
 Dispara*.txt
 /Apache/cert
 /dados
