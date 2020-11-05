@@ -2,7 +2,7 @@ DROP TABLE IF EXISTS `Alocacoes`;
 
 CREATE TABLE `Alocacoes` (
   `Codigo` INTEGER NOT NULL AUTO_INCREMENT, 
-  `CPF` VARCHAR(14), 
+  `CPF` VARCHAR(11), 
   `TDPF` VARCHAR(16), 
   `Alocacao` DATETIME, 
   `Desalocacao` DATETIME, 
@@ -17,7 +17,7 @@ DROP TABLE IF EXISTS `CadastroTDPFs`;
 
 CREATE TABLE `CadastroTDPFs` (
   `Codigo` INTEGER NOT NULL AUTO_INCREMENT, 
-  `Fiscal` VARCHAR(14), 
+  `Fiscal` VARCHAR(11), 
   `TDPF` VARCHAR(16), 
   `Inicio` DATETIME, 
   `Fim` DATETIME, 
@@ -40,7 +40,7 @@ DROP TABLE IF EXISTS `Fiscais`;
 
 CREATE TABLE `Fiscais` (
   `Codigo` INTEGER NOT NULL AUTO_INCREMENT, 
-  `CPF` VARCHAR(14), 
+  `CPF` VARCHAR(11), 
   `Nome` VARCHAR(255), 
   `Matricula` VARCHAR(20), 
   UNIQUE (`CPF`), 
@@ -68,7 +68,7 @@ DROP TABLE IF EXISTS `Usuarios`;
 
 CREATE TABLE `Usuarios` (
   `Codigo` INTEGER NOT NULL AUTO_INCREMENT, 
-  `CPF` VARCHAR(14), 
+  `CPF` VARCHAR(11), 
   `idTelegram` INTEGER DEFAULT 0, 
   `Adesao` DATETIME, 
   `Saida` DATETIME, 
@@ -101,7 +101,7 @@ DROP TABLE IF EXISTS `AvisosVencimento`;
 CREATE TABLE `AvisosVencimento` (
   `Codigo` INTEGER NOT NULL AUTO_INCREMENT, 
   `TDPF` VARCHAR(16), 
-  `CPF` VARCHAR(14), 
+  `CPF` VARCHAR(11), 
   `Data` DATETIME, 
   PRIMARY KEY (`Codigo`), 
   INDEX (`TDPF`),

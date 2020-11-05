@@ -153,7 +153,9 @@ def registra(update, context): #registra usuário no serviço
             return 
         conn = conecta()
         if not conn:   
-            bot.send_message(userId, text="Erro na conexão - registra")          
+            bot.send_message(userId, text="Erro na conexão - registra")  
+            eliminaPendencia(userId)
+            mostraMenuPrincipal(update, context)                    
             return
         cursor = conn.cursor(buffered=True)
         cursor.execute("Select Codigo, CPF, Chave, Adesao from Usuarios where CPF=%s", (cpf,))  
@@ -295,7 +297,7 @@ def acompanha(update, context): #inicia o monitoramente de um ou de TODOS os TDP
 
 def efetivaAtividade(userId, tdpf, atividade, data): #tenta efetivar uma atividade para um certo tdpf no BD
     conn = conecta()
-    if not conn: 
+    if not conn:         
         return False, "Erro na conexão - efetivaAtividade"
     cursor = conn.cursor(buffered=True)  
     try:
