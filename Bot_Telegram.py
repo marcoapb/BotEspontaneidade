@@ -1410,6 +1410,10 @@ def opcaoMostraTDPFs(update, context): #Relação de TDPFs e prazos
     if lista==None:
         response_message = "Você não monitora nenhum TDPF ou nenhum deles possui data de ciência informada neste serviço."        
     else:
+        if len(lista)==1 and 'str' in type(lista[0]): #só retornou uma mensagem de erro
+            response_message = lista[0]
+            bot.send_message(userId, text=response_message) 
+            return
         i = 1
         msg = ""
         for item in lista:
@@ -1464,6 +1468,10 @@ def opcaoMostraSupervisionados(update, context): #Relação de TDPFs supervision
     if lista==None:
         response_message = "Você não supervisiona nenhum TDPF."        
     else:
+        if len(lista)==1 and 'str' in type(lista[0]):
+            response_message = lista[0]
+            bot.send_message(userId, text=response_message) 
+            return        
         i = 1
         msg = ""
         for item in lista:
