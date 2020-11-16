@@ -238,7 +238,7 @@ def acompanha(update, context): #inicia o monitoramente de um ou de TODOS os TDP
             return             
         info = parametros[0]
         if info.upper().strip() in ["TODOS", "TODAS"]:
-            comando = "Select TDPF from Alocacoes, TDPFs Where Desalocacao Is Null and CPF=%s and TDPF=Numero and Encerramento Is Null"
+            comando = "Select TDPF from Alocacoes, TDPFS Where Desalocacao Is Null and CPF=%s and TDPF=Numero and Encerramento Is Null"
             cursor.execute(comando, (cpf,))
             tdpfs = cursor.fetchall()
             if not tdpfs:
@@ -251,7 +251,7 @@ def acompanha(update, context): #inicia o monitoramente de um ou de TODOS os TDP
                 bot.send_message(userId, text=response_message) 
                 conn.close()
                 return                 
-            comando = "Select TDPF from Alocacoes, TDPFs Where Desalocacao Is Null and CPF=%s and TDPF=%s and TDPF=Numero and Encerramento Is Null"
+            comando = "Select TDPF from Alocacoes, TDPFS Where Desalocacao Is Null and CPF=%s and TDPF=%s and TDPF=Numero and Encerramento Is Null"
             cursor.execute(comando, (cpf, tdpf))
             tdpfs = cursor.fetchall()
             if not tdpfs:
@@ -1327,13 +1327,13 @@ def montaListaTDPFs(userId, tipo=1):
         cpf = row[0]
         if tipo==1:
         #seleciona monitoramentos ativos (incluído pelo usuário, ainda alocado nele e não encerrado)
-            comando = '''Select CadastroTDPFs.TDPF as tdpf, TDPFs.Vencimento as Vencimento, Supervisor from CadastroTDPFs, Alocacoes, 
-                        TDPFs Where CadastroTDPFs.Fiscal=%s and CadastroTDPFs.Fim Is Null and CadastroTDPFs.Fiscal=Alocacoes.CPF and 
-                        CadastroTDPFs.TDPF=Alocacoes.TDPF and CadastroTDPFs.TDPF=TDPFs.Numero and Alocacoes.Desalocacao Is Null and 
-                        TDPFs.Encerramento Is Null'''
+            comando = '''Select CadastroTDPFs.TDPF as tdpf, TDPFS.Vencimento as Vencimento, Supervisor from CadastroTDPFs, Alocacoes, 
+                        TDPFS Where CadastroTDPFs.Fiscal=%s and CadastroTDPFs.Fim Is Null and CadastroTDPFs.Fiscal=Alocacoes.CPF and 
+                        CadastroTDPFs.TDPF=Alocacoes.TDPF and CadastroTDPFs.TDPF=TDPFS.Numero and Alocacoes.Desalocacao Is Null and 
+                        TDPFS.Encerramento Is Null'''
         elif tipo==2:
         #seleciona todos os TDPFs dos quais o usuário é supervisor
-            comando = '''Select Alocacoes.TDPF as tdpf, Vencimento from Alocacoes, TDPFs Where Desalocacao Is Null and Encerramento Is Null 
+            comando = '''Select Alocacoes.TDPF as tdpf, Vencimento from Alocacoes, TDPFS Where Desalocacao Is Null and Encerramento Is Null 
                         and CPF=%s and TDPF=Numero and Supervisor='S' Order by TDPF'''
         else:
             conn.close()
@@ -1344,7 +1344,7 @@ def montaListaTDPFs(userId, tipo=1):
             conn.close()
             return None
         result = []
-    
+
         for linha in listaAux:
             tdpf = linha[0]
             vencimento = linha[1]
@@ -1410,7 +1410,7 @@ def opcaoMostraTDPFs(update, context): #Relação de TDPFs e prazos
     if lista==None:
         response_message = "Você não monitora nenhum TDPF ou nenhum deles possui data de ciência informada neste serviço."        
     else:
-        if len(lista)==1 and 'str' in type(lista[0]): #só retornou uma mensagem de erro
+        if len(lista)==1 and type(lista[0]) is str: #só retornou uma mensagem de erro
             response_message = lista[0]
             bot.send_message(userId, text=response_message) 
             return
@@ -1468,7 +1468,7 @@ def opcaoMostraSupervisionados(update, context): #Relação de TDPFs supervision
     if lista==None:
         response_message = "Você não supervisiona nenhum TDPF."        
     else:
-        if len(lista)==1 and 'str' in type(lista[0]):
+        if len(lista)==1 and type(lista[0]) is str:
             response_message = lista[0]
             bot.send_message(userId, text=response_message) 
             return        
@@ -1654,8 +1654,8 @@ def disparaMensagens():
 
         #selecionamos as datas de vencimento dos TDPFs em que o usuário está alocado, mesmo que não monitorados
         comando = """
-                Select TDPFs.Numero as tdpf, TDPFs.Vencimento as vencimento from TDPFs, Alocacoes
-                Where Alocacoes.CPF=%s and TDPFs.Numero=Alocacoes.TDPF and TDPFs.Encerramento Is Null and 
+                Select TDPFS.Numero as tdpf, TDPFS.Vencimento as vencimento from TDPFS, Alocacoes
+                Where Alocacoes.CPF=%s and TDPFS.Numero=Alocacoes.TDPF and TDPFS.Encerramento Is Null and 
                 Alocacoes.Desalocacao Is Null
                 """        
         cursor.execute(comando, (cpf,))     
