@@ -9,7 +9,7 @@ from datetime import datetime, timedelta
 import re
 import schedule
 import time
-#from random import randint
+from random import randint
 import threading
 import sys
 import os
@@ -158,10 +158,24 @@ def registra(update, context): #registra usuário no serviço
             mostraMenuPrincipal(update, context)                    
             return
         cursor = conn.cursor(buffered=True)
-        cursor.execute("Select Codigo, CPF, Chave, Adesao from Usuarios where CPF=%s", (cpf,))  
+        cursor.execute("Select Codigo, CPF, Chave, Adesao, ValidadeChave, Tentativas from Usuarios where CPF=%s", (cpf,))  
         row = cursor.fetchone()
         if row:
             codigo = row[0]
+            validade = row[4]
+            tentativas = row[5]            
+            if validade<datetime.today().date():
+                eliminaPendencia(userId)                
+                bot.send_message(userId, text="Validade da chave está expirada.") 
+                mostraMenuPrincipal(update, context)  
+                conn.close()  
+                return   
+            if tentativas>3:
+                eliminaPendencia(userId)                               
+                bot.send_message(userId, text="Número de tentativas excedida.") 
+                mostraMenuPrincipal(update, context)  
+                conn.close()  
+                return                                   
             if row[2]==chave:
                 eliminaPendencia(userId) #apaga a pendência de informação do usuário                
                 try:
@@ -175,12 +189,19 @@ def registra(update, context): #registra usuário no serviço
                     response_message = "Usuário registrado/reativado com sucesso."                     
                 except:
                     conn.rollback()
-                    response_message = "Erro ao registrar o usuário no serviço."  
+                    response_message = "Erro ao registrar o usuário no serviço. Tente novamente mais tarde. Se o erro persistir, contacte o suporte."  
                 bot.send_message(userId, text=response_message) 
                 mostraMenuPrincipal(update, context)  
                 conn.close()  
                 return
             else:
+                try:
+                    comando =  "Update Usuarios set Tentativas=%s Codigo=%s"
+                    cursor.execute(comando, ((tentativas+1), codigo))   
+                    conn.commit()  
+                except:
+                    conn.rollback()
+                    logging.info('Erro na atualização de tentativas - registro '+cpf)
                 conn.close()
                 response_message = "Gere a chave primeiramente ou digite-a corretamente. Digite novamente o CPF e o código de registro." +textoRetorno                                   
         else:
@@ -193,6 +214,78 @@ def registra(update, context): #registra usuário no serviço
     bot.send_message(userId, text=response_message)
     return
 
+def enviaEmail(email, chave): #envia a chave de registro para o email do usuário - a implementar (TO DO)
+    return True
+
+def envioChave(update, context): #envia a chave de registro para o e-mail do usuário
+    global pendencias, textoRetorno   
+    response_message = ""
+    userId = update.message.from_user.id   
+    bot = update.effective_user.bot
+    msg = update.message.text    
+    parametros = getParametros(msg)
+    if len(parametros)!=1:
+        response_message = "Número de informações (parâmetros) inválido. Envie somente o CPF do usuário."
+        response_message = response_message+textoRetorno
+        bot.send_message(userId, text=response_message)        
+    else:
+        cpf = getAlgarismos(parametros[0])                   
+        logging.info('Envio chave '+cpf)
+        if not validaCPF(cpf):
+            response_message = "CPF inválido. Envie novamente o CPF do usuário."
+            response_message = response_message+textoRetorno
+            bot.send_message(userId, text=response_message)
+            return 
+        eliminaPendencia(userId)             
+        conn = conecta()                       
+        if not conn:   
+            bot.send_message(userId, text="Erro na conexão - envioChave")  
+            mostraMenuPrincipal(update, context)                    
+            return
+        cursor = conn.cursor(buffered=True)  
+        cursor.execute("Select Codigo, CPF, email, DataEnvio from Usuarios where CPF=%s", (cpf,))  
+        row = cursor.fetchone()
+        if row:
+            codigo = row[0]
+            email = row[2]
+            erro = False
+            if email==None or email=='':
+                bot.send_message(userId, text="CPF não tem e-mail associado na base de dados. Contacte o suporte.")  
+                erro = True             
+            if not verificaEMail(email):
+                bot.send_message(userId, text="O e-mail do usuário é inválido. Contacte o suporte.")  
+                erro = True
+            if not ("@rfb.gov.br" in email):
+                bot.send_message(userId, text="O e-mail do usuário não é institucional. Contacte o suporte.") 
+                erro = True
+            if erro:    
+                conn.close()                 
+                mostraMenuPrincipal(update, context)                    
+                return                 
+            dataEnvio = row[3]
+            if dataEnvio<datetime.today().date():
+                chave = randint(100000, 1000000) #a chave é um número inteiro de seis dígitos
+                sucesso = enviaEmail(email, chave)
+                if sucesso:
+                    comando = "Update Usuarios Set Chave=%s, ValidadeChave=%s, Tentativas=%s, DataEnvio=%s Where Codigo=%s"
+                    validade = datetime.today().date()+timedelta(days=3) #a chave tem validade de 3 dias
+                    try:
+                        cursor.execute(comando, (chave, validade, 0, datetime.today().date(), codigo))
+                        conn.commit()
+                        bot.send_message(userId, text="Chave foi enviada para o e-mail institucional do usuário.")                         
+                    except:
+                        conn.rollback()    
+                        bot.send_message(userId, text="Erro ao inserir a chave na tabela. A chave enviada não será reconhecida. Tente novamente mais tarde. Se o erro persistir, contacte o suporte.")  
+                else:
+                    bot.send_message(userId, text="Houve erro no envio do e-mail. Tente novamente mais tarde. Se o erro persistir, contacte o suporte.")                                            
+            else:
+                bot.send_message(userId, text="A chave já foi enviada hoje - é vedado o reenvio no mesmo dia.")       
+        else:
+            bot.send_message(userId, text="CPF do usuário não foi encontrado na base de dados.")      
+        mostraMenuPrincipal(update, context) 
+        conn.close()    
+    return
+                
 
 def acompanha(update, context): #inicia o monitoramente de um ou de TODOS os TDPFs que o usuário supervisione ou em que esteja alocado
     global pendencias, textoRetorno
@@ -1054,7 +1147,7 @@ def mostraMenuCadastro(update, context):
     if opcao1[:4] == 'Erro':
         bot.send_message(userId, text="Erro na consulta ao seu id")
         return
-    menu = [[opcao1], ['Prazos Para Receber Avisos'], ['Cadastra/Exclui e-Mail'], ['Menu Principal']] 
+    menu = [[opcao1], ['Solicita Chave de Registro'], ['Prazos Para Receber Avisos'], ['Cadastra/Exclui e-Mail'], ['Menu Principal']] 
     #mensagem = bot.send_message(userId, text="Teste apaga mensagem")
     #time.sleep(5)
     #bot.delete_message(userId, mensagem.message_id)
@@ -1161,6 +1254,20 @@ def opcaoUsuario(update, context): #Cadastra usuário
     if conn:
         conn.close()                                                    
     return
+
+def solicitaChaveRegistro(userId, bot): #envia chave de registro para o e-mail institucional do AFRFB (um envio a cada 24h)   
+    global pendencias    
+    userId = update.effective_user.id  
+    bot = update.effective_user.bot      
+    eliminaPendencia(userId)     
+    achou = verificaUsuario(userId, bot)       
+    if achou:              
+        pendencias[userId] = 'envioChave' #usuário agora tem uma pendência de informação (atividade)
+        response_message = "Envie /menu para ver o menu principal. Envie agora, numa única mensagem, o nº do CPF (11 dígitos) do usuário (fiscal):"  
+        bot.send_message(userId, text=response_message)
+    else:
+        mostraMenuPrincipal(update, context) 
+    return    
 
 def verificaUsuario(userId, bot): #verifica se o usuário está cadastrado e ativo no serviço
     global textoRetorno
@@ -1552,6 +1659,7 @@ def botTelegram():
     updater.dispatcher.add_handler(MessageHandler(Filters.regex('Espontaneidade e Atividades Relativas a TDPF'), mostraMenuCienciasAtividades))    
     updater.dispatcher.add_handler(MessageHandler(Filters.regex('Prazos Para Receber Avisos'), opcaoPrazos))
     updater.dispatcher.add_handler(MessageHandler(Filters.regex('Registra Usuário'), opcaoUsuario))
+    updater.dispatcher.add_handler(MessageHandler(Filters.regex('Solicita Chave de Registro'), solicitaChaveRegistro))
     updater.dispatcher.add_handler(MessageHandler(Filters.regex('Desativa Usuário'), opcaoUsuario))
     updater.dispatcher.add_handler(MessageHandler(Filters.regex('Reativa Usuário'), opcaoUsuario))
     updater.dispatcher.add_handler(MessageHandler(Filters.regex('Cadastra/Exclui e-Mail'), opcaoEMail))
@@ -1820,7 +1928,8 @@ pendencias = {} #indica que próxima função deve ser chamada para analisar ent
 #encaminha a pendência para a função adequada para tratar o input do usuário
 dispatch = { 'registra': registra, 'ciencia': ciencia, 'prazos': prazos, 'acompanha': acompanha,
              'anulaCiencia': anulaCiencia, 'fim': fim, 'email': cadastraEMail,
-             'atividade': atividade, 'anulaAtividade': anulaAtividade, 'atividadeTexto': atividadeTexto}
+             'atividade': atividade, 'anulaAtividade': anulaAtividade, 
+             'atividadeTexto': atividadeTexto, 'envioChave': envioChave}
 textoRetorno = "\nEnvie /menu para retornar ao menu principal"
 updater = None #para ser acessível ao disparador de mensagens
 #schedule.every().day.at("07:30").do(disparaMensagens)

@@ -79,6 +79,7 @@ CREATE TABLE `Usuarios` (
   `Chave` INTEGER DEFAULT 0, 
   `ValidadeChave` DATETIME, 
   `Tentativas` INTEGER DEFAULT 0, 
+  `DataEnvio` DATETIME,
   INDEX (`CPF`), 
   INDEX (`idTelegram`), 
   PRIMARY KEY (`Codigo`), 

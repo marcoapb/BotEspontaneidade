@@ -7,6 +7,7 @@ Created on Mon Aug 24 09:26:09 2020
 
 from __future__ import unicode_literals
 import pandas as pd
+import numpy as np
 import sys
 import os
 import logging  
@@ -43,8 +44,10 @@ def realizaCargaDados():
     try:
         dfTdpf = pd.read_excel(dirExcel+"TDPFS.xlsx")
         dfAloc = pd.read_excel(dirExcel+"Alocacoes.xlsx")
+        dfFiscais = pd.read_excel(dirExcel+"Fiscais.xlsx")
+        dfFiscais['CPF']=dfFiscais['CPF'].astype(str) 
     except:
-        logging.info("Arquivos Excel não foram encontrados - TDPFs.xlsx e Alocacoes.xlsx; outra tentativa será feita em 12h") 
+        logging.info("Arquivos Excel não foram encontrados - TDPFs.xlsx, Alocacoes.xlsx ou Fiscais.xlsx; outra tentativa será feita em 12h") 
         return    
 
     MYSQL_ROOT_PASSWORD = os.getenv("MYSQL_ROOT_PASSWORD", "EXAMPLE")
@@ -62,8 +65,6 @@ def realizaCargaDados():
                                     host=hostSrv,
                                     database=MYSQL_DATABASE)
         logging.info("Conexão efetuada com sucesso ao MySql!")                               
-
-        #CUIDADO com o comando ACIMA - se o BD não aceitar multiplos cursores, é necessário abrir uma conexão dentro de cada função
     except mysql.connector.Error as err:
         print("Erro na conexão com o BD - veja Log: "+datetime.now().strftime('%d/%m/%Y %H:%M'))
         if err.errno == errorcode.ER_ACCESS_DENIED_ERROR:
@@ -85,16 +86,20 @@ def realizaCargaDados():
 
     selectTDPF = "Select Codigo, Grupo, Encerramento from TDPFS Where Numero=%s"
     insereTDPF = "Insert Into TDPFS (Numero, Grupo, Emissao, Nome, NI, Vencimento) Values (%s, %s, %s, %s, %s, %s)"
-    atualizaTDPFEnc = "Update TDPFS Set Encerramento=%s Where Código=%s"
-    atualizaTDPFGrupoVencto = "Update TDPFS Set Grupo=%s, Vencimento=%s Where Código=%s"
+    atualizaTDPFEnc = "Update TDPFS Set Encerramento=%s Where Codigo=%s"
+    atualizaTDPFGrupoVencto = "Update TDPFS Set Grupo=%s, Vencimento=%s Where Codigo=%s"
 
     selectAloc = "Select Codigo, Desalocacao from Alocacoes Where TDPF=%s and CPF=%s"
-    insertAloc = "Insert Into Alocacoes (TDPF, CPF, Alocacao) Values (%s, %s, %s)"
-    insertAlocDesaloc = "Insert Into Alocacoes (TDPF, CPF, Alocacao, Desalocacao) Values (%s, %s, %s, %s)"
-    atualizaAloc = "Update Alocacoes Set Desalocacao=%s Where Código=%s"
+    insereAloc = "Insert Into Alocacoes (TDPF, CPF, Alocacao) Values (%s, %s, %s)"
+    insereAlocDesaloc = "Insert Into Alocacoes (TDPF, CPF, Alocacao, Desalocacao) Values (%s, %s, %s, %s)"
+    atualizaAloc = "Update Alocacoes Set Desalocacao=%s Where Codigo=%s"
 
     selectCiencias = "Select * from Ciencias Where TDPF=%s" 
     insereCiencia = "Insert Into Ciencias (TDPF, Data) Values (%s, %s)"
+
+    selectUsuario = "Select Codigo, CPF, email from Usuarios Where CPF=%s"
+    insereUsuario = "Insert Into Usuarios (CPF, email) Values (%s, %s)"
+    updateUsuario = "Update Usuarios Set email=%s Where Codigo=%s"
                     
     logging.info(f"TDPFs: {dfTdpf.shape[0]} linhas e {dfTdpf.shape[1]} colunas")
     logging.info(f"AFRFBs Execução: {dfAloc.shape[0]} linhas e {dfAloc.shape[1]} colunas")
@@ -104,6 +109,8 @@ def realizaCargaDados():
     tabCiencias=0
     tabAloc=0
     tabAlocAtu=0
+    tabUsuarios=0
+    tabUsuariosAtu=0
     gruposAtu=0
     if termina:
         return
@@ -133,6 +140,23 @@ def realizaCargaDados():
             fiscal = df.iat[linha2, 7]
             alocacao = df.iat[linha2, 8]
             desalocacao = df.iat[linha2, 9]
+            dfFiscal = dfFiscais.loc[dfFiscais['CPF']==cpf]
+            email = None
+            if dfFiscal.shape[0]>0:
+                if dfFiscal.iat[0, 4]!=np.nan and dfFiscal.iat[0, 4]!="": #email está na coluna 4 (coluna 'E' do Excel)
+                    email = dfFiscal.iat[0, 4]
+            print(email)        
+            cursor.execute(selectUsuario, (cpf,))
+            regUser = cursor.fetchone()
+            if len(regUser)>0: #achou o usuário - vemos se tem e-mail cadastrado
+                if (regUser[2]==None or regUser[2]=='') and email!=None: #regUser[2] é o email
+                    cursor.execute(updateUsuario, (email, regUser[0]))
+                    tabUsuariosAtu+=1
+                    atualizou = True
+            else: #inserimos o novo usuário
+                cursor.execute(insereUsuario, (cpf, email))       
+                tabUsuarios+=1 
+                atualizou = True
             cursor.execute(selectFisc, (cpf,))
             regFisc = cursor.fetchone()
             if not regFisc:
@@ -145,10 +169,10 @@ def realizaCargaDados():
                 tabAloc+=1
                 if desalocacao=="SD" or desalocacao=="":
                     atualizou = True
-                    cursor.execute(insertAloc, (tdpf, cpf, paraData(alocacao)))
+                    cursor.execute(insereAloc, (tdpf, cpf, paraData(alocacao)))
                 else:
                     atualizou = True
-                    cursor.execute(insertAlocDesaloc, (tdpf, cpf, paraData(alocacao), paraData(desalocacao)))
+                    cursor.execute(insereAlocDesaloc, (tdpf, cpf, paraData(alocacao), paraData(desalocacao)))
             elif regAloc[1]==None and desalocacao!="SD" and desalocacao!="":
                 tabAlocAtu+=1
                 atualizou = True
@@ -190,11 +214,13 @@ def realizaCargaDados():
     logging.info(f"Fiscais: {tabFiscais}")
     logging.info(f"Ciencias: {tabCiencias}")
     logging.info(f"Alocacoes: {tabAloc}")
+    logging.info(f"Usuarios: {tabUsuarios}")    
 
-    logging.info("\nAtualizações:")
+    logging.info("Registros Atualizados:")
     logging.info(f"TDPFs: {tabTdpfsAtu}")
     logging.info(f"Grupos(TDPFs): {gruposAtu}")
     logging.info(f"Alocacoes: {tabAlocAtu}")
+    logging.info(f"Usuarios: {tabUsuariosAtu}")
 
     try:
         os.rename(dirExcel+"TDPFS.xlsx", dirExcel+"TDPFS_Processado_"+datetime.now().strftime('%Y-%m-%d')+".xlsx")
