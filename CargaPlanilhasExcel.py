@@ -38,18 +38,24 @@ def paraData(data):
         return pd.to_datetime(data)
     return None
 
+def acrescentaZero(cpf): 
+    if cpf==None:
+        return  ""
+    if len(cpf)<11:
+        for i in range(len(cpf), 11):
+            cpf = "0"+cpf   
+    return cpf
+
 def realizaCargaDados():
     global dirExcel, termina
-
     try:
         dfTdpf = pd.read_excel(dirExcel+"TDPFS.xlsx")
         dfAloc = pd.read_excel(dirExcel+"Alocacoes.xlsx")
         dfFiscais = pd.read_excel(dirExcel+"Fiscais.xlsx")
-        dfFiscais['CPF']=dfFiscais['CPF'].astype(str) 
     except:
         logging.info("Arquivos Excel não foram encontrados - TDPFs.xlsx, Alocacoes.xlsx ou Fiscais.xlsx; outra tentativa será feita em 12h") 
-        return    
-
+        return 
+    dfFiscais['CPF']=dfFiscais['CPF'].astype(str).map(acrescentaZero) 
     MYSQL_ROOT_PASSWORD = os.getenv("MYSQL_ROOT_PASSWORD", "EXAMPLE")
     MYSQL_DATABASE = os.getenv("MYSQL_DATABASE", "testedb")
     MYSQL_USER = os.getenv("MYSQL_USER", "my_user")
@@ -145,10 +151,10 @@ def realizaCargaDados():
             if dfFiscal.shape[0]>0:
                 if dfFiscal.iat[0, 4]!=np.nan and dfFiscal.iat[0, 4]!="": #email está na coluna 4 (coluna 'E' do Excel)
                     email = dfFiscal.iat[0, 4]
-            print(email)        
+            #print(email)        
             cursor.execute(selectUsuario, (cpf,))
             regUser = cursor.fetchone()
-            if len(regUser)>0: #achou o usuário - vemos se tem e-mail cadastrado
+            if regUser!=None: #achou o usuário - vemos se tem e-mail cadastrado
                 if (regUser[2]==None or regUser[2]=='') and email!=None: #regUser[2] é o email
                     cursor.execute(updateUsuario, (email, regUser[0]))
                     tabUsuariosAtu+=1

@@ -163,8 +163,12 @@ def registra(update, context): #registra usuário no serviço
         if row:
             codigo = row[0]
             validade = row[4]
-            tentativas = row[5]            
-            if validade<datetime.today().date():
+            tentativas = row[5]   
+            if tentativas==None:
+                tentativas = 0   
+            if validade==None:
+                validade = datetime.strptime("31/12/2050", "%d/%m/%Y")                    
+            if validade.date()<datetime.today().date():
                 eliminaPendencia(userId)                
                 bot.send_message(userId, text="Validade da chave está expirada.") 
                 mostraMenuPrincipal(update, context)  
@@ -196,7 +200,7 @@ def registra(update, context): #registra usuário no serviço
                 return
             else:
                 try:
-                    comando =  "Update Usuarios set Tentativas=%s Codigo=%s"
+                    comando =  "Update Usuarios set Tentativas=%s Where Codigo=%s"
                     cursor.execute(comando, ((tentativas+1), codigo))   
                     conn.commit()  
                 except:
@@ -263,6 +267,9 @@ def envioChave(update, context): #envia a chave de registro para o e-mail do usu
                 mostraMenuPrincipal(update, context)                    
                 return                 
             dataEnvio = row[3]
+            if dataEnvio==None:
+                dataEnvio = datetime.strptime("01/01/1900", "%d/%m/%Y")
+            dataEnvio = dataEnvio.date()    
             if dataEnvio<datetime.today().date():
                 chave = randint(100000, 1000000) #a chave é um número inteiro de seis dígitos
                 sucesso = enviaEmail(email, chave)
@@ -1013,8 +1020,8 @@ def fim(update, context): #exclui o TDPF do monitoramento (campo Fim da tabela C
     return
 
 def verificaEMail(email): #valida o e-mail se o usuário informou um completo
-    regex1 = '^[a-z0-9]+[\._]?[a-z0-9]+[@]\w+[.]\w{2,3}$'
-    regex2 = '^[a-z0-9]+[\._]?[a-z0-9]+[@]\w+[.]\w+[.]\w{2,3}$'  
+    regex1 = '^[a-zA-Z0-9]+[\._]?[a-zA-Z0-9]+[@]\w+[.]\w{2,3}$'
+    regex2 = '^[a-zA-Z0-9]+[\._]?[a-zA-Z0-9]+[@]\w+[.]\w+[.]\w{2,3}$'  
 
     if(re.search(regex1,email)):  
         return True   
@@ -1255,18 +1262,16 @@ def opcaoUsuario(update, context): #Cadastra usuário
         conn.close()                                                    
     return
 
-def solicitaChaveRegistro(userId, bot): #envia chave de registro para o e-mail institucional do AFRFB (um envio a cada 24h)   
+def solicitaChaveRegistro(update, context): #envia chave de registro para o e-mail institucional do AFRFB (um envio a cada 24h)   
     global pendencias    
     userId = update.effective_user.id  
     bot = update.effective_user.bot      
-    eliminaPendencia(userId)     
-    achou = verificaUsuario(userId, bot)       
-    if achou:              
-        pendencias[userId] = 'envioChave' #usuário agora tem uma pendência de informação (atividade)
-        response_message = "Envie /menu para ver o menu principal. Envie agora, numa única mensagem, o nº do CPF (11 dígitos) do usuário (fiscal):"  
-        bot.send_message(userId, text=response_message)
-    else:
-        mostraMenuPrincipal(update, context) 
+    eliminaPendencia(userId)  
+    if update.effective_user.is_bot:
+        return #não atendemos bots                    
+    pendencias[userId] = 'envioChave' #usuário agora tem uma pendência de informação (atividade)
+    response_message = "Envie /menu para ver o menu principal. Envie agora, numa única mensagem, o nº do CPF (11 dígitos) do usuário (fiscal) p/ o qual a chave será enviada:"  
+    bot.send_message(userId, text=response_message)
     return    
 
 def verificaUsuario(userId, bot): #verifica se o usuário está cadastrado e ativo no serviço
@@ -1698,7 +1703,7 @@ def disparaMensagens():
         msgCofis = msgCofis+mensagem[0]
     if msgCofis!="":
         msgCofis = "Mensagens Cofis:\n"+msgCofis+"."    
-    comando = "Select idTelegram, CPF, d1, d2, d3 from Usuarios Where Saida Is Null"
+    comando = "Select idTelegram, CPF, d1, d2, d3 from Usuarios Where Adesao Is Not Null and Saida Is Null and idTelegram Is Not Null"
     cursor.execute(comando)
     usuarios = cursor.fetchall()
     totalMsg = 0
