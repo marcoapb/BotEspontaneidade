@@ -18,7 +18,11 @@ import mysql.connector
 from mysql.connector import errorcode
 from telegram.ext import Updater
 from telegram.ext import CommandHandler, CallbackQueryHandler, Filters, MessageHandler
-from telegram import InlineKeyboardButton, InlineKeyboardMarkup, ReplyKeyboardMarkup, KeyboardButton    
+from telegram import InlineKeyboardButton, InlineKeyboardMarkup, ReplyKeyboardMarkup, KeyboardButton 
+
+from email.mime.multipart import MIMEMultipart
+from email.mime.text import MIMEText
+import smtplib
 ############################### Bot ############################################
 
 
@@ -218,7 +222,30 @@ def registra(update, context): #registra usuário no serviço
     bot.send_message(userId, text=response_message)
     return
 
-def enviaEmail(email, chave): #envia a chave de registro para o email do usuário - a implementar (TO DO)
+def enviaEmail(email, chave): #envia a chave de registro para o email do usuário
+    global ambiente
+    try:
+        server = smtplib.SMTP('INETRFOC.RFOC.SRF: 25') #servidor de email Notes
+    except:
+        logging.info("Erro na criação do servidor SMTP (disparaMensagens")
+        return False		
+	# create message object instance
+    msg = MIMEMultipart()
+    message = "Prezado(a),\n\nSua chave sigilosa de registro no Bot Espontaneidade (Telegram) é "+str(chave)+"\n\nAtenciosamente,\n\nDisaf/Cofis\n\nAmbiente: "+ambiente    
+    # setup the parameters of the message
+    msg['From'] = "botespontaneidade@rfb.gov.br"
+    msg['To'] = email
+    msg['Subject'] = "Chave de Registro - Bot Espontaneidade"  
+    # add in the message body
+    msg.attach(MIMEText(message, 'plain'))        
+    # send the message via the server.
+    try:
+        server.sendmail(msg['From'], msg['To'], msg.as_string())
+    except:
+        logging.info("Erro no envio de email da chave - "+email)
+        server.quit()
+        return False  
+    server.quit()    
     return True
 
 def envioChave(update, context): #envia a chave de registro para o e-mail do usuário
@@ -254,13 +281,13 @@ def envioChave(update, context): #envia a chave de registro para o e-mail do usu
             email = row[2]
             erro = False
             if email==None or email=='':
-                bot.send_message(userId, text="CPF não tem e-mail associado na base de dados. Contacte o suporte.")  
+                bot.send_message(userId, text="CPF não tem e-mail associado na base de dados. Contacte o suporte ou cadastre um na opção 'Cadastros -> Cadastra/Exclui e-Mail' se você já estiver registrado no serviço.")  
                 erro = True             
-            if not verificaEMail(email):
-                bot.send_message(userId, text="O e-mail do usuário é inválido. Contacte o suporte.")  
+            elif not verificaEMail(email):
+                bot.send_message(userId, text="O e-mail do usuário é inválido. Contacte o suporte ou exclua o atual e cadastre um novo na opção 'Cadastros -> Cadastra/Exclui e-Mail' se você já estiver registrado no serviço.")
                 erro = True
-            if not ("@rfb.gov.br" in email):
-                bot.send_message(userId, text="O e-mail do usuário não é institucional. Contacte o suporte.") 
+            elif not ("@rfb.gov.br" in email):
+                bot.send_message(userId, text="O e-mail do usuário não é institucional. Contacte o suporte ou exclua o atual e cadastre um novo na opção 'Cadastros -> Cadastra/Exclui e-Mail' se você já estiver registrado no serviço.")
                 erro = True
             if erro:    
                 conn.close()                 
@@ -412,7 +439,7 @@ def efetivaAtividade(userId, tdpf, atividade, data): #tenta efetivar uma ativida
                 return False, "TDPF foi encerrado - monitoramento não é mais necessário ou possível, inclusive registro de atividade."
         if not achou:    
             conn.close()
-            return False, "TDPF não foi localizado - não existe ou foi encerrado há um bom tempo e retirado da base deste serviço."
+            return False, "TDPF não foi localizado - não existe ou foi encerrado há um certo tempo e retirado da base deste serviço."
         comando = "Select CPF, Saida from Usuarios Where idTelegram=%s"
         cursor.execute(comando, (userId,))
         row = cursor.fetchone()
@@ -491,16 +518,18 @@ def atividadeTexto(update, context): #obtém a descrição da atividade e chama 
             mostraMenuPrincipal(update, context)
             return     
         efetivou, msgAtividade = efetivaAtividade(userId, atividadeTxt[userId][0], atividade, atividadeTxt[userId][1])
+        eliminaPendencia(userId) #apaga a pendência de informação do usuário        
         if efetivou:
-            eliminaPendencia(userId) #apaga a pendência de informação do usuário
             response_message = "Atividade registrada para o TDPF."
             if msgAtividade!=None and msgAtividade!="":
                 response_message = response_message+msgAtividade
-            bot.send_message(userId, text=response_message) 
-            mostraMenuPrincipal(update, context)
-            return
         else:
-            response_message = msgAtividade+textoRetorno  
+            if msgAtividade==None or msgAtividade=='':
+                msgAtividade = "Erro ao registrar a atividade. Tente novamente mais tarde."
+            response_message = msgAtividade  #como são digitadas duas informações, desprezamos e retornamos ao menu pois o erro pode estar na anterior
+        bot.send_message(userId, text=response_message) 
+        mostraMenuPrincipal(update, context)
+        return            
     bot.send_message(userId, text=response_message)  
     return                
 
@@ -665,7 +694,7 @@ def efetivaCiencia(userId, tdpf, data): #tenta efetivar a ciência de um tdpf no
                 return False, "TDPF foi encerrado - monitoramento não é mais necessário ou possível."
         if not achou:    
             conn.close()
-            return False, "TDPF não foi localizado - não existe ou foi encerrado há um bom tempo e retirado da base deste serviço."
+            return False, "TDPF não foi localizado - não existe ou foi encerrado há um certo tempo e retirado da base deste serviço."
         comando = "Select CPF, Saida from Usuarios Where idTelegram=%s"
         cursor.execute(comando, (userId,))
         row = cursor.fetchone()
@@ -733,6 +762,7 @@ def efetivaCiencia(userId, tdpf, data): #tenta efetivar a ciência de um tdpf no
 
 def ciencia(update, context): #critica e tenta efetivar a ciência de um TDPF (registrar data)
     global pendencias, textoRetorno
+    msgCiencia = "Envie novamente o TDPF e a data de ciência (dd/mm/aaaa) (separados por espaço)."
     userId = update.message.from_user.id   
     bot = update.effective_user.bot
     msg = update.message.text    
@@ -746,38 +776,38 @@ def ciencia(update, context): #critica e tenta efetivar a ciência de um TDPF (r
         if data.isdigit() and len(data)==8:
             data = data[:2]+"/"+data[2:4]+"/"+data[4:]
         if len(tdpf)!=16 or not tdpf.isdigit():
-            response_message = "TDPF inválido. Envie novamente o TDPF (16 dígitos) e a data de ciência (separados por espaço)."
+            response_message = "TDPF inválido. "+msgCiencia
             response_message = response_message+textoRetorno            
         elif not isDate(data):
-            response_message = "Data inválida. Envie novamente o TDPF e a data de ciência (dd/mm/aaaa) (separados por espaço)."
+            response_message = "Data inválida. "+msgCiencia
             response_message = response_message+textoRetorno
         else:
             try:
                 dateTimeObj = datetime.strptime(data, '%d/%m/%Y')
             except: #não deveria acontecer após o isDate, mas fazemos assim para não correr riscos
                 logging.info("Erro na conversão da data "+data+" - UserId "+str(userId))
-                response_message = "Erro na conversão da data. Envie novamente o TDPF e a data de ciência (dd/mm/aaaa) (separados por espaço)."
+                response_message = "Erro na conversão da data. "+msgCiencia
                 response_message = response_message+textoRetorno   
                 bot.send_message(userId, text=response_message)  
                 return                
             if dateTimeObj.date()>datetime.now().date():
-                response_message = "Data de ciência não pode ser futura. Envie novamente o TDPF e outra data de ciência (separados por espaço)."
+                response_message = "Data de ciência não pode ser futura. "+msgCiencia
                 response_message = response_message+textoRetorno                    
             elif dateTimeObj.date()<datetime.now().date()-timedelta(days=60):
-                response_message = "Data de ciência já está vencida para fins de recuperação da espontaneidade tributária. Envie novamente o TDPF e outra data de ciência (separados por espaço)."
+                response_message = "Data de ciência já está vencida para fins de recuperação da espontaneidade tributária. "+msgCiencia
                 response_message = response_message+textoRetorno
             else:    
-                efetivou, msgCiencia = efetivaCiencia(userId, tdpf, data)
+                efetivou, msgEfetivaCiencia = efetivaCiencia(userId, tdpf, data)
                 if efetivou:
                     eliminaPendencia(userId) #apaga a pendência de informação do usuário
                     response_message = "Data de ciência registrada para o TDPF."
-                    if msgCiencia!=None and msgCiencia!="":
-                        response_message = response_message+msgCiencia
+                    if msgEfetivaCiencia!=None and msgEfetivaCiencia!="":
+                        response_message = response_message+msgEfetivaCiencia
                     bot.send_message(userId, text=response_message) 
                     mostraMenuPrincipal(update, context)
                     return
                 else:
-                    response_message = msgCiencia+textoRetorno                              
+                    response_message = msgEfetivaCiencia+" "+msgCiencia+textoRetorno                              
     bot.send_message(userId, text=response_message)  
     return 
 
@@ -1080,6 +1110,7 @@ def cadastraEMail(update, context): #cadastra o e-mail institucional
                 cpf = row[1]
                 cpf = cpf[:3]+"."+cpf[3:6]+"."+cpf[6:9]+"-"+cpf[9:]
                 emailAnt = row[2]
+                eliminaPendencia(userId) #apaga a pendência de informação do usuário                 
                 if email.upper()=="NULO" and (emailAnt==None or emailAnt==""):
                     response_message = "Usuário não tinha e-mail cadastrado no serviço."
                     bot.send_message(userId, text=response_message) 
@@ -1092,14 +1123,13 @@ def cadastraEMail(update, context): #cadastra o e-mail institucional
                         cursor.execute(comando, (chave,))
                     else:    
                         comando = "Update Usuarios Set email=%s Where Codigo=%s"  
-                        cursor.execute(comando, (email, chave))
-                    conn.commit()
-                    eliminaPendencia(userId) #apaga a pendência de informação do usuário                    
+                        cursor.execute(comando, (email+'@rfb.gov.br', chave))
+                    conn.commit()                   
                     if emailAnt!=None and emailAnt!="":
                         if email.upper()=="NULO":
-                            response_message = "Email anteriormente informado ("+emailAnt+"@rfb.gov.br) foi descadastrado."
+                            response_message = "Email anteriormente informado ("+emailAnt+") foi descadastrado."
                         else:    
-                            response_message = "Email anteriormente cadastrado ("+emailAnt+"@rfb.gov.br) foi substituído.\n"                
+                            response_message = "Email anteriormente cadastrado ("+emailAnt+") foi substituído.\n"                
                     if email.upper()!="NULO":
                         response_message = response_message+"Email cadastrado com sucesso - {}@rfb.gov.br.".format(email)    
                     bot.send_message(userId, text=response_message) 
@@ -1108,7 +1138,10 @@ def cadastraEMail(update, context): #cadastra o e-mail institucional
                     return 
                 except:
                     conn.close()
-                    response_message = "Erro na atualização das tabelas."+textoRetorno
+                    response_message = "Erro na atualização das tabelas. Tente novamente mais tarde."
+                    bot.send_message(userId, text=response_message) 
+                    mostraMenuPrincipal(update, context)  
+                    return                  
     bot.send_message(userId, text=response_message)  
     return
 
@@ -1510,7 +1543,7 @@ def montaListaTDPFs(userId, tipo=1):
             
         
 def opcaoMostraTDPFs(update, context): #Relação de TDPFs e prazos
-    global pendencias    
+    global pendencias, ambiente    
     userId = update.effective_user.id
     bot = update.effective_user.bot      
     eliminaPendencia(userId) 
@@ -1553,6 +1586,8 @@ def opcaoMostraTDPFs(update, context): #Relação de TDPFs e prazos
       
         response_message = "TDPFs Monitorados Por Você (somente):\na) TDPF; b) Supervisor; c) Data da última ciência; d) Dias restantes p/ recuperação da espontaneidade; e) Dias restantes para o vencto. do TDPF:"
         response_message = response_message+msg
+        if ambiente=="TESTE":
+            response_message = response_message+"\n\nAmbiente: "+ambiente
         bot.send_message(userId, text=response_message)  
         response_message = ""         
         msg = ""
@@ -1561,14 +1596,16 @@ def opcaoMostraTDPFs(update, context): #Relação de TDPFs e prazos
             for registro in atividade[1]:
                 msg = msg + "\na) "+atividade[0]+"; b) "+str(registro[0])+"; c) "+registro[1]+"; d) "+registro[2].strftime('%d/%m/%Y')
         if msg!="":
-            response_message = "Lista de atividades dos TDPFs Monitorados:\na)TDPF; b) Código; c) Descrição; d) Vencimento" + msg    
+            response_message = "Lista de atividades dos TDPFs Monitorados:\na)TDPF; b) Código; c) Descrição; d) Vencimento" + msg 
+            if ambiente=="TESTE":
+                response_message = response_message+"\n\nAmbiente: "+ambiente			
     if response_message!="":        
         bot.send_message(userId, text=response_message)
     mostraMenuPrincipal(update, context)
     return
 
 def opcaoMostraSupervisionados(update, context): #Relação de TDPFs supervisionados pelo usuário
-    global pendencias    
+    global pendencias, ambiente
     userId = update.effective_user.id
     bot = update.effective_user.bot      
     eliminaPendencia(userId) 
@@ -1606,6 +1643,8 @@ def opcaoMostraSupervisionados(update, context): #Relação de TDPFs supervision
         logging.info(lista)
         response_message = "TDPFs Supervisionados Por Você (somente):\na) TDPF; b) Monitorado Por Algum Fiscal; c) Data da última ciência; d) Dias restantes p/ recuperação da espontaneidade; e) Dias restantes para o vencto. do TDPF:"
         response_message = response_message+msg
+        if ambiente=="TESTE":
+            response_message = response_message+"\n\nAmbiente: "+ambiente		
     bot.send_message(userId, text=response_message)
     mostraMenuPrincipal(update, context)
     return
@@ -1640,7 +1679,7 @@ def opcaoEMail(update, context): #cadastra e-mail para o recebimento de avisos
         return False     
     pendencias[userId] = 'email'     #usuário agora tem uma pendência de informação
     if email!=None and email!="":
-        response_message = "Envie /menu para ver o menu principal. Email atualmente cadastrado - "+email+"@rfb.gov.br. Informe seu novo nome de usuário do endereço de e-mail institucional ou a palavra NULO para descadastrar o atual (exemplo - se seu e-mail é fulano@rfb.gov.br, envie fulano):"
+        response_message = "Envie /menu para ver o menu principal. Email atualmente cadastrado - "+email+". Informe seu novo nome de usuário do endereço de e-mail institucional ou a palavra NULO para descadastrar o atual (exemplo - se seu e-mail é fulano@rfb.gov.br, envie fulano):"
     else:    
         response_message = "Envie /menu para ver o menu principal. Envie agora seu nome de usuário do endereço de e-mail institucional no qual você também receberá alertas (exemplo - se seu e-mail é fulano@rfb.gov.br, envie fulano):"
     bot.send_message(userId, text=response_message)  
@@ -1650,14 +1689,16 @@ def opcaoEMail(update, context): #cadastra e-mail para o recebimento de avisos
 
 ############################# Handlers #########################################
 def botTelegram():
-    global updater, token
+    global updater, token, senhaAvisoUrgente
+    logging.info('Tentando iniciar o Updater Telegram')
     updater = Updater(token, use_context=True) 
     
     updater.dispatcher.add_handler(CommandHandler('start', start))
     #updater.dispatcher.add_handler(CallbackQueryHandler(menuTDPF))    
     updater.dispatcher.add_handler(CommandHandler('menu', start))
     updater.dispatcher.add_handler(CommandHandler('retorna', start)) 
-    
+    if len(senhaAvisoUrgente)>=6:
+        updater.dispatcher.add_handler(MessageHandler(Filters.regex('DisparaAvisoUrgente178'+senhaAvisoUrgente), disparaAvisoUrgente))
     updater.dispatcher.add_handler(MessageHandler(Filters.regex('Menu Principal'), mostraMenuPrincipal))
     updater.dispatcher.add_handler(MessageHandler(Filters.regex('Cadastros'), mostraMenuCadastro))
     updater.dispatcher.add_handler(MessageHandler(Filters.regex('TDPF - Monitoramento'), mostraMenuTDPF))
@@ -1684,10 +1725,73 @@ def botTelegram():
     logging.info('Serviço iniciado - '+datetime.now().strftime('%d/%m/%Y %H:%M'))
     #updater.idle()    #não é necessário pq o programa vai ficar rodando em loop infinito
 ################################################################################
-   
-def disparaMensagens():
-    global updater, termina
 
+def disparaAvisoUrgente(update, context): #avisos urgentes disparados por comando no Bot (exige comando especifico e senha)
+    global updater, ambiente
+    conn = conecta()
+    userId = update.effective_user.id
+    if not conn:
+        updater.bot.send_message(userId, "Erro na conexão ao banco de dados")
+        return
+    logging.info("Acionado o disparo de mensagens URGENTES - "+datetime.now().strftime('%d/%m/%Y %H:%M'))
+    cursor = conn.cursor()
+    dataAtual = datetime.today()
+    cursor.execute('Select Mensagem from AvisosUrgentes Where DataEnvio Is Null')    
+    mensagens = cursor.fetchall()
+    if not mensagens:
+        msgErro = "Não há mensagem a ser enviada"
+        logging.info(msgErro) 
+        updater.bot.send_message(userId, msgErro)
+        return #não há mensagens a serem enviadas
+    msgCofis = ""
+    for mensagem in mensagens:
+        if msgCofis!="":
+            msgCofis = msgCofis+";\n"
+        msgCofis = msgCofis+mensagem[0]
+    if msgCofis!="":
+        msgCofis = "Mensagem URGENTE Cofis:\n"+msgCofis+"."  
+        if ambiente=="TESTE":
+            msgCofis = msgCofis + "\nAmbiente: "+ambiente
+    else:
+        msgErro = "Não há mensagem a ser enviada (2)"
+        logging.info(msgErro) 
+        updater.bot.send_message(userId, msgErro)        
+        return
+    comando = "Select idTelegram from Usuarios Where Saida Is Null and idTelegram Is Not Null and Adesao Is Not Null"
+    cursor.execute(comando)
+    usuarios = cursor.fetchall()
+    totalMsg = 0
+    msgDisparadas = 0
+    for usuario in usuarios: #percorremos os usuários ativos Telegram
+        updater.bot.send_message(usuario[0], text=msgCofis)   
+        totalMsg+=1
+        msgDisparadas+=1
+        if msgDisparadas>=30:
+            msgDisparadas = 0
+            time.sleep(1) #a cada 30 mensagens, dormimos um segundo (limitação do Bot é 30 por seg - TESTE) 
+    msgErro = "Total de usuários para os quais foi enviada a mensagem (AvisoUrgente) no ambiente "+ambiente+": "+str(totalMsg)
+    logging.info(msgErro) 
+    updater.bot.send_message(userId, msgErro)     
+    updater.bot.send_message(userId, "Mensagem que foi enviada para cada usuário:\n'"+msgCofis+"'")  
+    try:
+        comando = "Update AvisosUrgentes Set DataEnvio=%s Where DataEnvio Is Null"
+        cursor.execute(comando, (dataAtual,))
+        conn.commit()
+    except:
+        msgErro = "Erro ao atualizar a tabela de AvisosUrgentes - datas de envio ficaram em branco. Cuidado para não reenviar."
+        logging.info(msgErro)
+        updater.bot.send_message(userId, msgErro)         
+        conn.rollback()
+    return
+
+def disparaMensagens():
+    global updater, termina, ambiente
+		
+    try:
+        server = smtplib.SMTP('INETRFOC.RFOC.SRF: 25') #servidor de email Notes
+    except:
+        logging.info("Erro na criação do servidor SMTP (disparaMensagens")
+        server = None        
     conn = conecta()
     if not conn:
         return
@@ -1703,7 +1807,7 @@ def disparaMensagens():
         msgCofis = msgCofis+mensagem[0]
     if msgCofis!="":
         msgCofis = "Mensagens Cofis:\n"+msgCofis+"."    
-    comando = "Select idTelegram, CPF, d1, d2, d3 from Usuarios Where Adesao Is Not Null and Saida Is Null and idTelegram Is Not Null"
+    comando = "Select idTelegram, CPF, d1, d2, d3, email from Usuarios Where Adesao Is Not Null and Saida Is Null and idTelegram Is Not Null"
     cursor.execute(comando)
     usuarios = cursor.fetchall()
     totalMsg = 0
@@ -1712,6 +1816,8 @@ def disparaMensagens():
     tdpfsAvisadosInsert = set()
     for usuario in usuarios: #percorremos os usuários ativos Telegram
         if termina: #programa foi informado de que é para encerrar (quit)
+            if server:
+                server.quit()
             return
         logging.info("Verificando disparo para "+usuario[1])
         #if usuario.CPF=="53363833172": #me excluo do envio de mensagens - só para testes
@@ -1725,6 +1831,7 @@ def disparaMensagens():
         d1 = usuario[2]
         d2 = usuario[3]
         d3 = usuario[4]
+        email = usuario[5]
         #selecionamos os TDPFs do usuário em andamento e monitorados (ativos) pelo serviço
         comando = """
                 Select CadastroTDPFs.TDPF as tdpf
@@ -1751,7 +1858,7 @@ def disparaMensagens():
                     prazoRestante = (dataCiencia+timedelta(days=60)-dataAtual).days                
                     if prazoRestante==d1 or prazoRestante==d2 or prazoRestante==d3:
                         if len(listaUsuario)==0:
-                            listaUsuario = "Alertas do dia (TDPF | Dias*):"
+                            listaUsuario = "Alertas do dia (TDPF | Dias Restantes):"
                         listaUsuario = listaUsuario+"\n"+formataTDPF(tdpf)+ " | "+str(prazoRestante)+" (a)"
            
                 #buscamos as atividades do TDPF    
@@ -1761,7 +1868,7 @@ def disparaMensagens():
                     prazoRestante = (atividade[1].date()-dataAtual).days
                     if prazoRestante==0 or prazoRestante==d3: #para atividade, alertamos só no d3 (o menor) e no dia do vencimento (prazo restante == 0)
                         if len(listaUsuario)==0:
-                            listaUsuario = "Alertas do dia (TDPF | Dias*):"
+                            listaUsuario = "Alertas do dia (TDPF | Dias Restantes):"
                         listaUsuario = listaUsuario+"\n"+formataTDPF(tdpf)+" | "+str(prazoRestante)+" (b)"
                         listaUsuario = listaUsuario+"\nAtividade: "+atividade[0]
 
@@ -1801,12 +1908,11 @@ def disparaMensagens():
                         podeAvisar = False                      
                 if podeAvisar: #verificar este prazos quando for colocar em produção
                     if len(listaUsuario)==0:
-                        listaUsuario = "Alertas do dia (TDPF | Dias*):"
+                        listaUsuario = "Alertas do dia (TDPF | Dias Restantes):"
                     listaUsuario = listaUsuario+"\n"+formataTDPF(tdpf)+ " | "+str(prazoVenctoTDPF)+" (c)"                 
 
         if len(listaUsuario)>0 or msgCofis!="":
             if len(listaUsuario)>0:
-                listaUsuario = listaUsuario+"\n*Dias restantes"
                 listaUsuario = listaUsuario+"\n(a) P/ recuperação da espontaneidade tributária."
                 listaUsuario = listaUsuario+"\n(b) P/ vencimento da Atividade."            
                 listaUsuario = listaUsuario+"\n(c) P/ vencimento do TDPF no Ação Fiscal."
@@ -1814,8 +1920,27 @@ def disparaMensagens():
                 if len(listaUsuario)>0:
                     listaUsuario = listaUsuario+"\n\n"
                 listaUsuario = listaUsuario+msgCofis
+            if ambiente=="TESTE":
+                listaUsuario = listaUsuario+"\n\nAmbiente: "+ambiente
             logging.info("Disparando mensagem para "+cpf)
-            updater.bot.send_message(usuario[0], text=listaUsuario)   
+            updater.bot.send_message(usuario[0], text=listaUsuario)  
+			#enviamos e-mail também, se houver um na tabela
+            if email!=None and server!=None:
+                email = email.strip()
+                if email!="":
+                    # create message object instance
+                    msg = MIMEMultipart()               
+                    # setup the parameters of the e-mail message
+                    msg['From'] = "botespontaneidade@rfb.gov.br"
+                    msg['Subject'] = "BotEspontaneidade - Avisos e Alertas do Dia"                    
+                    msg['To'] = email			
+					# add in the message body
+                    msg.attach(MIMEText(listaUsuario, 'plain'))				
+					# send the message via the server.
+                    try:
+                        server.sendmail(msg['From'], msg['To'], msg.as_string())
+                    except:
+                        logging.info("Erro no envio de email com os avisos do dia - "+email)							
             #logging.info(listaUsuario)            
             totalMsg+=1
             msgDisparadas+=1
@@ -1855,26 +1980,31 @@ def disparaMensagens():
         except:
             logging.info("Erro ao tentar atualizar as datas de aviso na tabela AvisosVencimento.")
             conn.rollback()
+    if server:
+        server.quit()            
     return
 
 
 def disparador():
-    global termina, dirLog, sistema
+    global termina, dirLog, sistema, ambiente
+    logging.info("Disparador (thread) iniciado ...")
     while not termina:
         schedule.run_pending() 
-        time.sleep(60) #remover isso e 'descomentar' as linhas abaixo
-        #time.sleep(24*60*60) #dorme por 24 horas até verificar se deve fazer o disparo de mensagens 
-        #a cada 24h, inicia um arquivo de log diferente
-        #logging.basicConfig(filename=dirLog+datetime.now().strftime('%Y-%m-%d %H_%M')+' Bot'+sistema+'.log', format='%(asctime)s - %(message)s', level=logging.INFO, force=True)       
+        logging.info("Disparador (thread) indo 'dormir'")
+        if ambiente=='TESTE':
+            time.sleep(60*30) #dorme por 30 minutos
+        else:    
+            time.sleep(24*60*60) #dorme por 24 horas até verificar se deve fazer o disparo de mensagens; a cada 24h, inicia um arquivo de log diferente
+            logging.basicConfig(filename=dirLog+datetime.now().strftime('%Y-%m-%d %H_%M')+' Bot'+sistema+'.log', format='%(asctime)s - %(message)s', level=logging.INFO, force=True)       
     return 
 
 def conecta():
     global MYSQL_DATABASE, MYSQL_USER, MYSQL_PASSWORD, hostSrv
 
     try:
-        logging.info(MYSQL_DATABASE)
+        #logging.info("BD: "+MYSQL_DATABASE)
         #logging.info(MYSQL_PASSWORD)
-        logging.info(MYSQL_USER)
+        #logging.info("User: "+MYSQL_USER)
 
         conn = mysql.connector.connect(user=MYSQL_USER, password=MYSQL_PASSWORD,
                                     host=hostSrv,
@@ -1890,7 +2020,6 @@ def conecta():
             logging.error(err)
             logging.error("Erro na conexão com o Banco de Dados")
         return None
-
 
 sistema = sys.platform.upper()
 if "WIN32" in sistema or "WIN64" in sistema or "WINDOWS" in sistema:
@@ -1909,7 +2038,9 @@ MYSQL_DATABASE = os.getenv("MYSQL_DATABASE", "testedb")
 MYSQL_USER = os.getenv("MYSQL_USER", "my_user")
 MYSQL_PASSWORD = os.getenv("MYSQL_PASSWORD", "mypass1234")
 token = os.getenv("TOKEN", "ERRO")
-
+ambiente = os.getenv("AMBIENTE", "TESTE")
+senhaAvisoUrgente = os.getenv("AVISOURGENTE", "760714")
+logging.info("Ambiente: "+ambiente)
 if token=="ERRO":
     logging.error("Token do Bot Telegram não foi fornecido.")
     print("Token não informado")
@@ -1920,6 +2051,9 @@ conn = conecta() #não será utilizada - apenas conectamos para ver se está ok
 if not conn:
     sys.exit(1)
 logging.info("Conexão efetuada com sucesso ao MySql!")
+logging.info("BD: "+MYSQL_DATABASE)
+#logging.info(MYSQL_PASSWORD)
+logging.info("User: "+MYSQL_USER)
 conn.close() #cada função criará sua conexão (aqui é só um teste para inicializarmos o Bot)
 #dias de antecedência padrão para avisar
 d1padrao = 30
@@ -1938,7 +2072,11 @@ dispatch = { 'registra': registra, 'ciencia': ciencia, 'prazos': prazos, 'acompa
 textoRetorno = "\nEnvie /menu para retornar ao menu principal"
 updater = None #para ser acessível ao disparador de mensagens
 #schedule.every().day.at("07:30").do(disparaMensagens)
-schedule.every(1).minutes.do(disparaMensagens)
+if ambiente=="TESTE":
+    schedule.every(30).minutes.do(disparaMensagens) #deixamos enviar msgs a cada 30 min no ambiente de testes
+else:
+	schedule.every().day.at("07:30").do(disparaMensagens) #uma vez por dia - produção
+
 termina = False
 botTelegram()
 threadDisparador = threading.Thread(target=disparador, daemon=True) #encerra thread quando sair do programa sem esperá-la
@@ -1949,4 +2087,5 @@ while not termina:
         if entrada.strip().upper()=="QUIT":
             termina = True
 updater.stop() 
-schedule.clear()            
+schedule.clear() 
+       
