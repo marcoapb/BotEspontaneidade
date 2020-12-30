@@ -323,6 +323,8 @@ def envioChave(update, context): #envia a chave de registro para o e-mail do usu
 
 def acompanha(update, context): #inicia o monitoramente de um ou de TODOS os TDPFs que o usuário supervisione ou em que esteja alocado
     global pendencias, textoRetorno
+    bot = update.effective_user.bot
+    userId = update.message.from_user.id      
     conn = conecta()
     if not conn: 
         response_message = "Erro na conexão - acompanha."
@@ -330,9 +332,7 @@ def acompanha(update, context): #inicia o monitoramente de um ou de TODOS os TDP
         eliminaPendencia(userId)
         mostraMenuPrincipal(update, context)
         return    
-    cursor = conn.cursor(buffered=True)    
-    userId = update.message.from_user.id   
-    bot = update.effective_user.bot
+    cursor = conn.cursor(buffered=True)     
     msg = update.message.text    
     parametros = getParametros(msg)
     if len(parametros)!=1:
@@ -1146,7 +1146,7 @@ def cadastraEMail(update, context): #cadastra o e-mail institucional
     return
 
 
-def start(update, context):
+def start(update, context): #comandos /start /menu /retorna acionam esta opção
     global pendencias
     
     userId = update.message.from_user.id  
@@ -1155,9 +1155,12 @@ def start(update, context):
     if update.effective_user.is_bot:
         return #não atendemos bots     
     eliminaPendencia(userId)
-    bot.send_message(userId, text='Este serviço monitora os prazos restantes para que o contribuinte readquira'+
-                     ' a espontaneidade tributária dos TDPFs informados e avisa o usuário com antecedência'+
-                     ' em 3 datas distintas. Digite a qualquer momento /menu para ver o menu principal.')
+    bot.send_message(userId, text='Este serviço controla os prazos restantes para que o contribuinte readquira'+
+                     ' a espontaneidade tributária dos TDPFs monitorados e avisa o usuário com antecedência'+
+                     ' em 3 prazos distintos (d1 [maior], d2 e d3 [menor] dias antes). Também alerta o usuário sobre'+
+                     ' vencimentos de TDPFs em duas datas distintas (separadas por não menos do que 8 dias e quando o vencimento se der em até 15 dias)'+
+                     ' e de atividades cadastradas (em d3 dias antes e no dia do vencimento).'+
+                     ' Digite a qualquer momento /menu para ver o menu principal.')
     mostraMenuPrincipal(update, context)
     return
   
@@ -1182,6 +1185,8 @@ def unknown(update, context):
 def mostraMenuCadastro(update, context):
     global pendencias
     userId = update.effective_user.id   
+    if update.effective_user.is_bot:
+        return #não atendemos bots      
     opcao1 =  tipoOpcao1(userId) 
     bot = update.effective_user.bot     
     if opcao1[:4] == 'Erro':
@@ -1191,9 +1196,7 @@ def mostraMenuCadastro(update, context):
     #mensagem = bot.send_message(userId, text="Teste apaga mensagem")
     #time.sleep(5)
     #bot.delete_message(userId, mensagem.message_id)
-    #return
-    if update.effective_user.is_bot:
-        return #não atendemos bots                
+    #return              
     update.message.reply_text("Menu Cadastro:", reply_markup=ReplyKeyboardMarkup(menu, one_time_keyboard=True)) 
     return 
 
@@ -1261,7 +1264,8 @@ def tipoOpcao1(userId):
 
 def opcaoUsuario(update, context): #Cadastra usuário
     global pendencias
-    
+    if update.effective_user.is_bot:
+        return #não atendemos bots      
     userId = update.effective_user.id
     bot = update.effective_user.bot     
     eliminaPendencia(userId)     
@@ -1298,10 +1302,10 @@ def opcaoUsuario(update, context): #Cadastra usuário
 def solicitaChaveRegistro(update, context): #envia chave de registro para o e-mail institucional do AFRFB (um envio a cada 24h)   
     global pendencias    
     userId = update.effective_user.id  
-    bot = update.effective_user.bot      
-    eliminaPendencia(userId)  
+    bot = update.effective_user.bot       
     if update.effective_user.is_bot:
-        return #não atendemos bots                    
+        return #não atendemos bots  
+    eliminaPendencia(userId)                          
     pendencias[userId] = 'envioChave' #usuário agora tem uma pendência de informação (atividade)
     response_message = "Envie /menu para ver o menu principal. Envie agora, numa única mensagem, o nº do CPF (11 dígitos) do usuário (fiscal) p/ o qual a chave será enviada:"  
     bot.send_message(userId, text=response_message)
@@ -1327,12 +1331,17 @@ def verificaUsuario(userId, bot): #verifica se o usuário está cadastrado e ati
         else:
             return True
     except:
-        conn.close()
+        try:
+            conn.close()
+        except:
+            pass    
         bot.send_message(userId, text="Erro na consulta (7).")        
         return False                
 
 def opcaoInformaAtividade(update, context): #informa atividade relativa a TDPF e data de vencimento ou prazo em dias
-    global pendencias    
+    global pendencias   
+    if update.effective_user.is_bot:
+        return #não atendemos bots      
     userId = update.effective_user.id  
     bot = update.effective_user.bot      
     eliminaPendencia(userId)     
@@ -1347,6 +1356,8 @@ def opcaoInformaAtividade(update, context): #informa atividade relativa a TDPF e
 
 def opcaoInformaCiencia(update, context): #Informa ciência de TDPF
     global pendencias
+    if update.effective_user.is_bot:
+        return #não atendemos bots       
     userId = update.effective_user.id  
     bot = update.effective_user.bot      
     eliminaPendencia(userId)     
@@ -1361,6 +1372,8 @@ def opcaoInformaCiencia(update, context): #Informa ciência de TDPF
         
 def opcaoPrazos(update, context): #Informa prazos para receber avisos
     global pendencias, textoRetorno  
+    if update.effective_user.is_bot:
+        return #não atendemos bots       
     userId = update.effective_user.id 
     bot = update.effective_user.bot     
     eliminaPendencia(userId)     
@@ -1394,14 +1407,16 @@ def opcaoPrazos(update, context): #Informa prazos para receber avisos
             response_message = "Usuário está inativo no serviço. "+textoRetorno            
         else:    
             pendencias[userId] = 'prazos'   #usuário agora tem uma pendência de informação
-            response_message = "Envie /menu para ver o menu principal. Prazos vigentes para receber alertas: {}, {} e {} dias antes de o contribuinte readquirir a espontaneidade.\nEnvie agora, numa única mensagem, três quantidades de dias (1 a 50) distintas antes de o contribuinte readquirir a espontaneidade tributária em que você deseja receber alertas (separe as informações com espaço):".format(d1, d2, d3)
+            response_message = "Envie /menu para ver o menu principal. Prazos vigentes para receber alertas: {} (d1), {} (d2) e {} (d3) dias antes de o contribuinte readquirir a espontaneidade.\nEnvie agora, numa única mensagem, três quantidades de dias (1 a 50) distintas antes de o contribuinte readquirir a espontaneidade tributária em que você deseja receber alertas (separe as informações com espaço):".format(d1, d2, d3)
     bot.send_message(userId, text=response_message)  
     conn.close()  
     return
 
 
 def opcaoAnulaAtividade(update, context): #anula informação de atividade
-    global pendencias    
+    global pendencias  
+    if update.effective_user.is_bot:
+        return #não atendemos bots         
     userId = update.effective_user.id  
     bot = update.effective_user.bot    
     eliminaPendencia(userId)  
@@ -1417,6 +1432,8 @@ def opcaoAnulaAtividade(update, context): #anula informação de atividade
 
 def opcaoAnulaCiencia(update, context): #Anula ciência de TDPF
     global pendencias    
+    if update.effective_user.is_bot:
+        return #não atendemos bots       
     userId = update.effective_user.id  
     bot = update.effective_user.bot    
     eliminaPendencia(userId)  
@@ -1431,6 +1448,8 @@ def opcaoAnulaCiencia(update, context): #Anula ciência de TDPF
 
 def opcaoFinalizaAvisos(update, context): #Finaliza avisos para um certo TDPF
     global pendencias    
+    if update.effective_user.is_bot:
+        return #não atendemos bots       
     userId = update.effective_user.id
     bot = update.effective_user.bot      
     eliminaPendencia(userId)  
@@ -1445,6 +1464,8 @@ def opcaoFinalizaAvisos(update, context): #Finaliza avisos para um certo TDPF
 
 def opcaoAcompanhaTDPFs(update, context): #acompanha um TDPF ou todos os TDPFs em que estiver alocado ou em que for supervisor
     global pendencias    
+    if update.effective_user.is_bot:
+        return #não atendemos bots       
     userId = update.effective_user.id
     bot = update.effective_user.bot     
     eliminaPendencia(userId)  
@@ -1495,7 +1516,10 @@ def montaListaTDPFs(userId, tipo=1):
             vencimento = linha[1]
             if vencimento:
                 vencimento = vencimento.date()
-                vctoTDPF = str((vencimento-datetime.today().date()).days)
+                vctoTDPFNum = (vencimento-datetime.today().date()).days
+                vctoTDPF = str(vctoTDPFNum)
+                if vctoTDPFNum<0:
+                    vctoTDPF = vctoTDPF + " (vencido)"
             else:
                 vctoTDPF = "ND"
             comando = "Select Data from Ciencias Where TDPF=%s order by Data DESC"
@@ -1543,7 +1567,9 @@ def montaListaTDPFs(userId, tipo=1):
             
         
 def opcaoMostraTDPFs(update, context): #Relação de TDPFs e prazos
-    global pendencias, ambiente    
+    global pendencias, ambiente   
+    if update.effective_user.is_bot:
+        return #não atendemos bots        
     userId = update.effective_user.id
     bot = update.effective_user.bot      
     eliminaPendencia(userId) 
@@ -1576,12 +1602,12 @@ def opcaoMostraTDPFs(update, context): #Relação de TDPFs e prazos
                 delta = ciencia.date() + timedelta(days=60)-datetime.today().date()
                 dias = delta.days
                 if dias<0:
-                    dias = "d) "+str(dias)+" (vencido); e) "+vctoTDPF
+                    dias = "d) "+str(dias)+" (recuperada); e) "+vctoTDPF
                 else:
-                    dias = "d) "+ str(dias) + "; e) "+vctoTDPF
+                    dias = "d) "+ str(dias) + "; e) "+vctoTDPF    
                 msg = msg+"\n\n"+str(i)+"a) "+tdpf+"; b) "+supervisor+";\nc) "+ciencia.strftime('%d/%m/%Y')+"; "+dias
             else:
-                msg = msg+"\n\n"+str(i)+"a) "+tdpf+"; b) "+supervisor+"\nc) ND; d) ND; e) "+vctoTDPF
+                msg = msg+"\n\n"+str(i)+"a) "+tdpf+"; b) "+supervisor+"\nc) ND; d) ND; e) "+vctoTDPF              
             i+=1                 
       
         response_message = "TDPFs Monitorados Por Você (somente):\na) TDPF; b) Supervisor; c) Data da última ciência; d) Dias restantes p/ recuperação da espontaneidade; e) Dias restantes para o vencto. do TDPF:"
@@ -1606,6 +1632,8 @@ def opcaoMostraTDPFs(update, context): #Relação de TDPFs e prazos
 
 def opcaoMostraSupervisionados(update, context): #Relação de TDPFs supervisionados pelo usuário
     global pendencias, ambiente
+    if update.effective_user.is_bot:
+        return #não atendemos bots       
     userId = update.effective_user.id
     bot = update.effective_user.bot      
     eliminaPendencia(userId) 
@@ -1633,7 +1661,7 @@ def opcaoMostraSupervisionados(update, context): #Relação de TDPFs supervision
                 delta = ciencia.date() + timedelta(days=60)-datetime.today().date()
                 dias = delta.days
                 if dias<0:
-                    dias = " d) "+str(dias)+" (vencido); e) "+vctoTDPF
+                    dias = " d) "+str(dias)+" (recuperada); e) "+vctoTDPF
                 else:
                     dias = " d) "+ str(dias) + "; e) "+vctoTDPF
                 msg = msg+"\n\n"+str(i)+"a) "+tdpf+"; b) "+monitorado+";\nc) "+ciencia.strftime('%d/%m/%Y')+";"+dias
@@ -1651,7 +1679,8 @@ def opcaoMostraSupervisionados(update, context): #Relação de TDPFs supervision
     
 def opcaoEMail(update, context): #cadastra e-mail para o recebimento de avisos
     global pendencias
-    
+    if update.effective_user.is_bot:
+        return #não atendemos bots       
     userId = update.effective_user.id
     bot = update.effective_user.bot       
     eliminaPendencia(userId) 
@@ -1726,8 +1755,10 @@ def botTelegram():
     #updater.idle()    #não é necessário pq o programa vai ficar rodando em loop infinito
 ################################################################################
 
-def disparaAvisoUrgente(update, context): #avisos urgentes disparados por comando no Bot (exige comando especifico e senha)
+def disparaAvisoUrgente(update, context): #avisos urgentes da Cofis disparados por comando no Bot (exige comando especifico e senha)
     global updater, ambiente
+    if update.effective_user.is_bot:
+        return #não atendemos bots    
     conn = conecta()
     userId = update.effective_user.id
     if not conn:
@@ -1784,7 +1815,7 @@ def disparaAvisoUrgente(update, context): #avisos urgentes disparados por comand
         conn.rollback()
     return
 
-def disparaMensagens():
+def disparaMensagens(): #avisos diários (produção) ou de hora em hora (teste) contendo os alertas e mensagens da Cofis
     global updater, termina, ambiente
 		
     try:
@@ -1834,7 +1865,7 @@ def disparaMensagens():
         email = usuario[5]
         #selecionamos os TDPFs do usuário em andamento e monitorados (ativos) pelo serviço
         comando = """
-                Select CadastroTDPFs.TDPF as tdpf
+                Select CadastroTDPFs.TDPF as tdpf, Supervisor
                 from CadastroTDPFs, TDPFS, Alocacoes
                 Where CadastroTDPFs.Fiscal=%s and CadastroTDPFs.TDPF=TDPFS.Numero and 
                 CadastroTDPFs.TDPF=Alocacoes.TDPF and  
@@ -1851,6 +1882,8 @@ def disparaMensagens():
                 if termina: #foi solicitado o término do bot
                     return            
                 tdpf = fiscalizacao[0] 
+                tdpfFormatado = formataTDPF(tdpf)
+                supervisor = fiscalizacao[1]
                 cursor.execute(comandoCiencias, (tdpf,)) #buscamos as ciências do TDPF
                 ciencias = cursor.fetchall() #buscamos todas por questões técnicas do mysqlconnector
                 if len(ciencias)>0:       
@@ -1858,8 +1891,12 @@ def disparaMensagens():
                     prazoRestante = (dataCiencia+timedelta(days=60)-dataAtual).days                
                     if prazoRestante==d1 or prazoRestante==d2 or prazoRestante==d3:
                         if len(listaUsuario)==0:
-                            listaUsuario = "Alertas do dia (TDPF | Dias Restantes):"
-                        listaUsuario = listaUsuario+"\n"+formataTDPF(tdpf)+ " | "+str(prazoRestante)+" (a)"
+                            listaUsuario = "Alertas do dia (TDPF | Dias Restantes):"                        
+                        if supervisor=='S':    
+                            tdpfFormatado2 = tdpfFormatado + ' (S)'
+                        else:
+                            tdpfFormatado2 = tdpfFormatado    
+                        listaUsuario = listaUsuario+"\n"+tdpfFormatado2+ " | "+str(prazoRestante)+" (a)"
            
                 #buscamos as atividades do TDPF    
                 cursor.execute(comandoAtividades, (tdpf, dataAtual))
@@ -1869,12 +1906,12 @@ def disparaMensagens():
                     if prazoRestante==0 or prazoRestante==d3: #para atividade, alertamos só no d3 (o menor) e no dia do vencimento (prazo restante == 0)
                         if len(listaUsuario)==0:
                             listaUsuario = "Alertas do dia (TDPF | Dias Restantes):"
-                        listaUsuario = listaUsuario+"\n"+formataTDPF(tdpf)+" | "+str(prazoRestante)+" (b)"
+                        listaUsuario = listaUsuario+"\n"+tdpfFormatado+" | "+str(prazoRestante)+" (b)"
                         listaUsuario = listaUsuario+"\nAtividade: "+atividade[0]
 
         #selecionamos as datas de vencimento dos TDPFs em que o usuário está alocado, mesmo que não monitorados
         comando = """
-                Select TDPFS.Numero as tdpf, TDPFS.Vencimento as vencimento from TDPFS, Alocacoes
+                Select TDPFS.Numero as tdpf, TDPFS.Vencimento as vencimento, Supervisor from TDPFS, Alocacoes
                 Where Alocacoes.CPF=%s and TDPFS.Numero=Alocacoes.TDPF and TDPFS.Encerramento Is Null and 
                 Alocacoes.Desalocacao Is Null
                 """        
@@ -1884,10 +1921,12 @@ def disparaMensagens():
         for tdpfUsuario in tdpfUsuarios: #percorremos os TDPFs do usuário para ver suas datas de vencimento (TODOS em andamento no qual o usuário esteja atualmente alocado)
             vencimento = tdpfUsuario[1]
             tdpf = tdpfUsuario[0]
+            tdpfFormatado = formataTDPF(tdpf)
+            supervisor = tdpfUsuario[2]
             if vencimento: #não deve ser nulo, mas garantimos ...
                 vencimento = vencimento.date()
                 prazoVenctoTDPF = (vencimento-dataAtual).days
-                if not (1<=prazoVenctoTDPF<=15): #se não estiver próximo do vencimento, prosseguimos (pulamos)
+                if not (1<=prazoVenctoTDPF<=15): #se não estiver próximo do vencimento (1 a 15 dias), prosseguimos (pulamos)
                     continue 
                 cursor.execute(comandoVencimento, (tdpf, cpf))  #buscamos as datas de aviso para o CPF e TDPF  
                 avisos = cursor.fetchall()
@@ -1909,12 +1948,16 @@ def disparaMensagens():
                 if podeAvisar: #verificar este prazos quando for colocar em produção
                     if len(listaUsuario)==0:
                         listaUsuario = "Alertas do dia (TDPF | Dias Restantes):"
-                    listaUsuario = listaUsuario+"\n"+formataTDPF(tdpf)+ " | "+str(prazoVenctoTDPF)+" (c)"                 
+                    if supervisor=='S':    
+                        tdpfFormatado2 = tdpfFormatado + ' (S)'
+                    else:
+                        tdpfFormatado2 = tdpfFormatado                         
+                    listaUsuario = listaUsuario+"\n"+tdpfFormatado2+ " | "+str(prazoVenctoTDPF)+" (c)"                 
 
         if len(listaUsuario)>0 or msgCofis!="":
             if len(listaUsuario)>0:
-                listaUsuario = listaUsuario+"\n(a) P/ recuperação da espontaneidade tributária."
-                listaUsuario = listaUsuario+"\n(b) P/ vencimento da Atividade."            
+                listaUsuario = listaUsuario+"\n\n(a) P/ recuperação da espontaneidade tributária."
+                listaUsuario = listaUsuario+"\n(b) P/ vencimento da atividade."            
                 listaUsuario = listaUsuario+"\n(c) P/ vencimento do TDPF no Ação Fiscal."
             if msgCofis!="":
                 if len(listaUsuario)>0:
@@ -2000,7 +2043,6 @@ def disparador():
 
 def conecta():
     global MYSQL_DATABASE, MYSQL_USER, MYSQL_PASSWORD, hostSrv
-
     try:
         #logging.info("BD: "+MYSQL_DATABASE)
         #logging.info(MYSQL_PASSWORD)
