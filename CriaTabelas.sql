@@ -7,6 +7,7 @@ CREATE TABLE `Alocacoes` (
   `Alocacao` DATETIME, 
   `Desalocacao` DATETIME, 
   `Supervisor` VARCHAR(1), 
+  `Horas` INTEGER DEFAULT 0,
   INDEX (`CPF`), 
   INDEX (`CPF`, `Supervisor`), 
   INDEX (`CPF`, `TDPF`), 
@@ -32,6 +33,7 @@ CREATE TABLE `Ciencias` (
   `Codigo` INTEGER NOT NULL AUTO_INCREMENT, 
   `TDPF` VARCHAR(16), 
   `Data` DATETIME, 
+  `Documento` VARCHAR(50),
   PRIMARY KEY (`Codigo`), 
   INDEX (`TDPF`)
 ) ENGINE=innodb DEFAULT CHARSET=utf8;
@@ -92,7 +94,10 @@ CREATE TABLE `Atividades` (
   `Codigo` INTEGER NOT NULL AUTO_INCREMENT, 
   `TDPF` VARCHAR(16), 
   `Atividade` VARCHAR(50), 
-  `Data` DATETIME, 
+  `Vencimento` DATETIME, 
+  `Termino` DATETIME,
+  `Inicio` DATETIME,
+  `Horas` INTEGER DEFAULT 0,
   PRIMARY KEY (`Codigo`), 
   INDEX (`TDPF`)
 ) ENGINE=innodb DEFAULT CHARSET=utf8;
@@ -128,4 +133,17 @@ CREATE TABLE `AvisosUrgentes` (
   `DataEnvio` DATETIME, 
   PRIMARY KEY (`Codigo`), 
   INDEX (`DataEnvio`)
+) ENGINE=innodb DEFAULT CHARSET=utf8;
+
+DROP TABLE IF EXISTS `Supervisores`;
+
+CREATE TABLE `Supervisores` (
+  `Codigo` INTEGER NOT NULL AUTO_INCREMENT, 
+  `Equipe` VARCHAR(14), 
+  `CPF` VARCHAR(11),
+  `Inicio` DATETIME, 
+  `Fim` DATETIME, 
+  PRIMARY KEY (`Codigo`), 
+  INDEX (`CPF`),
+  INDEX (`Equipe`)
 ) ENGINE=innodb DEFAULT CHARSET=utf8;

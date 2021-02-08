@@ -1,11 +1,15 @@
 *.crt
 *.key
 *.xlsx
+*.csv
 *.env
 *.log
+*.pem
 *mail*.docx
+opa.dat
 Dispara*.txt
 /Apache/cert
 /dados
+/db-data
 /botEnv
 /cargaEnv

@@ -20,7 +20,7 @@ services:
       - mysqlsrv  
 
   mysqlsrv:
-    image: mysql:8.0.21
+    image: mysql:8.0.23
     container_name: botmysqlsrv
     environment: 
       TZ: "America/Sao_Paulo"    
@@ -29,7 +29,7 @@ services:
     ports:
       - "3306:3306"
     volumes:
-      - ./dados:/var/lib/mysql
+      - db-data:/var/lib/mysql
 
   botcarga:
     build:
@@ -52,20 +52,29 @@ services:
   adminer:
     image: adminer
     container_name: botadminer
+    environment: 
+      TZ: "America/Sao_Paulo"      
     ports:
       - 8080:8080
 
- # avisourgente:
- #   build:
- #     context: .
- #     dockerfile: ./docker/aviso/Dockerfile
- #   container_name: avisourgente
- #   environment: 
- #     TZ: "America/Sao_Paulo"
- #   env_file:
- #     - config.env      
- #   restart: "no"
- #   volumes:
- #     - ./log:/Log
- #   depends_on:
- #     - mysqlsrv        
+  servidorcontagil:
+    build:
+      context: .
+      dockerfile: ./docker/contagil/Dockerfile
+    container_name: servidorcontagil
+    stdin_open: true # docker run -i
+    tty: true        # docker run -t    
+    environment: 
+      TZ: "America/Sao_Paulo"
+    env_file:
+      - config.env   
+    ports:
+      - 1352:1352         
+    restart: unless-stopped
+    volumes:
+      - ./log:/Log
+    depends_on:
+      - mysqlsrv  
+
+volumes:
+  db-data:      
