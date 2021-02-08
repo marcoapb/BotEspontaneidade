@@ -167,7 +167,7 @@ def zeraTentativas(codigo, conn): #zera as tentativas de utilizar a senha em cas
         conn.rollback() #não há o que fazer
     return 
 
-def verificaAlocacao(conn, cpf, tdpf): #verifica se o fiscal (cpf) está alocado ao TDPF em andamento
+def verificaAlocacao(conn, cpf, tdpf): #verifica se o fiscal (cpf) está alocado ao TDPF em andamento - retorna tb o nome do fiscalizado
     cursor = conn.cursor(buffered=True)
     comando = """Select TDPFS.Numero, TDPFS.Nome, TDPFS.Vencimento, TDPFS.Emissao 
                 from TDPFS, Alocacoes 
@@ -175,12 +175,12 @@ def verificaAlocacao(conn, cpf, tdpf): #verifica se o fiscal (cpf) está alocado
     cursor.execute(comando, (tdpf, cpf))
     row = cursor.fetchone()  
     if not row:
-        return False
+        return False, None
     if len(row)==0:
-        return False
-    return True
+        return False, None
+    return True, row[1]
 
-def verificaSupervisao(conn, cpf, tdpf): #verifica se o fiscal (cpf) é supervisor da equipe do fiscal responsável pelo TDPF em andamento
+def verificaSupervisao(conn, cpf, tdpf): #verifica se o fiscal (cpf) é supervisor da equipe do fiscal responsável pelo TDPF em andamento - retorna tb o nome do fiscalizado
     cursor = conn.cursor(buffered=True)
     comando = """Select TDPFS.Numero, TDPFS.Nome, TDPFS.Vencimento, TDPFS.Emissao 
                 from TDPFS, Supervisores 
@@ -188,10 +188,29 @@ def verificaSupervisao(conn, cpf, tdpf): #verifica se o fiscal (cpf) é supervis
     cursor.execute(comando, (tdpf, cpf))
     row = cursor.fetchone()  
     if not row:
-        return False
+        return False, None
     if len(row)==0:
-        return False
-    return True      
+        return False, None
+    return True, row[1] 
+
+def tdpfMonitoradoCPF(conn, tdpf, cpf): #verifica se o TDPF está sendo monitorado e se tal monitoramento está ativo
+    cursor = conn.cursor(buffered=True)
+    comando = "Select Codigo, Fim from CadastroTDPFs Where TDPF=%s and Fiscal=%s"
+    cursor.execute(comando, (tdpf, cpf))
+    row = cursor.fetchone()
+    tdpfMonitorado = False
+    monitoramentoAtivo = None
+    chave = None
+    if row:
+        if len(row)>0:
+            tdpfMonitorado = True  
+            chave = row[0]
+            fim = row[1]
+            if fim==None:
+                monitoramentoAtivo = True
+            else:
+                monitoramentoAtivo = False
+    return tdpfMonitorado, monitoramentoAtivo, chave #indica se o tdpf está sendo monitorado; se True, o segundo retorno indica se tal monitoramento está ativo e o terceiro a chave do registro     
 
 def trataMsgRecebida(msgRecebida, c): #c é o socket estabelecido com o cliente que será utilizado para a resposta
     tamChave = 6 #tamanho da chave do ContÁgil (chave de registro) 
@@ -201,7 +220,7 @@ def trataMsgRecebida(msgRecebida, c): #c é o socket estabelecido com o cliente 
     c.settimeout(10)
     #todas as mensagens tem um código, um cpf, um tdpf para acesso e uma chave deste - total: 39 caracteres
     if len(msgRecebida)<(13+tamChave):
-        resposta = "99REQUISIÇÃO INVÁLIDA" #código de erro na mensagem recebida
+        resposta = "99REQUISIÇÃO INVÁLIDA (A)" #código de erro na mensagem recebida
         enviaResposta(resposta, c)
         return 
     
@@ -213,27 +232,27 @@ def trataMsgRecebida(msgRecebida, c): #c é o socket estabelecido com o cliente 
     logging.info(cpf)
     logging.info(chaveContagil)     
     if not codigoStr.isdigit():
-        resposta = "99REQUISIÇÃO INVÁLIDA (1)"
+        resposta = "99REQUISIÇÃO INVÁLIDA (B)"
         enviaResposta(resposta, c)       
         return     
     
     codigo = int(codigoStr)
     if codigo<1 or codigo>17:
-        resposta = "99REQUISIÇÃO INVÁLIDA (2)" 
+        resposta = "99REQUISIÇÃO INVÁLIDA (C)" 
         enviaResposta(resposta, c)          
         return     
     
     if not chaveContagil.isdigit():
-        resposta = "99CHAVE DE ACESSO VIA CONTAGIL NÃO É NUMÉRICA"
+        resposta = "90CHAVE DE ACESSO VIA CONTAGIL NÃO É NUMÉRICA"
         enviaResposta(resposta, c)        
         return  
     if cpf=="12345678909": #este CPF flag não vem por aqui - ele é esperado dentro de alguns lugares neste procedimento para mandar mais informações da requisição
-        resposta = "99CPF INVÁLIDO PARA ESTA REQUISIÇÃO"
+        resposta = "97CPF INVÁLIDO PARA ESTA REQUISIÇÃO"
         enviaResposta(resposta, c)        
         return
     
     if not validaCPF(cpf):
-        resposta = "99CPF INVÁLIDO"
+        resposta = "97PF INVÁLIDO"
         enviaResposta(resposta, c)        
         return     
 
@@ -243,7 +262,7 @@ def trataMsgRecebida(msgRecebida, c): #c é o socket estabelecido com o cliente 
     #conn = pyodbc.connect("DRIVER={};DBQ={}".format(driver, dbpath+db))  #estabelece conexão com o BD
     conn = conecta()
     if not conn:
-        resposta = "99ERRO NA CONEXÃO COM O BANCO DE DADOS" #erro de conexão ou de BD
+        resposta = "97ERRO NA CONEXÃO COM O BANCO DE DADOS" #erro de conexão ou de BD
         enviaResposta(resposta, c) 
         return         
     
@@ -293,11 +312,11 @@ def trataMsgRecebida(msgRecebida, c): #c é o socket estabelecido com o cliente 
     
     
     #validamos a chave do contágil ligada àquele CPF (registro ativo) - serviços de 2 em diante
-    comando = "Select Codigo, Chave, ValidadeChave, Tentativas, email, d1, d2, d3 from Usuarios Where CPF=%s and  Saida Is Null and Adesao Is Not Null"
+    comando = "Select Codigo, Chave, ValidadeChave, Tentativas, email, d1, d2, d3 from Usuarios Where CPF=%s and  Saida Is Null and Adesao Is Not Null"            
     cursor.execute(comando, (cpf,))
     row = cursor.fetchone()   
     if not row: #o usuário está inativo
-        resposta = "99USUÁRIO NÃO ENCONTRADO OU INATIVO"
+        resposta = "90USUÁRIO NÃO ENCONTRADO OU INATIVO"
         enviaResposta(resposta, c)  
         conn.close()
         return
@@ -305,49 +324,49 @@ def trataMsgRecebida(msgRecebida, c): #c é o socket estabelecido com o cliente 
     if tentativas==None:
         tentativas = 0         
     if row[1]==None:
-        resposta = "99CHAVE DE ACESSO VIA CONTÁGIL NÃO FOI GERADA"       
+        resposta = "90CHAVE DE ACESSO VIA CONTÁGIL NÃO FOI GERADA"       
         enviaResposta(resposta, c) 
         conn.close()
         return        
     if row[1]!=int(chaveContagil):
-        resposta = "99CHAVE DE ACESSO VIA CONTÁGIL É INVÁLIDA OU INCORRETA"
+        resposta = "90CHAVE DE ACESSO VIA CONTÁGIL É INVÁLIDA OU INCORRETA"
         atualizaTentativas(row[0], tentativas, conn)        
         enviaResposta(resposta, c)
         conn.close()
         return
     if row[2]==None:
-        resposta = "99CHAVE DE ACESSO VIA CONTÁGIL SEM VALIDADE - GERE OUTRA NO TELEGRAM"
+        resposta = "90CHAVE DE ACESSO VIA CONTÁGIL SEM VALIDADE - GERE OUTRA NO TELEGRAM"
         enviaResposta(resposta, c) 
         conn.close()
         return        
     if datetime.today().date()>row[2].date():
-        resposta = "99CHAVE DE ACESSO VIA CONTÁGIL ESTÁ EXPIRADA - GERE OUTRA NO TELEGRAM"
+        resposta = "90CHAVE DE ACESSO VIA CONTÁGIL ESTÁ EXPIRADA - GERE OUTRA NO TELEGRAM"
         enviaResposta(resposta, c)  
         conn.close()
         return    
     if tentativas>=3:
-        resposta = "99CHAVE DE ACESSO VIA CONTÁGIL ESTÁ EXPIRADA - TENTATIVAS EXCEDIDAS - GERE OUTRA NO TELEGRAM"
+        resposta = "90CHAVE DE ACESSO VIA CONTÁGIL ESTÁ EXPIRADA - TENTATIVAS EXCEDIDAS - GERE OUTRA NO TELEGRAM"
         enviaResposta(resposta, c) 
         conn.close()
         return    
     
     zeraTentativas(row[0], conn) #como a chave está correta, zera o nº de tentativas
         
-    #para todas as funções abaixo, temos que verificar se o cpf está cadastrado e ativo
-    comando = "Select Codigo, CPF, Adesao, Saida, d1, d2, d3, email, Chave, ValidadeChave, Tentativas from Usuarios Where Saida Is Null and Adesao Is Not Null and CPF=%s"        
-    cursor.execute(comando, (cpf,))
-    row = cursor.fetchone()
-    if not row:
-        resposta = "99CPF NÃO ENCONTRADO OU INATIVO NO SERVIÇO"
-        enviaResposta(resposta, c)
-        conn.close()
-        return 
+    #para todas as funções abaixo, temos que verificar se o cpf está cadastrado e ativo <- JÁ FOI FEITO ACIMA
+    #comando = "Select Codigo, CPF, Adesao, Saida, d1, d2, d3, email, Chave, ValidadeChave, Tentativas from Usuarios Where Saida Is Null and Adesao Is Not Null and CPF=%s"        
+    #cursor.execute(comando, (cpf,))
+    #row = cursor.fetchone()
+    #if not row:
+    #    resposta = "99CPF NÃO ENCONTRADO OU INATIVO NO SERVIÇO"
+    #    enviaResposta(resposta, c)
+    #    conn.close()
+    #    return 
 
-    if len(row)==0:
-        resposta = "99CPF NÃO ENCONTRADO OU INATIVO NO SERVIÇO"
-        enviaResposta(resposta, c)
-        conn.close()
-        return           
+    #if len(row)==0:
+    #    resposta = "99CPF NÃO ENCONTRADO OU INATIVO NO SERVIÇO"
+    #    enviaResposta(resposta, c)
+    #    conn.close()
+    #    return           
     
     if 2<=codigo<=5 or codigo in [14, 16, 17]: #verificações COMUNS relativas ao TDPF
         if len(msgRecebida)<(29+tamChave):
@@ -383,9 +402,12 @@ def trataMsgRecebida(msgRecebida, c): #c é o socket estabelecido com o cliente 
             return            
         comando = "Select Desalocacao from Alocacoes Where CPF=%s and TDPF=%s"
         cursor.execute(comando, (cpf, tdpf))
-        row = cursor.fetchone()        
+        row = cursor.fetchone()    
+        bSupervisor = False 
+        if codigo==4: #supervisor pode relacionar ciências de TDPF
+            bSupervisor, _ = verificaSupervisao(conn, cpf, tdpf)    
         achou = False
-        if row:
+        if row and not bSupervisor:
             achou = True
             if row[0]!=None:
                 msg = "CPF NÃO está mais alocado ao TDPF"
@@ -394,7 +416,7 @@ def trataMsgRecebida(msgRecebida, c): #c é o socket estabelecido com o cliente 
                 enviaResposta(resposta, c)  
                 conn.close()
                 return                
-        if not achou:
+        if not achou and not bSupervisor:
             msg = "CPF NÃO está alocado ao TDPF"
             msg = msg.ljust(tamMsg)            
             resposta = codigoStr+(("N"+msg+nome) if 2<=codigo<=5 else msg)     
@@ -484,24 +506,16 @@ def trataMsgRecebida(msgRecebida, c): #c é o socket estabelecido com o cliente 
             enviaResposta(resposta, c)  
             conn.close()
             return                                          
-        comando = "Select Codigo, Fim from CadastroTDPFs Where TDPF=%s and Fiscal=%s"
-        cursor.execute(comando, (tdpf, cpf))
-        row = cursor.fetchone()
-        tdpfCadastrado = False
-        fim = None
-        if row:
-            tdpfCadastrado = True  
-            chave = row[0]
-            fim = row[1]
+        tdpfMonitorado, monitoramentoAtivo, chave = tdpfMonitoradoCPF(conn, tdpf, cpf)
         try:
             comando = "Insert into Ciencias (TDPF, Data, Documento) Values (%s, %s, %s)"
             cursor.execute(comando, (tdpf, dataObj.date(), documento))
             msg = "Ciência registrada para o TDPF"
-            if fim!=None: #monitoramento do tdpf estava desativado - ativa
+            if tdpfMonitorado and monitoramentoAtivo==False: #monitoramento do tdpf estava desativado - ativa
                 msg = "Monitoramento deste TDPF foi reativado e a ciência foi registrada."
                 comando = "Update CadastroTDPFs Set Fim=Null Where Codigo=%s"
                 cursor.execute(comando, (chave,))                         
-            elif not tdpfCadastrado: #tdpf não estava sendo monitorado - inclui ele
+            elif not tdpfMonitorado: #tdpf não estava sendo monitorado - inclui ele
                 comando = "Insert into CadastroTDPFs (Fiscal, TDPF, Inicio) Values (%s, %s, %s)"
                 cursor.execute(comando, (cpf, tdpf, datetime.today().date()))
             conn.commit()
@@ -604,7 +618,10 @@ def trataMsgRecebida(msgRecebida, c): #c é o socket estabelecido com o cliente 
         
     if codigo==6: #mostra lista de tdpfs ativos e últimas ciências 
         if len(msgRecebida)>(13+tamChave): #despreza
-            pass
+            resposta = "99REQUISIÇÃO INVÁLIDA (6)"
+            enviaResposta(resposta, c) 
+            conn.close()
+            return 
         comando = """Select CadastroTDPFs.TDPF, TDPFS.Nome, TDPFS.Vencimento, TDPFS.Emissao 
                      from CadastroTDPFs, Alocacoes, TDPFS 
                      Where CadastroTDPFs.Fiscal=%s and CadastroTDPFs.Fim Is Null and CadastroTDPFs.Fiscal=Alocacoes.CPF 
@@ -691,9 +708,12 @@ def trataMsgRecebida(msgRecebida, c): #c é o socket estabelecido com o cliente 
                     
     if codigo==7: #requer e-mail cadastrado
         if len(msgRecebida)>(13+tamChave): #despreza
-            pass
+            resposta = "99REQUISIÇÃO INVÁLIDA (7)"
+            enviaResposta(resposta, c) 
+            conn.close()
+            return 
         #a variável row foi buscada na pequena rotina antes do código validador previo de 2 a 5
-        email = row[7]
+        email = row[4]
         if email==None or email=="":
             resposta = "07N"
             enviaResposta(resposta, c)  
@@ -707,10 +727,10 @@ def trataMsgRecebida(msgRecebida, c): #c é o socket estabelecido com o cliente 
 
     if codigo==8: #cadastra ou substitui e-mail        
         if len(msgRecebida)!=(63+tamChave): 
-            resposta = "99REQUISIÇÃO INVÁLIDA (6)"
+            resposta = "99REQUISIÇÃO INVÁLIDA (8)"
             enviaResposta(resposta, c) 
             conn.close()
-            return 
+            return             
         email = msgRecebida[(13+tamChave):].strip()
         if "@" in email:
             if not verificaEMail(email):
@@ -720,16 +740,16 @@ def trataMsgRecebida(msgRecebida, c): #c é o socket estabelecido com o cliente 
                 enviaResposta(resposta, c)
                 conn.close()
                 return
-            elif not "@rfb.gov.br" in email:
+            elif email[-11:]!="@rfb.gov.br":
                 msg = "Email não é institucional"
                 msg = msg.ljust(100)            
                 resposta = "08N"+msg
                 enviaResposta(resposta, c)
                 conn.close()
-                return
-            else:
-                email = email[:email.find("@")]
-        if len(email)<4:
+                return                       
+        else:
+            email = email + "@rfb.gov.br"
+        if len(email)<15:
             msg = "Email inválido (nome de usuário curto)"
             msg = msg.ljust(100)            
             resposta = "08N"+msg
@@ -744,7 +764,7 @@ def trataMsgRecebida(msgRecebida, c): #c é o socket estabelecido com o cliente 
             msg = msg.ljust(100)
             resposta = "08S"+msg
         except:
-            msg = "Erro na atualização de tabelas"
+            msg = "Erro na atualização de tabelas (2)"
             msg = msg.ljust(100)            
             resposta = "08N"+msg
         enviaResposta(resposta, c)
@@ -753,7 +773,10 @@ def trataMsgRecebida(msgRecebida, c): #c é o socket estabelecido com o cliente 
      
     if codigo==9: #apaga e-mail
         if len(msgRecebida)>(13+tamChave):
-            pass #despreza excesso
+            resposta = "99REQUISIÇÃO INVÁLIDA (9)"
+            enviaResposta(resposta, c) 
+            conn.close()
+            return  
         comando = "Update Usuarios Set email=Null Where CPF=%s and Saida Is Null"
         try:
             cursor.execute(comando, (cpf,))
@@ -770,12 +793,15 @@ def trataMsgRecebida(msgRecebida, c): #c é o socket estabelecido com o cliente 
         return
     
     if codigo==10: #solicita prazos vigentes
-        if len(msgRecebida)>(13+tamChave): #despreza
-            pass
+        if len(msgRecebida)!=(13+tamChave): #despreza
+            resposta = "99REQUISIÇÃO INVÁLIDA (10)"
+            enviaResposta(resposta, c) 
+            conn.close()
+            return  
         #a variável row foi buscada na pequena rotina antes do código validador previo de 2 a 5
-        d1 = str(row[4]).rjust(2,"0")
-        d2 = str(row[5]).rjust(2,"0")
-        d3 = str(row[6]).rjust(2,"0")
+        d1 = str(row[5]).rjust(2,"0")
+        d2 = str(row[6]).rjust(2,"0")
+        d3 = str(row[7]).rjust(2,"0")
         resposta = "10"+d1+d2+d3
         enviaResposta(resposta, c)
         conn.close()
@@ -783,7 +809,7 @@ def trataMsgRecebida(msgRecebida, c): #c é o socket estabelecido com o cliente 
     
     if codigo==11: #altera prazos
         if len(msgRecebida)!=(19+tamChave):
-            resposta = "99REQUISIÇÃO INVÁLIDA (7)"
+            resposta = "99REQUISIÇÃO INVÁLIDA (11)"
             enviaResposta(resposta, c) 
             conn.close()
             return                    
@@ -838,7 +864,10 @@ def trataMsgRecebida(msgRecebida, c): #c é o socket estabelecido com o cliente 
 
     if codigo==12: #Relação de TDPFs Alocados ao CPF e em andamento (não encerrados) - indica se está sendo monitorado e se é supervisor
         if len(msgRecebida)>(13+tamChave):
-            pass #despreza excesso
+            resposta = "99REQUISIÇÃO INVÁLIDA (12)"
+            enviaResposta(resposta, c) 
+            conn.close()
+            return 
         comando = "Select Alocacoes.TDPF, Alocacoes.Supervisor, TDPFS.Nome from Alocacoes, TDPFS Where Alocacoes.CPF=%s and Alocacoes.Desalocacao Is Null and Alocacoes.TDPF=TDPFS.Numero and TDPFS.Encerramento Is Null Order by Alocacoes.TDPF"
         cursor.execute(comando, (cpf,))
         rows = cursor.fetchall()
@@ -906,8 +935,6 @@ def trataMsgRecebida(msgRecebida, c): #c é o socket estabelecido com o cliente 
                         return 
 
     if codigo==13: #mostra lista de tdpfs ativos e últimas ciências sob supervisão do CPF - semelhante ao código 6
-        #if len(msgRecebida)>(13+tamChave): #despreza
-        #    pass
         if len(msgRecebida)!=(16+tamChave):
             resposta = "99REQUISIÇÃO INVÁLIDA (13A)"
             enviaResposta(resposta, c) 
@@ -1098,11 +1125,20 @@ def trataMsgRecebida(msgRecebida, c): #c é o socket estabelecido com o cliente 
         #    conn.close()
         #    return 
         #podemos incluir a atividade 
+        tdpfMonitorado, monitoramentoAtivo, chave = tdpfMonitoradoCPF(conn, tdpf, cpf)
         try:
             comando = "Insert Into Atividades (TDPF, Atividade, Inicio, Vencimento, Termino, Horas) Values (%s, %s, %s, %s, %s, %s)"           
-            cursor.execute(comando, (tdpf, atividade, inicio, vencimento, terminoAux, horas))                
+            cursor.execute(comando, (tdpf, atividade, inicio, vencimento, terminoAux, horas))  
+            resposta = "14REGISTRO INCLUÍDO"            
+            if tdpfMonitorado and monitoramentoAtivo==False: #monitoramento do tdpf estava desativado - ativa
+                comando = "Update CadastroTDPFs Set Fim=Null Where Codigo=%s"
+                cursor.execute(comando, (chave,))  
+                resposta = resposta + " - MONITORAMENTO REATIVADO"                       
+            elif not tdpfMonitorado: #tdpf não estava sendo monitorado - inclui ele
+                comando = "Insert into CadastroTDPFs (Fiscal, TDPF, Inicio) Values (%s, %s, %s)"
+                cursor.execute(comando, (cpf, tdpf, datetime.today().date())) 
+                resposta = resposta + " - MONITORAMENTO INICIADO"                    
             conn.commit()
-            resposta = "14REGISTRO INCLUÍDO"
         except:
             conn.rollback()
             resposta = "14ERRO NA INCLUSÃO DO REGISTRO"
@@ -1144,15 +1180,14 @@ def trataMsgRecebida(msgRecebida, c): #c é o socket estabelecido com o cliente 
              offsetReg = ""  
         haTDPFS = False
         #verificamos se o fiscal está alocado
-        haTDPFS = verificaAlocacao(conn, cpf, tdpf)
+        haTDPFS, nome = verificaAlocacao(conn, cpf, tdpf)
         if not haTDPFS: #verificamos se é supervisor  
-            haTDPFS = verificaSupervisao(conn, cpf, tdpf)      
+            haTDPFS, nome = verificaSupervisao(conn, cpf, tdpf)      
         if not haTDPFS:
             resposta = "15CPF NÃO ESTÁ ALOCADO OU NÃO É SUPERVISOR OU TDPF ENCERRADO/INEXISTENTE"
             enviaResposta(resposta, c) 
             conn.close()
             return
-        nome = row[1]
         if nome==None:
             nome = ""   
         nome = nome[:tamNome].ljust(tamNome)      
@@ -1254,7 +1289,13 @@ def trataMsgRecebida(msgRecebida, c): #c é o socket estabelecido com o cliente 
             resposta = "99REQUISIÇÃO INVÁLIDA - ATIVIDADE NÃO PERTENCE AO TDPF (16H)"
             enviaResposta(resposta, c) 
             conn.close()
-            return              
+            return   
+        tdpfMonitorado, monitoramentoAtivo, chave = tdpfMonitoradoCPF(conn, tdpf, cpf)  
+        if not tdpfMonitorado or monitoramentoAtivo==False:
+            resposta = "16TDPF NÃO ESTÁ SENDO MONITORADO PELO USUÁRIO - EXCLUSÃO NÃO PERMITIDA"
+            enviaResposta(resposta, c) 
+            conn.close()
+            return             
         #podemos excluir a atividade 
         comando = "Delete from Atividades Where Codigo=%s"
         try:
@@ -1363,7 +1404,13 @@ def trataMsgRecebida(msgRecebida, c): #c é o socket estabelecido com o cliente 
             resposta = "99REQUISIÇÃO INVÁLIDA - HORAS INVÁLIDAS (17N)"
             enviaResposta(resposta, c) 
             conn.close()
-            return                                  
+            return   
+        tdpfMonitorado, monitoramentoAtivo, chave = tdpfMonitoradoCPF(conn, tdpf, cpf)  
+        if not tdpfMonitorado or monitoramentoAtivo==False:
+            resposta = "17TDPF NÃO ESTÁ SENDO MONITORADO PELO USUÁRIO - ALTERAÇÃO NÃO PERMITIDA"
+            enviaResposta(resposta, c) 
+            conn.close()
+            return                                             
         #já foi verificado
         #verificamos se o tdpf existe e se é de responsabilidade do usuário e está em andamento
         #if not verificaAlocacao(conn, cpf, tdpf):
@@ -1452,23 +1499,25 @@ MYSQL_USER = os.getenv("MYSQL_USER", "my_user")
 MYSQL_PASSWORD = os.getenv("MYSQL_PASSWORD", "mypass1234")
 token = os.getenv("TOKEN", "ERRO")
 ambiente = os.getenv("AMBIENTE", "TESTE")
-threads = list() 
-
-threadServ = threading.Thread(target=servidor, daemon=True) #ativa o servidor
-#threadServ.daemon = True #mata a thread quando sair do programa
-threadServ.start()
-time.sleep(1) #dá um tempinho para fazer os prints na threadServ
-while True:
-    sair = input("Digite QUIT quando quiser sair: ")
-    if sair:
-        if sair.upper().strip()=="QUIT":
-            break
-if s!=None: #fecha o socket principal (ouvindo a rede) se estiver aberto
-    s.close() #fecha antes de esperar o término das threads para não entrar mais requisições
-i = 0        
-for thread in (threads):
-    if thread.is_alive():
-        i+=1              #ao interromper o loop, espera as threads que estão tratando requisições
-        thread.join()     #terminarem antes de encerrar o programa (fechar conexões)
-logging.info(str(i) + " threads estavam em andamento.")
-#conn.close() #fecha a conexão com o banco de dados
+conn = conecta() #testa a conexão com o BD
+if conn!=None:
+    conn.close()
+    threads = list() 
+    threadServ = threading.Thread(target=servidor, daemon=True) #ativa o servidor
+    #threadServ.daemon = True #mata a thread quando sair do programa
+    threadServ.start()
+    while True:
+        sair = input("Digite QUIT quando quiser sair: ")
+        if sair:
+            if sair.upper().strip()=="QUIT":
+                break
+    if s!=None: #fecha o socket principal (ouvindo a rede) se estiver aberto
+        s.close() #fecha antes de esperar o término das threads para não entrar mais requisições
+    i = 0        
+    for thread in (threads):
+        if thread.is_alive():
+            i+=1              #ao interromper o loop, espera as threads que estão tratando requisições
+            thread.join()     #terminarem antes de encerrar o programa (fechar conexões)
+    logging.info(str(i) + " threads estavam em andamento.")
+else:
+    print("Corrija o problema do Banco de Dados e reinicie este serviço.")

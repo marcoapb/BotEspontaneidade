@@ -307,6 +307,7 @@ def realizaCargaDados():
     gruposRows = cursor.fetchall()
     tabGrupos = 0
     tabGruposAtu = 0
+    atualizouSuperv = False
     superv = 0 #número de supervisores que não fazem parte de nenhum grupo - são incluídos na tabela de usuários pq supervisionam ativamente alguma equipe
     for grupoRow in gruposRows:
         df = dfSupervisores.loc[dfSupervisores['Grupo Fiscal']==grupoRow[0]].sort_values(by=['R028_DT_INI_VINCULO'], ascending=False)
@@ -338,22 +339,29 @@ def realizaCargaDados():
                         if len(supervisoresRows)>0:
                             comando = "Update Supervisores Set Fim=%s Where Equipe=%s and CPF<>%s and Fim Is Not Null" #"matamos" os antigos supervisores
                             cursor.execute(comando, (datetime.now().date(), grupoRow[0], cpf))
-                #verificamos se este supervisor consta da tabela de usuários
-                cursor.execute(selectUsuario, (cpf,))
-                rows = cursor.fetchall()
-                bAchou = True
-                if rows==None:
-                    bAchou = False
-                elif len(rows)==0:
-                    bAchou = False
-                if not bAchou:
-                    dfFiscal = dfFiscais.loc[dfFiscais['CPF']==cpf]
-                    email = None
-                    if dfFiscal.shape[0]>0:
-                        if dfFiscal.iat[0, 4]!=np.nan and dfFiscal.iat[0, 4]!="": #email está na coluna 4 (coluna 'E' do Excel)
-                            email = dfFiscal.iat[0, 4]                    
-                    cursor.execute(insereUsuario, (cpf, email)) 
-                    superv+=1              
+                #verificamos se este supervisor consta da tabela de usuários e fiscais
+                dfFiscal = dfFiscais.loc[dfFiscais['CPF']==cpf]
+                email = None
+                if dfFiscal.shape[0]>0: 
+                    fiscal =  dfFiscal.iat[0, 2] #nome do fiscal
+                    if dfFiscal.iat[0, 4]!=np.nan and dfFiscal.iat[0, 4]!="": #email está na coluna 4 (coluna 'E' do Excel)
+                        email = dfFiscal.iat[0, 4]                                   
+                    cursor.execute(selectUsuario, (cpf,))
+                    rows = cursor.fetchall()
+                    bAchou = True
+                    if rows==None:
+                        bAchou = False
+                    elif len(rows)==0:
+                        bAchou = False
+                    if not bAchou:  #não existe o supervisor na tabela de usuários             
+                        cursor.execute(insereUsuario, (cpf, email)) 
+                        atualizouSuperv = True
+                    cursor.execute(selectFisc, (cpf,))
+                    regFisc = cursor.fetchone()
+                    if not regFisc: #não existe o supervisor na tabela de fiscais
+                        tabFiscais+=1
+                        atualizouSuperv = True
+                        cursor.execute(insereFisc, (cpf, fiscal.upper()))                                 
             else: #não é mais supervisor da equipe
                 comando = "Select Codigo, CPF, Inicio, Fim from Supervisores Where Equipe=%s and CPF=%s and Inicio=%s and Fim Is Null"
                 cursor.execute(comando, (grupoRow[0], cpf, paraData(dataIni)))
@@ -370,7 +378,7 @@ def realizaCargaDados():
         else:
             logging.info("Grupo não encontrado: "+grupoRow[0])
 
-    if tabGrupos>0 or tabGruposAtu>0:
+    if tabGrupos>0 or tabGruposAtu>0 or atualizouSuperv:
         conn.commit()
     cursor.close()
     conn.close()  
