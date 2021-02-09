@@ -410,7 +410,7 @@ def acompanha(update, context): #inicia o monitoramente de um ou de TODOS os TDP
                 if row:
                     if row[1]!=None:
                         comando = "Update CadastroTDPFs Set Fim=Null Where Codigo=%s"
-                        cursor.execute(comando, (row[0]))
+                        cursor.execute(comando, (row[0],))
                         atualizou = True
                 else:
                     comando = "Insert into CadastroTDPFs (Fiscal, TDPF, Inicio) Values (%s, %s, %s)"
@@ -640,11 +640,11 @@ def efetivaAnulacaoAtividade(userId, tdpf, codigo): #efetiva a anulação (apaga
             conn.close()
             return False, "O acompanhamento do TDPF foi finalizado em "+row[1].strftime('%d/%m/%Y')+"."
         if codigo==0:    
-            comando = "Select Codigo, TDPF, Data from Atividades Where TDPF=%s Order by Codigo DESC"
+            comando = "Select Codigo, TDPF, Inicio from Atividades Where TDPF=%s Order by Codigo DESC"
             cursor.execute(comando, (tdpf,))
             rows = cursor.fetchall()
         else:
-            comando = "Select Codigo, TDPF, Data from Atividades Where Codigo=%s and TDPF=%s"
+            comando = "Select Codigo, TDPF, Inicio from Atividades Where Codigo=%s and TDPF=%s"
             cursor.execute(comando, (codigo, tdpf))
             rows = cursor.fetchall()       
             if len(rows)==0:
@@ -1060,7 +1060,6 @@ def cienciaTexto(update, context): #obtém a descrição da atividade e chama a 
             response_message = "Data de ciência registrada para o TDPF."
             if msgEfetivaCiencia!=None and msgEfetivaCiencia!="":
                 response_message = response_message+msgEfetivaCiencia
-            bot.send_message(userId, text=response_message) 
         else:
             response_message = msgEfetivaCiencia         
         bot.send_message(userId, text=response_message) 
@@ -1278,7 +1277,7 @@ def efetivaFinalizacao(userId, tdpf=""): #finaliza monitoramento de um tdpf (cam
         cpf = row[0]
         if tdpf!="":
             comando = "Select Codigo, Fim from CadastroTDPFs Where Fiscal=%s and TDPF=%s"
-            cursor.execute(comando, cpf, tdpf)            
+            cursor.execute(comando, (cpf, tdpf))            
         else:
             comando = "Select Codigo, Fim from CadastroTDPFs Where Fiscal=%s and Fim Is Null"
             cursor.execute(comando, (cpf,))
@@ -2183,6 +2182,8 @@ def opcaoMostraTDPFs(update, context): #Relação de TDPFs e prazos
         if msg!="":
             response_message = "TDPFs Monitorados Por Você (somente):\na) TDPF; b) Supervisor; c) Data da última ciência; d) Dias restantes p/ recuperação da espontaneidade; e) Documento; f) Dias restantes para o vencto. do TDPF:"
             response_message = response_message+msg
+            response_message = response_message + "\n\nVencimento do TDPF pode ser inferior ao do Ação Fiscal, pois as informações do serviço se baseiam"
+            response_message = response_message + " na data de distribuição, que pode ter ocorrido antes da assinatura e emissão do TDPF."             
             if ambiente=="TESTE":
                 response_message = response_message+"\n\nAmbiente: "+ambiente
             bot.send_message(userId, text=response_message)  
@@ -2193,9 +2194,7 @@ def opcaoMostraTDPFs(update, context): #Relação de TDPFs e prazos
             for registro in atividade[1]:
                 msg = msg + "\na) "+atividade[0]+"; b) "+str(registro[0])+"; c) "+registro[1]+"; d) "+registro[2].strftime('%d/%m/%Y')+"; e) "+registro[3].strftime('%d/%m/%Y')
         if msg!="":
-            response_message = "Lista de atividades em andamento dos TDPFs Monitorados:\na)TDPF; b) Código; c) Descrição; d) Início; e) Vencimento" + msg 
-            response_message = response_message + "\nVencimento do TDPF pode ser inferior ao do Ação Fiscal, pois as informações do serviço se baseiam"
-            response_message = response_message + " na data de distribuição, que pode ter ocorrido antes da assinatura e emissão do TDPF."            
+            response_message = "Lista de atividades em andamento dos TDPFs Monitorados:\na)TDPF; b) Código; c) Descrição; d) Início; e) Vencimento" + msg            
             if ambiente=="TESTE":
                 response_message = response_message+"\n\nAmbiente: "+ambiente			
     if response_message!="":        
@@ -2347,7 +2346,7 @@ def mostraSupervisionados(update, context): #Relação de TDPFs supervisionados 
         if (i % 15) == 0: #há limite de tamanho de msg - enviamos 15 TDPFs por vez, no máximo
             response_message = "TDPFs Supervisionados Por Você (somente):\na) TDPF; b) Monitorado Por Algum Fiscal; c) Data da última ciência; d) Dias restantes p/ recuperação da espontaneidade; e) Dias restantes para o vencto. do TDPF:" 
             response_message = response_message + msg  
-            response_message = response_message + "\nVencimento do TDPF pode ser inferior ao do Ação Fiscal, pois as informações do serviço se baseiam"
+            response_message = response_message + "\n\nVencimento do TDPF pode ser inferior ao do Ação Fiscal, pois as informações do serviço se baseiam"
             response_message = response_message + " na data de distribuição, que pode ter ocorrido antes da assinatura e emissão do TDPF."            
             if ambiente=="TESTE":
                 response_message = response_message+"\n\nAmbiente: "+ambiente	                    
@@ -2374,7 +2373,7 @@ def mostraSupervisionados(update, context): #Relação de TDPFs supervisionados 
                 bot.send_message(userId, text=msg)
             else:
                 bot.send_message(userId, text="E-mail enviado.")   
-            #os.remove(nomeArq)  
+            os.remove(nomeArq)  
         conn.close()    
     mostraMenuPrincipal(update, context)
     return
@@ -2496,7 +2495,7 @@ def opcaoEnviaAtividades(update, context): #envia relação de atividades de TDP
                 bot.send_message(userId, text=msg)
             else:
                 bot.send_message(userId, text="E-mail enviado.")   
-            #os.remove(nomeArq)
+            os.remove(nomeArq)
         else:    
             bot.send_message(userId, text="Não há atividades relativamente aos TDPFs em andamento sob sua supervisão.")
         conn.close()
@@ -2732,7 +2731,7 @@ def disparaAvisoUrgente(update, context): #avisos urgentes da Cofis disparados p
         logging.info(msgErro) 
         updater.bot.send_message(userId, msgErro)        
         return
-    comando = "Select idTelegram from Usuarios Where Saida Is Null and idTelegram Is Not Null and Adesao Is Not Null"
+    comando = "Select idTelegram from Usuarios Where Saida Is Null and idTelegram Is Not Null and idTelegram<>0 and Adesao Is Not Null"
     cursor.execute(comando)
     usuarios = cursor.fetchall()
     totalMsg = 0
@@ -2782,7 +2781,7 @@ def disparaMensagens(): #avisos diários (produção) ou de hora em hora (teste)
         msgCofis = msgCofis+mensagem[0]
     if msgCofis!="":
         msgCofis = "Mensagens Cofis:\n"+msgCofis+"."    
-    comando = "Select idTelegram, CPF, d1, d2, d3, email from Usuarios Where Adesao Is Not Null and Saida Is Null and idTelegram Is Not Null"
+    comando = "Select idTelegram, CPF, d1, d2, d3, email from Usuarios Where Adesao Is Not Null and Saida Is Null and idTelegram Is Not Null and idTelegram<>0"
     cursor.execute(comando)
     usuarios = cursor.fetchall()
     totalMsg = 0
@@ -2978,7 +2977,7 @@ def disparaMensagens(): #avisos diários (produção) ou de hora em hora (teste)
               Select Distinctrow Supervisores.CPF, TDPFS.Numero, Usuarios.idTelegram, Supervisores.Equipe
               From TDPFS, Usuarios, Supervisores 
               Where Supervisores.Fim Is Null and Supervisores.Equipe=TDPFS.Grupo and TDPFS.Emissao=cast((now() - interval 30 day) as date) 
-              and TDPFS.Encerramento Is Null and Supervisores.CPF=Usuarios.CPF and Usuarios.idTelegram Is Not Null and Usuarios.Adesao Is Not Null and 
+              and TDPFS.Encerramento Is Null and Supervisores.CPF=Usuarios.CPF and Usuarios.idTelegram Is Not Null and Usuarios.idTelegram<>0 and Usuarios.Adesao Is Not Null and 
               Usuarios.Saida Is Null and TDPFS.Numero not in (Select TDPF from Ciencias Where Data Is Not Null)
               Order By Supervisores.CPF, Supervisores.Equipe, TDPFS.Numero
               """
@@ -3017,7 +3016,7 @@ def disparaMensagens(): #avisos diários (produção) ou de hora em hora (teste)
               Select Distinctrow Supervisores.CPF, TDPFS.Numero, Usuarios.idTelegram, Supervisores.Equipe
               From TDPFS, Usuarios, Supervisores 
               Where Supervisores.Fim Is Null and Supervisores.Equipe=TDPFS.Grupo and TDPFS.Encerramento Is Null and
-              Supervisores.CPF=Usuarios.CPF and Usuarios.idTelegram Is Not Null and Usuarios.Adesao Is Not Null and 
+              Supervisores.CPF=Usuarios.CPF and Usuarios.idTelegram Is Not Null and Usuarios.idTelegram<>0 and Usuarios.Adesao Is Not Null and 
               Usuarios.Saida Is Null and TDPFS.Numero in (Select TDPF from Ciencias Where Data Is Not Null)
               Order By Supervisores.CPF, Supervisores.Equipe, TDPFS.Numero
               """         
