@@ -28,8 +28,10 @@ from email import encoders
 import smtplib
 
 from openpyxl import Workbook
-from openpyxl.styles import colors
-from openpyxl.styles import Font, Color
+#from openpyxl.styles import colors
+from openpyxl.styles import Font #, Color
+from openpyxl.utils import get_column_letter
+from openpyxl.styles import Alignment
 ############################### Bot ############################################
 
 
@@ -160,6 +162,54 @@ def enviaEmail(email, texto, assunto, arquivo=None):
         return 2
     server.quit()  
     return 3 #sucesso
+
+def verificaUsuarioTelegram(conn, userId): #retorna True, CPF e "" se está cadastrado e ativo; False CPF/vazio e mensagem se não está no serviço ou está inativo (saiu) 
+    if conn==None:
+        return False, "", ""
+    if userId==None or userId==0:
+        return False, "", "userId inválido"
+    comando = "Select CPF, Adesao, Saida from Usuarios Where idTelegram=%s"
+    cursor = conn.cursor(buffered=True)
+    cursor.execute(comando, (userId,))
+    row = cursor.fetchone()
+    if row:
+        cpf = row[0]
+        if row[1]==None: #adesão
+            return False, cpf, "Usuário não se registrou no serviço"
+        if row[2]!=None: #saída
+            return False, cpf, "Usuário está INATIVO no serviço - saída em "+row[2].strftime("%d/%m/%Y") 
+        return True, cpf, ""
+    else:
+        return False, "", "Usuário não está na base de dados"    
+
+def verificaMonitoramento(conn, cpf, tdpf): #verifica se o usuário está monitorando o TDPF; retorna False, vazio, vazio e mensagem se não, 
+                                            #e True, chaveTdpf, chaveFiscal e vazio caso afirmativo
+    cursor = conn.cursor(buffered=True)
+    comando = """Select CadastroTDPFs.Codigo, CadastroTDPFs.Fim, CadastroTDPFs.TDPF, Fiscais.Codigo from CadastroTDPFs, Fiscais, TDPFS 
+                 Where Fiscais.CPF=%s and Fiscais.Codigo=CadastroTDPFs.Fiscal and CadastroTDPFs.TDPF=TDPFS.Codigo and TDPFS.Numero=%s"""
+    cursor.execute(comando, (cpf, tdpf))
+    row = cursor.fetchone()
+    if not row:
+        return False, None, None, "TDPF não está sendo monitorado pelo usuário."
+    if row[1]!=None:
+        return False, None, None, "O monitoramento do TDPF foi finalizado em "+row[1].strftime('%d/%m/%Y')+"."
+    chaveTdpf = row[2]  
+    chaveFiscal = row[3]  
+    return True, chaveTdpf, chaveFiscal, ""    
+
+def verificaAlocacao(conn, cpf, tdpf): #verifica se o usuário está alocado ao TDPF e se o TDPF está em andamento; 
+                                       #retorna False, vazio, vazio e mensagem se não (ou TDPF inexistente), e True, chaveTdpf, chaveFiscal e vazio caso afirmativo
+    cursor = conn.cursor(buffered=True)
+    comando = """Select TDPFS.Numero, TDPFS.Codigo, Fiscais.Codigo from Alocacoes, TDPFS, Fiscais 
+                 Where Fiscais.CPF=%s and Fiscais.Codigo=Alocacoes.Fiscal and TDPFS.Numero=%s and Alocacoes.TDPF=TDPFS.Codigo 
+                 and TDPFS.Encerramento Is Null and Alocacoes.Desalocacao Is Null"""
+    cursor.execute(comando, (cpf, tdpf))        
+    row = cursor.fetchone()
+    if not row:
+        return False, None, None, "TDPF inexistente/encerrado ou usuário não está alocado a ele ou foi desalocado."
+    chaveTdpf = row[1]    
+    chaveFiscal = row[2]
+    return True, chaveTdpf, chaveFiscal, ""
 
 def registra(update, context): #registra usuário no serviço
     global pendencias, textoRetorno, d1padrao, d2padrao, d3padrao #, cpfRegistro   
@@ -332,7 +382,7 @@ def envioChave(update, context): #envia a chave de registro para o e-mail do usu
     return
                 
 
-def acompanha(update, context): #inicia o monitoramente de um ou de TODOS os TDPFs que o usuário supervisione ou em que esteja alocado
+def acompanha(update, context): #inicia o monitoramente de um ou de TODOS os TDPFs que o usuário esteja alocado
     global pendencias, textoRetorno
     bot = update.effective_user.bot
     userId = update.message.from_user.id      
@@ -353,30 +403,21 @@ def acompanha(update, context): #inicia o monitoramente de um ou de TODOS os TDP
         conn.close()
         return        
     else:  
-        comando = "Select CPF, Saida from Usuarios Where idTelegram=%s"
-        cursor.execute(comando, (userId,))
-        row = cursor.fetchone()
-        achou = False
-        if row:
-            achou = True
-            cpf = row[0]
-            if row[1]!=None: #saida
-                eliminaPendencia(userId) #apaga a pendência de informação do usuário
-                response_message = "Usuário não está ativo no serviço." #já testado quando acionou o menu
-                bot.send_message(userId, text=response_message) 
-                mostraMenuPrincipal(update, context)
-                conn.close()
-                return                
-        if not achou:
-            eliminaPendencia(userId) #apaga a pendência de informação do usuário            
-            response_message = "Usuário não está registrado no serviço." #tb já foi testado        
+        tdpfs = None
+        bAlocacao = False
+        bUsuario, cpf, msg = verificaUsuarioTelegram(conn, userId)
+        if not bUsuario:
+            response_message = msg
             bot.send_message(userId, text=response_message) 
             mostraMenuPrincipal(update, context)
+            eliminaPendencia(userId) #apaga a pendência de informação do usuário
             conn.close()
-            return             
+            return                          
         info = parametros[0]
         if info.upper().strip() in ["TODOS", "TODAS"]:
-            comando = "Select TDPF from Alocacoes, TDPFS Where Desalocacao Is Null and CPF=%s and TDPF=Numero and Encerramento Is Null"
+            comando = """Select TDPFS.Numero, TDPFS.Codigo, Fiscais.Codigo from Alocacoes, TDPFS, Fiscais 
+                         Where Alocacoes.Desalocacao Is Null and Fiscais.CPF=%s and Alocacoes.Fiscal=Fiscais.Codigo and 
+                         Alocacoes.TDPF=TDPFS.Codigo and TDPFS.Encerramento Is Null"""
             cursor.execute(comando, (cpf,))
             tdpfs = cursor.fetchall()
             if not tdpfs:
@@ -388,13 +429,11 @@ def acompanha(update, context): #inicia o monitoramente de um ou de TODOS os TDP
                 response_message = response_message+textoRetorno  
                 bot.send_message(userId, text=response_message) 
                 conn.close()
-                return                 
-            comando = "Select TDPF from Alocacoes, TDPFS Where Desalocacao Is Null and CPF=%s and TDPF=%s and TDPF=Numero and Encerramento Is Null"
-            cursor.execute(comando, (cpf, tdpf))
-            tdpfs = cursor.fetchall()
-            if not tdpfs:
-                response_message = "TDPF não existe, usuário não é supervisor ou não está alocado nele."
-        if not tdpfs:
+                return
+            bAlocacao, chaveTdpf, chaveFiscal, msg = verificaAlocacao(conn, cpf, tdpf)                 
+            if not bAlocacao:
+                response_message = msg
+        if not tdpfs and not bAlocacao:
             eliminaPendencia(userId) #apaga a pendência de informação do usuário            
             bot.send_message(userId, text=response_message) 
             mostraMenuPrincipal(update, context)
@@ -403,9 +442,11 @@ def acompanha(update, context): #inicia o monitoramente de um ou de TODOS os TDP
         atualizou = False 
         try:
             for tdpfObj in tdpfs:
-                tdpf = tdpfObj[0]
-                comando = "Select Codigo as codigo, Fim from CadastroTDPFs Where Fiscal=%s and TDPF=%s"
-                cursor.execute(comando, (cpf, tdpf))
+                chaveTdpf = tdpfObj[1]
+                chaveFiscal = tdpfObj[2]
+                comando = """Select CadastroTDPFs.Codigo, CadastroTDPFs.Fim from CadastroTDPFs
+                                Where CadastroTDPFs.Fiscal=%s and CadastroTDPFs.TDPF=%s"""
+                cursor.execute(comando, (chaveFiscal, chaveTdpf))
                 row = cursor.fetchone()
                 if row:
                     if row[1]!=None:
@@ -414,7 +455,7 @@ def acompanha(update, context): #inicia o monitoramente de um ou de TODOS os TDP
                         atualizou = True
                 else:
                     comando = "Insert into CadastroTDPFs (Fiscal, TDPF, Inicio) Values (%s, %s, %s)"
-                    cursor.execute(comando, (cpf, tdpf, datetime.today().date()))
+                    cursor.execute(comando, (chaveFiscal, chaveTdpf, datetime.today().date()))
                     atualizou = True
             if atualizou:        
                 conn.commit()
@@ -439,51 +480,22 @@ def efetivaAtividade(userId, tdpf, atividade, vencimento, inicio): #tenta efetiv
         return False, "Erro na conexão - efetivaAtividade"
     cursor = conn.cursor(buffered=True)  
     try:
-        comando = "Select Encerramento from TDPFS Where Numero=%s"        
-        cursor.execute(comando, (tdpf,))
-        row = cursor.fetchone()
-        achou = False
-        if row:
-            achou = True
-            if row[0]!=None:
-                conn.close()
-                return False, "TDPF foi encerrado - monitoramento não é mais necessário ou possível, inclusive registro de atividade."
-        if not achou:    
+        bUsuario, cpf, msg = verificaUsuarioTelegram(conn, userId)
+        if not bUsuario:
             conn.close()
-            return False, "TDPF não foi localizado - não existe ou foi encerrado há um certo tempo e retirado da base deste serviço."
-        comando = "Select CPF, Saida from Usuarios Where idTelegram=%s"
-        cursor.execute(comando, (userId,))
-        row = cursor.fetchone()
-        achou = False
-        if row:
-            achou = True
-            cpf = row[0]
-            if row[1]!=None: #saida
-                conn.close()
-                return False, "Usuário não está ativo no serviço." #já testado quando acionou o menu
-        if not achou:
+            return False, msg #tb já foi testado  
+        bAlocacao, chaveTdpf, chaveFiscal, msg = verificaAlocacao(conn, cpf, tdpf) 
+        if not bAlocacao:
             conn.close()
-            return False, "Usuário não está registrado no serviço." #tb já foi testado
-        comando = "Select Desalocacao from Alocacoes Where CPF=%s and TDPF=%s"
-        cursor.execute(comando, (cpf, tdpf))
-        row = cursor.fetchone()        
-        achou = False
-        if row:
-            achou = True
-            if row[0]!=None:
-                conn.close()
-                return False, "Usuário não está mais alocado ao TDPF."
-        if not achou:
-            conn.close()
-            return False, "Usuario não está alocado ao TDPF."
-        comando = "Select Codigo, Fim from CadastroTDPFs Where TDPF=%s and Fiscal=%s"
-        cursor.execute(comando, (tdpf, cpf))
+            return False, msg         
+        comando = "Select Codigo, Fim from CadastroTDPFs Where TDPF=%s and CadastroTDPFs.Fiscal=%s"
+        cursor.execute(comando, (chaveTdpf, chaveFiscal))
         row = cursor.fetchone()        
         tdpfCadastrado = False
         fim = None
         if row:
             tdpfCadastrado = True  
-            chave = row[0]
+            chaveCad = row[0]
             fim = row[1]
             #logging.info("TDPF cadastrado")          
     except:
@@ -496,16 +508,16 @@ def efetivaAtividade(userId, tdpf, atividade, vencimento, inicio): #tenta efetiv
             dataVenc = datetime.today().date()+timedelta(days=int(vencimento)) 
         dataInicio = datetime.strptime(inicio, "%d/%m/%Y").date()          
         comando = "Insert into Atividades (TDPF, Atividade, Vencimento, Inicio) Values (%s, %s, %s, %s)"
-        cursor.execute(comando, (tdpf, atividade.upper(), dataVenc, dataInicio))
+        cursor.execute(comando, (chaveTdpf, atividade.upper(), dataVenc, dataInicio))
         msg = ""
         if fim!=None:
             msg = " Monitoramento deste TDPF foi reativado."
             comando = "Update CadastroTDPFs Set Fim=Null Where Codigo=%s"
-            cursor.execute(comando, (chave,))                         
+            cursor.execute(comando, (chaveCad,))                         
         elif not tdpfCadastrado:
             msg = " Monitoramento deste TDPF foi iniciado."
             comando = "Insert into CadastroTDPFs (Fiscal, TDPF, Inicio) Values (%s, %s, %s)"
-            cursor.execute(comando, (cpf, tdpf, datetime.today().date()))
+            cursor.execute(comando, (chaveFiscal, chaveTdpf, datetime.today().date()))
         conn.commit()
         conn.close()
         return True, msg
@@ -552,9 +564,10 @@ def atividade(update, context): #critica e tenta efetivar a realização de uma 
     userId = update.message.from_user.id   
     bot = update.effective_user.bot
     msg = update.message.text    
+    msgAtividade = "Envie novamente o TDPF (16 dígitos), a data ou o prazo de vencimento em dias e a data de início da atividade."
     parametros = getParametros(msg)
     if len(parametros)!=3:
-        response_message = "Número de informações (parâmetros) inválido. Envie somente o nº do TDPF, a data ou o prazo de vencimento em dias e a data de início da atividade."
+        response_message = "Número de informações (parâmetros) inválido. "+msgAtividade
         response_message = response_message+textoRetorno
     else:
         response_message = ""
@@ -566,13 +579,13 @@ def atividade(update, context): #critica e tenta efetivar a realização de uma 
         if inicio.isdigit() and len(inicio)==8:
             inicio = inicio[:2]+"/"+inicio[2:4]+"/"+inicio[4:]                      
         if len(tdpf)!=16 or not tdpf.isdigit():
-            response_message = "TDPF inválido. Envie novamente o TDPF (16 dígitos), a data ou o prazo de vencimento em dias e a data de início da atividade."
+            response_message = "TDPF inválido. "+msgAtividade
             response_message = response_message+textoRetorno                          
         elif not isDate(data) and not data.isdigit():
-            response_message = "Data/prazo inválido. Envie novamente o TDPF, a data ou o prazo de vencimento em dias e a data de início da atividade."
+            response_message = "Data/prazo inválido. "+msgAtividade
             response_message = response_message+textoRetorno             
         if response_message=="" and not isDate(inicio):
-            response_message = "Data de início da atividade inválida. Envie novamente o TDPF, a data ou o prazo de vencimento em dias e a data de início da atividade."
+            response_message = "Data de início da atividade inválida. "+msgAtividade
             response_message = response_message+textoRetorno 
         if len(response_message)>0:           
             bot.send_message(userId, text=response_message)  
@@ -583,69 +596,62 @@ def atividade(update, context): #critica e tenta efetivar a realização de uma 
             try:
                 dateTimeObj = datetime.strptime(data, '%d/%m/%Y').date()
                 if dateTimeObj<=datetime.now().date():
-                    response_message = "Data de vencimento deve ser futura. Envie novamente o TDPF, a data ou o prazo de vencimento em dias e a data de início da atividade."
+                    response_message = "Data de vencimento deve ser futura. "+msgAtividade
                     response_message = response_message+textoRetorno                      
             except: #não deveria acontecer após o isDate, mas fazemos assim para não correr riscos
-                response_message = "Erro na conversão da data de vencimento. Envie novamente o TDPF, a data ou o prazo de vencimento em dias e a data de início da atividade."
+                response_message = "Erro na conversão da data de vencimento. "+msgAtividade
                 response_message = response_message+textoRetorno   
         else:
             try:
                 prazo = int(data)  
                 if prazo>365 or prazo<=0:
-                    response_message = "Prazo de vencimento deve ser superior a 0 e inferior a 366 dias. Envie novamente o TDPF, a data ou o prazo de vencimento em dias e a data de início da atividade."
+                    response_message = "Prazo de vencimento deve ser superior a 0 e inferior a 366 dias. "+msgAtividade
                     response_message = response_message+textoRetorno                          
             except: 
-                response_message = "Erro na conversão do prazo. Envie novamente o TDPF, a data ou o prazo de vencimento em dias e a data de início da atividade."
+                response_message = "Erro na conversão do prazo. "+msgAtividade
                 response_message = response_message+textoRetorno 
         if len(response_message)==0:
             try:
                 dataInicio =  datetime.strptime(inicio, '%d/%m/%Y').date()
                 if dataInicio>datetime.now().date():
-                    response_message = "Data de início deve ser atual ou passada. Envie novamente o TDPF, a data ou o prazo de vencimento em dias e a data de início da atividade."
+                    response_message = "Data de início deve ser atual ou passada. "+msgAtividade
                     response_message = response_message+textoRetorno                      
             except: #não deveria acontecer após o isDate, mas fazemos assim para não correr riscos
-                response_message = "Erro na conversão da data de início. Envie novamente o TDPF, a data ou o prazo de vencimento em dias e a data de início da atividade."
+                response_message = "Erro na conversão da data de início. "+msgAtividade
                 response_message = response_message+textoRetorno                                                  
         if len(response_message)==0:
             eliminaPendencia(userId)
             pendencias[userId] = 'atividadeTexto'
             atividadeTxt[userId] = [tdpf, data, inicio]
-            response_message = "Informe a descrição da atividade (máximo de 50 caracteres):"                     
+            response_message = "Informe a descrição da atividade SEM QUALQUER INFORMAÇÃO PROTEGIDA POR SIGILO (máximo de 50 caracteres):"                    
     bot.send_message(userId, text=response_message)  
-    return 
+    return     
 
-def efetivaAnulacaoAtividade(userId, tdpf, codigo): #efetiva a anulação (apaga) de uma atividade de um tdpf 
+def efetivaAnulacaoAtividade(userId, tdpf, codigo): #efetiva a anulação (apaga) de uma atividade de um tdpf (o código é a chave primária da atividade - opcional; se não houver, é o último registro daquele TDPF)
     conn = conecta()
     if not conn: 
         return False, "Erro na conexão - efetivaAnulacaoAtividade"
     cursor = conn.cursor(buffered=True)
-    comando = "Select CPF, Saida from Usuarios Where idTelegram=%s"
+    bUsuario, cpf, msg = verificaUsuarioTelegram(conn, userId)
+    if not bUsuario:
+        conn.close()
+        return False, msg #tb já foi testado     
     try:
-        cursor.execute(comando, (userId,))
-        row = cursor.fetchone()
-        if not row: #não achou usuário
+        bAlocacao, chaveTdpf, chaveFiscal, msg = verificaAlocacao(conn, cpf, tdpf)
+        if not bAlocacao:
             conn.close()
-            return False, "Usuário Telegram não está registrado no serviço."
-        if row[1]!=None:
+            return False, msg        
+        bMonitoramento, chaveTdpf, chaveFiscal, msg = verificaMonitoramento(conn, cpf, tdpf)
+        if not bMonitoramento:
             conn.close()
-            return False, "Usuário Telegram saiu do serviço em "+row[1].strftime('%d/%m/%Y')+"."
-        cpf = row[0]
-        comando = "Select Codigo, Fim from CadastroTDPFs Where Fiscal=%s and TDPF=%s"
-        cursor.execute(comando, (cpf, tdpf))
-        row = cursor.fetchone()
-        if not row:
-            conn.close()
-            return False, "TDPF não está sendo monitorado para você."
-        if row[1]!=None:
-            conn.close()
-            return False, "O acompanhamento do TDPF foi finalizado em "+row[1].strftime('%d/%m/%Y')+"."
+            return False, msg
         if codigo==0:    
             comando = "Select Codigo, TDPF, Inicio from Atividades Where TDPF=%s Order by Codigo DESC"
-            cursor.execute(comando, (tdpf,))
+            cursor.execute(comando, (chaveTdpf,))
             rows = cursor.fetchall()
         else:
             comando = "Select Codigo, TDPF, Inicio from Atividades Where Codigo=%s and TDPF=%s"
-            cursor.execute(comando, (codigo, tdpf))
+            cursor.execute(comando, (codigo, chaveTdpf))
             rows = cursor.fetchall()       
             if len(rows)==0:
                 conn.close()
@@ -660,7 +666,7 @@ def efetivaAnulacaoAtividade(userId, tdpf, codigo): #efetiva a anulação (apaga
         codigo = rows[0][0]    
     try:
         comando = "Delete from Atividades Where Codigo=%s and TDPF=%s"
-        cursor.execute(comando, (codigo, tdpf))
+        cursor.execute(comando, (codigo, chaveTdpf))
         conn.commit() 
         conn.close()  
         return True, ""
@@ -709,18 +715,15 @@ def efetivaHorasAtividade(userId, codigo, horas):
     if not conn: 
         return False, "Erro na conexão - efetivaHorasAtividade"
     cursor = conn.cursor(buffered=True)
-    comando = "Select CPF, Saida from Usuarios Where idTelegram=%s"
+    bUsuario, cpf, msg = verificaUsuarioTelegram(conn, userId)
+    if not bUsuario:
+        conn.close()
+        return False, msg #tb já foi testado  
     try:
-        cursor.execute(comando, (userId,))
-        row = cursor.fetchone()
-        if not row: #não achou usuário
-            conn.close()
-            return False, "Usuário Telegram não está registrado no serviço."
-        if row[1]!=None:
-            conn.close()
-            return False, "Usuário Telegram saiu do serviço em "+row[1].strftime('%d/%m/%Y')+"."
-        cpf = row[0]
-        comando = "Select Atividades.Atividade, Alocacoes.Desalocacao, Atividades.TDPF, Atividades.Inicio From Atividades, Alocacoes Where Atividades.Codigo=%s and Atividades.TDPF=Alocacoes.TDPF and Alocacoes.CPF=%s"
+        comando = """Select Atividades.Atividade, Alocacoes.Desalocacao, Atividades.TDPF, Atividades.Inicio, Fiscais.Codigo
+                     From Atividades, Alocacoes, Fiscais, CadastroTDPFs
+                     Where Atividades.Codigo=%s and Atividades.TDPF=Alocacoes.TDPF and Fiscais.CPF=%s and Fiscais.Codigo=Alocacoes.Fiscal
+                     and CadastroTDPFs.Fiscal=Fiscais.Codigo and CadastroTDPFs.TDPF=Atividades.TDPF and CadastroTDPFs.Fim Is Null"""
         cursor.execute(comando, (codigo, cpf))
         linhas = cursor.fetchall()
     except:
@@ -733,15 +736,16 @@ def efetivaHorasAtividade(userId, codigo, horas):
         bAchou = False
     if not bAchou:
         conn.close()
-        return False, "Código da atividade não localizado ou usuário nunca esteve alocado ao TDPF"        
+        return False, "Código da atividade não localizado ou usuário não está alocado ao TDPF ou o monitora"        
     linha = linhas[0]
     if linha[1]!=None:
         conn.close()
         return False, "Usuário não está mais alocado ao TDPF"
-    tdpf = linha[2]    
+    chaveTdpf = linha[2]
+    chaveFiscal = linha[4]    
     comando = "Select Codigo, Fim from CadastroTDPFs Where Fiscal=%s and TDPF=%s"
     try:
-        cursor.execute(comando, (cpf, tdpf))
+        cursor.execute(comando, (chaveFiscal, chaveTdpf))
         row = cursor.fetchone()
     except:
         conn.close()
@@ -821,18 +825,15 @@ def efetivaTerminoAtividade(userId, codigo, dataTermino, horas):
     if not conn: 
         return False, "Erro na conexão - efetivaTerminoAtividade"
     cursor = conn.cursor(buffered=True)
-    comando = "Select CPF, Saida from Usuarios Where idTelegram=%s"
+    bUsuario, cpf, msg = verificaUsuarioTelegram(conn, userId)
+    if not bUsuario:
+        conn.close()
+        return False, msg #tb já foi testado      
     try:
-        cursor.execute(comando, (userId,))
-        row = cursor.fetchone()
-        if not row: #não achou usuário
-            conn.close()
-            return False, "Usuário Telegram não está registrado no serviço."
-        if row[1]!=None:
-            conn.close()
-            return False, "Usuário Telegram saiu do serviço em "+row[1].strftime('%d/%m/%Y')+"."
-        cpf = row[0]
-        comando = "Select Atividades.Atividade, Alocacoes.Desalocacao, Atividades.TDPF, Atividades.Inicio From Atividades, Alocacoes Where Atividades.Codigo=%s and Atividades.TDPF=Alocacoes.TDPF and Alocacoes.CPF=%s"
+        comando = """Select Atividades.Atividade, Alocacoes.Desalocacao, Atividades.TDPF, Atividades.Inicio, Fiscais.Codigo, Atividades.TDPF
+                     From Atividades, Alocacoes, Fiscais, CadastroTDPFs
+                     Where Atividades.Codigo=%s and Atividades.TDPF=Alocacoes.TDPF and Fiscais.CPF=%s and Alocacoes.Fiscal=Fiscais.Codigo
+                     and Atividades.TDPF=CadastroTDPFs.TDPF and Fiscais.Codigo=CadastroTDPFs.Fiscal and CadastroTDPFs.Fim Is Null"""
         cursor.execute(comando, (codigo, cpf))
         linhas = cursor.fetchall()
     except:
@@ -845,11 +846,13 @@ def efetivaTerminoAtividade(userId, codigo, dataTermino, horas):
         bAchou = False
     if not bAchou:
         conn.close()
-        return False, "Código da atividade não localizado ou usuário nunca esteve alocado ao TDPF"        
+        return False, "Código da atividade não localizado ou usuário não está alocado ao TDPF ou o monitora"        
     linha = linhas[0]
     if linha[1]!=None:
         conn.close()
         return False, "Usuário não está mais alocado ao TDPF"
+    chaveFiscal = linha[4]
+    chaveTdpf = linha[5]
     dataInicio = linha[3]    
     if dataInicio!=None:
         if dataTermino<dataInicio:
@@ -858,7 +861,7 @@ def efetivaTerminoAtividade(userId, codigo, dataTermino, horas):
     tdpf = linha[2]    
     comando = "Select Codigo, Fim from CadastroTDPFs Where Fiscal=%s and TDPF=%s"
     try:
-        cursor.execute(comando, (cpf, tdpf))
+        cursor.execute(comando, (chaveFiscal, chaveTdpf))
         row = cursor.fetchone()
     except:
         conn.close()
@@ -960,51 +963,22 @@ def efetivaCiencia(userId, tdpf, data, documento): #tenta efetivar a ciência de
         return False, "Erro na conexão - efetivaCiencia"
     cursor = conn.cursor(buffered=True)  
     try:
-        comando = "Select Encerramento from TDPFS Where Numero=%s"        
-        cursor.execute(comando, (tdpf,))
-        row = cursor.fetchone()
-        achou = False
-        if row:
-            achou = True
-            if row[0]!=None:
-                conn.close()
-                return False, "TDPF foi encerrado - monitoramento não é mais necessário ou possível."
-        if not achou:    
+        bUsuario, cpf, msg = verificaUsuarioTelegram(conn, userId)
+        if not bUsuario:
             conn.close()
-            return False, "TDPF não foi localizado - não existe ou foi encerrado há um certo tempo e retirado da base deste serviço."
-        comando = "Select CPF, Saida from Usuarios Where idTelegram=%s"
-        cursor.execute(comando, (userId,))
-        row = cursor.fetchone()
-        achou = False
-        if row:
-            achou = True
-            cpf = row[0]
-            if row[1]!=None: #saida
-                conn.close()
-                return False, "Usuário não está ativo no serviço." #já testado quando acionou o menu
-        if not achou:
+            return False, msg #tb já foi testado  
+        bAlocacao, chaveTdpf, chaveFiscal, msg = verificaAlocacao(conn, cpf, tdpf)  
+        if not bAlocacao:
             conn.close()
-            return False, "Usuário não está registrado no serviço." #tb já foi testado
-        comando = "Select Desalocacao from Alocacoes Where CPF=%s and TDPF=%s"
-        cursor.execute(comando, (cpf, tdpf))
-        row = cursor.fetchone()        
-        achou = False
-        if row:
-            achou = True
-            if row[0]!=None:
-                conn.close()
-                return False, "Usuário não está mais alocado ao TDPF."
-        if not achou:
-            conn.close()
-            return False, "Usuario não está alocado ao TDPF."
+            return False, msg      
         comando = "Select Data from Ciencias Where TDPF=%s and Data>=%s Order by Data DESC"
-        cursor.execute(comando, (tdpf, datetime.strptime(data, "%d/%m/%Y")))
+        cursor.execute(comando, (chaveTdpf, datetime.strptime(data, "%d/%m/%Y")))
         row = cursor.fetchone()
         if row:
             conn.close()
             return False, "Data de ciência informada DEVE ser posterior à ultima informada para o TDPF ("+row[0].strftime('%d/%m/%Y')+")."
         comando = "Select Codigo, Fim from CadastroTDPFs Where TDPF=%s and Fiscal=%s"
-        cursor.execute(comando, (tdpf, cpf))
+        cursor.execute(comando, (chaveTdpf, chaveFiscal))
         row = cursor.fetchone()        
         tdpfCadastrado = False
         fim = None
@@ -1018,7 +992,7 @@ def efetivaCiencia(userId, tdpf, data, documento): #tenta efetivar a ciência de
         return False, "Erro na consulta (3)."
     try:
         comando = "Insert into Ciencias (TDPF, Data, Documento) Values (%s, %s, %s)"
-        cursor.execute(comando, (tdpf, datetime.strptime(data, "%d/%m/%Y"), documento))
+        cursor.execute(comando, (chaveTdpf, datetime.strptime(data, "%d/%m/%Y"), documento))
         msg = ""
         if fim!=None:
             msg = " Monitoramento deste TDPF foi reativado."
@@ -1027,7 +1001,7 @@ def efetivaCiencia(userId, tdpf, data, documento): #tenta efetivar a ciência de
         elif not tdpfCadastrado:
             msg = " Monitoramento deste TDPF foi iniciado."
             comando = "Insert into CadastroTDPFs (Fiscal, TDPF, Inicio) Values (%s, %s, %s)"
-            cursor.execute(comando, (cpf, tdpf, datetime.today().date()))
+            cursor.execute(comando, (chaveFiscal, chaveTdpf, datetime.today().date()))
         conn.commit()
         conn.close()
         return True, msg
@@ -1114,7 +1088,7 @@ def efetivaPrazos(userId, d): #altera no BD os prazos padrão do usuário (d é 
     conn = conecta()
     if not conn: 
         return False, "Erro na conexão - efetivaPrazos"
-    cursor = conn.cursor(buffered=True) 
+    cursor = conn.cursor(buffered=True)    
     #ordena os prazos (não tem utilidade, mas deixei assim pois pode ser que venha a ter)
     d.sort(reverse = True)
     d1 = d[0]
@@ -1178,28 +1152,21 @@ def efetivaAnulacao(userId, tdpf): #efetiva a anulação (apaga) de uma data de 
     if not conn: 
         return False, "Erro na conexão - efetivaAnulacao"
     cursor = conn.cursor(buffered=True)
-    comando = "Select CPF, Saida from Usuarios Where idTelegram=%s"
+    bUsuario, cpf, msg = verificaUsuarioTelegram(conn, userId)
+    if not bUsuario:
+        conn.close()
+        return False, msg #tb já foi testado      
     try:
-        cursor.execute(comando, (userId,))
-        row = cursor.fetchone()
-        if not row: #não achou usuário
+        bMonitoramento, chaveTdpf, chaveFiscal, msg = verificaMonitoramento(conn, cpf, tdpf)  
+        if not bMonitoramento:
             conn.close()
-            return False, "Usuário Telegram não está registrado no serviço."
-        if row[1]!=None:
+            return False, msg      
+        bAlocacao, chaveTdpf, chaveFiscal, msg = verificaAlocacao(conn, cpf, tdpf)
+        if not bAlocacao:
             conn.close()
-            return False, "Usuário Telegram saiu do serviço em "+row[1].strftime('%d/%m/%Y')+"."
-        cpf = row[0]
-        comando = "Select Codigo, Fim from CadastroTDPFs Where Fiscal=%s and TDPF=%s"
-        cursor.execute(comando, (cpf, tdpf))
-        row = cursor.fetchone()
-        if not row:
-            conn.close()
-            return False, "TDPF não está sendo monitorado para você."
-        if row[1]!=None:
-            conn.close()
-            return False, "O acompanhamento do TDPF foi finalizado em "+row[1].strftime('%d/%m/%Y')+"."
+            return False, msg              
         comando = "Select Codigo, TDPF, Data from Ciencias Where TDPF=%s Order by Data"
-        cursor.execute(comando, (tdpf,))
+        cursor.execute(comando, (chaveTdpf,))
         rows = cursor.fetchall()
     except:
         conn.close()
@@ -1259,52 +1226,48 @@ def anulaCiencia(update, context): #anula (apaga) a última data de ciência do 
     bot.send_message(userId, text=response_message)  
     return          
 
-def efetivaFinalizacao(userId, tdpf=""): #finaliza monitoramento de um tdpf (campo Fim da tabela CadastroTDPFs)
+def efetivaFinalizacao(userId, tdpf=""): #finaliza monitoramento de um tdpf ou de todos do usuário (campo Fim da tabela CadastroTDPFs)
     conn = conecta()
     if not conn: 
         return False, "Erro na conexão - efetivaFinalização"
     cursor = conn.cursor(buffered=True)
-    comando = "Select CPF, Saida from Usuarios Where idTelegram=%s"
+    bUsuario, cpf, msg = verificaUsuarioTelegram(conn, userId)
+    if not bUsuario:
+        conn.close()
+        return False, msg #tb já foi testado  
     try:
-        cursor.execute(comando, (userId,))
-        row = cursor.fetchone()
-        if not row: #não achou usuário
-            conn.close()
-            return False, "Usuário Telegram não está registrado no serviço."
-        if row[1]!=None:
-            conn.close()
-            return False, "Usuário Telegram saiu do serviço em "+row[1].strftime('%d/%m/%Y')+"."
-        cpf = row[0]
         if tdpf!="":
-            comando = "Select Codigo, Fim from CadastroTDPFs Where Fiscal=%s and TDPF=%s"
+            comando = """Select CadastroTDPFs.Codigo, Fim, Fiscais.Codigo from CadastroTDPFs, Fiscais, TDPFS 
+                         Where Fiscais.CPF=%s and CadastroTDPFs.Fiscal=Fiscais.Codigo and TDPFS.Numero=%s and TDPFS.Codigo=CadastroTDPFs.TDPF"""
             cursor.execute(comando, (cpf, tdpf))            
         else:
-            comando = "Select Codigo, Fim from CadastroTDPFs Where Fiscal=%s and Fim Is Null"
+            comando = "Select CadastroTDPFs.Codigo, Fim, Fiscais.Codigo from CadastroTDPFs, Fiscais Where Fiscais.CPF=%s and CadastroTDPFs.Fiscal=Fiscais.Codigo and Fim Is Null"
             cursor.execute(comando, (cpf,))
         row = cursor.fetchone()
         if not row:
+            conn.close()
             if tdpf!="":
-                conn.close()
                 return False, "TDPF não está sendo monitorado por você. Envie um novo nº de TDPF:"
             else:
-                conn.close()
                 return True, "Nenhum TDPF está sendo monitorado por você atualmente."
         if row[1]!=None and tdpf!="":
             conn.close()
             return True, "O acompanhamento do TDPF já havia sido finalizado em "+row[1].strftime('%d/%m/%Y')+"."
         elif tdpf!="":
-            conn.close()
-            chave = row[0]
+            #conn.close()    #<-------VERIFICAR - ACHO QUE ESTÁ ERRADO
+            pass
     except:
         conn.close()
         return False, "Erro na consulta (7). Tente novamente mais tarde."
     try:
+        chaveReg = row[0]        
+        chaveFiscal = row[2]
         if tdpf!="":
             comando = "Update CadastroTDPFs Set Fim=%s Where Codigo=%s"
-            cursor.execute(comando, (datetime.today().date(), chave))
+            cursor.execute(comando, (datetime.today().date(), chaveReg))
         else:
             comando = "Update CadastroTDPFs Set Fim=%s Where Fiscal=%s"
-            cursor.execute(comando, (datetime.today().date(), cpf))
+            cursor.execute(comando, (datetime.today().date(), chaveFiscal))
         conn.commit()  
         conn.close()          
         return True, None
@@ -1461,7 +1424,7 @@ def start(update, context): #comandos /start /menu /retorna acionam esta opção
                      ' e de atividades cadastradas (em d3 dias antes e no dia do vencimento).'+
                      ' Digite a qualquer momento /menu para ver o menu principal.')
     bot.send_message(userId, text='Este serviço pode estar informando o vencimento do TDPF com alguma antecedência devido ao cálculo baseado apenas na data de distribuição,'+
-                        ' a qual pode ter ocorrido antes da assinatura e emissão do documento. Isto será corrigido quando os dados migrarem para o Receita Data.')
+                        ' a qual pode ter ocorrido antes da assinatura e emissão do documento. Isto será corrigido futuramente.')
     mostraMenuPrincipal(update, context)
     return
   
@@ -1660,18 +1623,18 @@ def opcaoInformaAtividade(update, context): #informa atividade relativa a TDPF e
     achou = verificaUsuario(userId, bot)       
     if achou:                      
         pendencias[userId] = 'atividade' #usuário agora tem uma pendência de informação (atividade)
-        response_message = "Envie /menu para ver o menu principal. Envie agora, numa única mensagem, o nº do TDPF (16 dígitos), a data de vencimento (dd/mm/aaaa) ou o prazo de vencimento em dias e a data de início da atividade (dd/mm/aaaa) - separe as informações com espaço:"  
+        response_message = "Envie /menu para ver o menu principal. Envie agora, numa única mensagem, o nº do TDPF (16 dígitos), a data de vencimento (dd/mm/aaaa) ou o prazo de vencimento em dias (contados de hoje) e a data de início da atividade (dd/mm/aaaa) - separe as informações com espaço:"  
         bot.send_message(userId, text=response_message)
     else:
         mostraMenuPrincipal(update, context)
     return    
 
-def exibeAtividadesEmAndamento(bot, userId, conn): #nome descreve (atividades em andamento de TDPFs em andamento para anulação ou informação do término)
+def exibeAtividadesEmAndamento(bot, userId, conn): #exibe atividades em andamento de TDPFs não encerrados para anulação ou informação do término
     consulta = """
-                Select Atividades.Codigo, Atividades.TDPF, Atividades.Atividade, Atividades.Inicio, Atividades.Vencimento, Atividades.Horas
-                from Atividades, TDPFS, Alocacoes, Usuarios
-                Where Usuarios.idTelegram=%s and Usuarios.CPF=Alocacoes.CPF and Alocacoes.Desalocacao Is Null and 
-                Alocacoes.TDPF=TDPFS.Numero and TDPFS.Encerramento Is Null and TDPFS.Numero=Atividades.TDPF and Atividades.Termino Is Null
+                Select Atividades.Codigo, TDPFS.Numero, Atividades.Atividade, Atividades.Inicio, Atividades.Vencimento, Atividades.Horas
+                from Atividades, TDPFS, Alocacoes, Usuarios, Fiscais
+                Where Usuarios.idTelegram=%s and Usuarios.CPF=Fiscais.CPF and Fiscais.Codigo=Alocacoes.Fiscal and Alocacoes.Desalocacao Is Null and 
+                Alocacoes.TDPF=TDPFS.Codigo and TDPFS.Encerramento Is Null and TDPFS.Codigo=Atividades.TDPF and Atividades.Termino Is Null
                 Order by Atividades.Inicio, Atividades.Vencimento
                 """    
     cursor = conn.cursor(buffered=True)
@@ -1792,10 +1755,10 @@ def opcaoEnviaCienciasAtividades(update, context): #Envia para o e-mail do usuá
         mostraMenuPrincipal(update, context)
         return
     consulta = """
-                Select TDPFS.Numero, TDPFS.Emissao, TDPFS.Nome, Usuarios.email
-                From TDPFS, Usuarios, Alocacoes
-                Where Usuarios.idTelegram=%s and Usuarios.Saida Is Null and Usuarios.Adesao Is Not Null and Usuarios.CPF=Alocacoes.CPF
-                and Alocacoes.Desalocacao Is Null and TDPFS.Numero=Alocacoes.TDPF and TDPFS.Encerramento Is Null 
+                Select TDPFS.Numero, TDPFS.Emissao, TDPFS.Nome, Usuarios.email, TDPFS.Codigo
+                From TDPFS, Usuarios, Alocacoes, Fiscais
+                Where Usuarios.idTelegram=%s and Usuarios.Saida Is Null and Usuarios.Adesao Is Not Null and Usuarios.CPF=Fiscais.CPF and Fiscais.Codigo=Alocacoes.Fiscal
+                and Alocacoes.Desalocacao Is Null and TDPFS.Codigo=Alocacoes.TDPF and TDPFS.Encerramento Is Null 
                 Order by TDPFS.Numero
                 """
     cursor = conn.cursor(buffered=True)           
@@ -1833,17 +1796,28 @@ def opcaoEnviaCienciasAtividades(update, context): #Envia para o e-mail do usuá
     sheet1.cell(row=1, column=6).value = "Vencimento"
     sheet1.cell(row=1, column=7).value = "Término"
     sheet1.cell(row=1, column=8).value = "Horas"
+    larguras = [19, 13, 32, 27, 13, 13, 13, 8]
+    for col in range(len(larguras)):
+        sheet1.column_dimensions[get_column_letter(col+1)].width = larguras[col]   
+        currentCell = sheet1.cell(row=1, column=col+1)
+        currentCell.alignment = Alignment(horizontal='center', vertical='center', wrap_text=True)                 
     sheet2 = book.create_sheet(title="Ciências")
     sheet2.cell(row=1, column=1).value = "TDPF"
     sheet2.cell(row=1, column=2).value = "Data Emissão"
     sheet2.cell(row=1, column=3).value = "Nome Fiscalizado"
     sheet2.cell(row=1, column=4).value = "Data de Ciência"
     sheet2.cell(row=1, column=5).value = "Documento"            
-    sheet2.cell(row=1, column=6).value = "60 dias da Ciência"   
+    sheet2.cell(row=1, column=6).value = "60 dias da Ciência"  
+    larguras = [19, 13, 32, 14, 25, 16]
+    for col in range(len(larguras)):
+        sheet2.column_dimensions[get_column_letter(col+1)].width = larguras[col]  
+        currentCell = sheet2.cell(row=1, column=col+1)
+        currentCell.alignment = Alignment(horizontal='center', vertical='center', wrap_text=True)             
     i = 1
     j = 1
     for linha in linhas:                             
         tdpf = linha[0]
+        chaveTdpf = linha[4]
         emissao = linha[1]
         if emissao==None:
             emissao = ""
@@ -1853,17 +1827,25 @@ def opcaoEnviaCienciasAtividades(update, context): #Envia para o e-mail do usuá
         if fiscalizado==None:
             fiscalizado = ""                
         consulta = "Select Atividade, Inicio, Vencimento, Termino, Horas from Atividades Where TDPF=%s Order By Inicio"
-        cursor.execute(consulta,(tdpf,))
+        cursor.execute(consulta,(chaveTdpf,))
         rows = cursor.fetchall()                  
         for row in rows:
-            sheet1.cell(row=i+1, column=1).value = formataTDPF(tdpf)
-            sheet1.cell(row=i+1, column=2).value = emissao
+            currentCell = sheet1.cell(row=i+1, column=1)
+            currentCell.value = formataTDPF(tdpf)
+            currentCell.alignment = Alignment(horizontal='center')             
+            currentCell = sheet1.cell(row=i+1, column=2)
+            currentCell.value = emissao
+            currentCell.alignment = Alignment(horizontal='center')             
             sheet1.cell(row=i+1, column=3).value = fiscalizado                           
             sheet1.cell(row=i+1, column=4).value = row[0]
             if row[1]!=None:
                 sheet1.cell(row=i+1, column=5).value = row[1].date()
+                currentCell = sheet1.cell(row=i+1, column=5)
+                currentCell.alignment = Alignment(horizontal='center')                 
             if row[2]!=None:                              
                 sheet1.cell(row=i+1, column=6).value = row[2].date()
+                currentCell = sheet1.cell(row=i+1, column=6)
+                currentCell.alignment = Alignment(horizontal='center')                  
             if row[3]!=None:                              
                 sheet1.cell(row=i+1, column=7).value = row[3].date()
             if row[4]!=None:
@@ -1879,13 +1861,19 @@ def opcaoEnviaCienciasAtividades(update, context): #Envia para o e-mail do usuá
                         sheet1.cell(row=i+1, column=col+1).font = cor
             i+=1  
         consulta = "Select Data, Documento from Ciencias Where TDPF=%s and Data Is Not Null Order By Data"
-        cursor.execute(consulta,(tdpf,))
+        cursor.execute(consulta,(chaveTdpf,))
         rows = cursor.fetchall()                  
         for row in rows: 
-            sheet2.cell(row=j+1, column=1).value = formataTDPF(tdpf)
-            sheet2.cell(row=j+1, column=2).value = emissao
+            currentCell = sheet2.cell(row=i+1, column=1)
+            currentCell.value = formataTDPF(tdpf)
+            currentCell.alignment = Alignment(horizontal='center')             
+            currentCell = sheet2.cell(row=i+1, column=2)
+            currentCell.value = emissao
+            currentCell.alignment = Alignment(horizontal='center')             
             sheet2.cell(row=j+1, column=3).value = fiscalizado                           
-            sheet2.cell(row=j+1, column=4).value = row[0].date()
+            currentCell = sheet2.cell(row=i+1, column=4)
+            currentCell.value = row[0].date()
+            currentCell.alignment = Alignment(horizontal='center')             
             if row[1]!=None:
                 sheet2.cell(row=j+1, column=5).value = row[1] 
             diaEspont = (row[0]+timedelta(days=60)).date()
@@ -1899,7 +1887,7 @@ def opcaoEnviaCienciasAtividades(update, context): #Envia para o e-mail do usuá
                 for col in range(6):
                     sheet2.cell(row=j+1, column=col+1).font = cor            
             j+=1
-    if i>1 or j>1:
+    if i>1 or j>1:              
         nomeArq = "CiencAtiv_"+str(userId)+"_"+datetime.now().strftime("%Y_%m_%d_%H_%M_%S")+".xlsx"
         book.save(nomeArq)   
         message = "Prezado(a),\n\nConforme solicitado, enviamos, em anexo, planilha com relação das ciências e das atividades de TDPFs em andamento sob sua responsabilidade.\n\nAtenciosamente,\n\nDisaf/Cofis\n\nAmbiente: "+ambiente    
@@ -1916,7 +1904,6 @@ def opcaoEnviaCienciasAtividades(update, context): #Envia para o e-mail do usuá
     conn.close()
     mostraMenuPrincipal(update, context)         
     return   
-
 
 def opcaoInformaCiencia(update, context): #Informa ciência de TDPF
     global pendencias
@@ -1975,7 +1962,6 @@ def opcaoPrazos(update, context): #Informa prazos para receber avisos
     bot.send_message(userId, text=response_message)  
     conn.close()  
     return
-
 
 def opcaoAnulaCiencia(update, context): #Anula ciência de TDPF
     global pendencias    
@@ -2040,15 +2026,15 @@ def montaListaTDPFs(userId, tipo=1):
         cpf = row[0]
         if tipo==1:
         #seleciona monitoramentos ativos (incluído pelo usuário, ainda alocado nele e não encerrado)
-            comando = '''Select CadastroTDPFs.TDPF as tdpf, TDPFS.Vencimento as Vencimento, Supervisor from CadastroTDPFs, Alocacoes, 
-                        TDPFS Where CadastroTDPFs.Fiscal=%s and CadastroTDPFs.Fim Is Null and CadastroTDPFs.Fiscal=Alocacoes.CPF and 
-                        CadastroTDPFs.TDPF=Alocacoes.TDPF and CadastroTDPFs.TDPF=TDPFS.Numero and Alocacoes.Desalocacao Is Null and 
-                        TDPFS.Encerramento Is Null Order By CadastroTDPFs.TDPF'''
+            comando = '''Select TDPFS.Numero, TDPFS.Vencimento, TDPFS.Codigo, Alocacoes.Supervisor from CadastroTDPFs, Alocacoes, Fiscais, TDPFS
+                        Where Fiscais.CPF=%s and CadastroTDPFs.Fiscal=Fiscais.Codigo and CadastroTDPFs.Fim Is Null and CadastroTDPFs.Fiscal=Alocacoes.Fiscal and 
+                        CadastroTDPFs.TDPF=Alocacoes.TDPF and CadastroTDPFs.TDPF=TDPFS.Codigo and Alocacoes.Desalocacao Is Null and 
+                        TDPFS.Encerramento Is Null Order By TDPFS.Numero'''
         elif tipo==2:
         #seleciona todos os TDPFs dos quais o usuário é supervisor
             comando = """ 
-                        Select TDPFS.Numero as tdpf, Vencimento from TDPFS, Supervisores Where Encerramento Is Null and 
-                        Supervisores.Equipe=TDPFS.Grupo and Supervisores.Fim Is Null and Supervisores.CPF=%s Order by TDPFS.Numero
+                        Select TDPFS.Numero, TDPFS.Vencimento, TDPFS.Codigo from TDPFS, Supervisores, Fiscais Where Encerramento Is Null and 
+                        Supervisores.Equipe=TDPFS.Grupo and Supervisores.Fim Is Null and Fiscais.CPF=%s and Fiscais.Codigo=Supervisores.Fiscal Order by TDPFS.Numero
                         """
             #comando = '''Select Alocacoes.TDPF as tdpf, Vencimento from Alocacoes, TDPFS Where Desalocacao Is Null and Encerramento Is Null 
             #            and CPF=%s and TDPF=Numero and Supervisor='S' Order by TDPF'''
@@ -2066,6 +2052,7 @@ def montaListaTDPFs(userId, tipo=1):
         result = []
         for linha in listaAux:
             tdpf = linha[0]
+            chaveTdpf = linha[2]
             vencimento = linha[1]
             if vencimento:
                 vencimento = vencimento.date()
@@ -2077,11 +2064,11 @@ def montaListaTDPFs(userId, tipo=1):
                 vctoTDPF = "ND"
             comando = "Select Data, Documento from Ciencias Where TDPF=%s order by Data DESC"
             #logging.info(comando)
-            cursor.execute(comando, (tdpf,))            
+            cursor.execute(comando, (chaveTdpf,))            
             cienciaReg = cursor.fetchone() #busca a data de ciência mais recente (DESC acima)
             if tipo==2: #verificamos se o TDPF está sendo monitorado
                 comando = "Select Codigo as codigo from CadastroTDPFs Where TDPF=%s and Fim Is Null"
-                cursor.execute(comando, (tdpf,))
+                cursor.execute(comando, (chaveTdpf,))
                 monitoradoReg = cursor.fetchone()
                 if monitoradoReg:
                     monitorado = "SIM"
@@ -2099,8 +2086,8 @@ def montaListaTDPFs(userId, tipo=1):
                 ciencia = None
             if tipo==1:
                 atividades = []
-                comando = "Select Codigo, Atividade, Inicio, Vencimento from Atividades Where TDPF=%s and Termino Is Null order by Inicio"   #somente as atividade em andamento
-                cursor.execute(comando, (tdpf,))
+                comando = "Select Codigo, Atividade, Inicio, Vencimento, Horas from Atividades Where TDPF=%s and Termino Is Null order by Inicio"   #somente as atividade em andamento
+                cursor.execute(comando, (chaveTdpf,))
                 regAtividades = cursor.fetchall()
                 for regAtividade in regAtividades:
                     lista = []
@@ -2108,8 +2095,9 @@ def montaListaTDPFs(userId, tipo=1):
                     lista.append(regAtividade[1])
                     lista.append(regAtividade[2])
                     lista.append(regAtividade[3])
+                    lista.append(regAtividade[4])
                     atividades.append(lista)            
-                registro = [tdpfForm, linha[2], ciencia, documento, vctoTDPF, atividades]
+                registro = [tdpfForm, linha[3], ciencia, documento, vctoTDPF, atividades]
             else:
                 registro = [tdpfForm, monitorado, ciencia, documento, vctoTDPF]
             result.append(registro)       
@@ -2125,7 +2113,7 @@ def montaListaTDPFs(userId, tipo=1):
         return ["Erro na consulta (9). Tente novamente mais tarde."]
             
         
-def opcaoMostraTDPFs(update, context): #Relação de TDPFs e prazos
+def opcaoMostraTDPFs(update, context): #Relação de TDPFs monitorados, prazos e atividades do fiscal alocado
     global pendencias, ambiente   
     if update.effective_user.is_bot:
         return #não atendemos bots        
@@ -2168,11 +2156,11 @@ def opcaoMostraTDPFs(update, context): #Relação de TDPFs e prazos
                     dias = "d) "+str(dias)+" (recuperada); e) "+documento+"; f) "+vctoTDPF
                 else:
                     dias = "d) "+ str(dias) + "; e) "+documento+"; f) "+vctoTDPF    
-                msg = msg+"\n\n"+str(i)+"a) "+tdpf+"; b) "+supervisor+";\nc) "+ciencia.strftime('%d/%m/%Y')+"; "+dias
+                msg = msg+"\n\n"+str(i)+"a) *"+tdpf+"*; b) "+supervisor+";\nc) "+ciencia.strftime('%d/%m/%Y')+"; "+dias
             else:
-                msg = msg+"\n\n"+str(i)+"a) "+tdpf+"; b) "+supervisor+"\nc) ND; d) ND; e) ND; f) "+vctoTDPF  
+                msg = msg+"\n\n"+str(i)+"a) *"+tdpf+"*; b) "+supervisor+"\nc) ND; d) ND; e) ND; f) "+vctoTDPF  
             if i%15==0:   #há limite de tamanho de msg - enviamos 15 TDPFs por vez, no máximo
-                response_message = "TDPFs Monitorados Por Você (somente):\na) TDPF; b) Supervisor; c) Data da última ciência; d) Dias restantes p/ recuperação da espontaneidade; e) Documento; f) Dias restantes para o vencto. do TDPF:"
+                response_message = "TDPFs Monitorados Por Você:\na) TDPF; b) Supervisor; c) Data da última ciência; d) Dias restantes p/ recuperação da espontaneidade; e) Documento; f) Dias restantes para o vencto. do TDPF:"
                 response_message = response_message+msg  
                 if ambiente=="TESTE":
                     response_message = response_message+"\n\nAmbiente: "+ambiente   
@@ -2180,25 +2168,32 @@ def opcaoMostraTDPFs(update, context): #Relação de TDPFs e prazos
                 msg = ""                       
             i+=1                 
         if msg!="":
-            response_message = "TDPFs Monitorados Por Você (somente):\na) TDPF; b) Supervisor; c) Data da última ciência; d) Dias restantes p/ recuperação da espontaneidade; e) Documento; f) Dias restantes para o vencto. do TDPF:"
+            response_message = "TDPFs Monitorados Por Você:\na) TDPF; b) Supervisor; c) Data da última ciência; d) Dias restantes p/ recuperação da espontaneidade; e) Documento; f) Dias restantes para o vencto. do TDPF:"
             response_message = response_message+msg
             response_message = response_message + "\n\nVencimento do TDPF pode ser inferior ao do Ação Fiscal, pois as informações do serviço se baseiam"
             response_message = response_message + " na data de distribuição, que pode ter ocorrido antes da assinatura e emissão do TDPF."             
             if ambiente=="TESTE":
                 response_message = response_message+"\n\nAmbiente: "+ambiente
-            bot.send_message(userId, text=response_message)  
+            response_message = response_message.replace(".", "\.").replace("_", "\_").replace("[", "\[").replace("]", "\]").replace(")", "\)").replace("(", "\(").replace("-","\-")#.replace("*", "\\*")        
+            bot.send_message(userId, text=response_message, parse_mode= 'MarkdownV2')                
         response_message = ""         
         msg = ""
+        i = 1
         for atividade in atividades:
             logging.info(atividade)
             for registro in atividade[1]:
-                msg = msg + "\na) "+atividade[0]+"; b) "+str(registro[0])+"; c) "+registro[1]+"; d) "+registro[2].strftime('%d/%m/%Y')+"; e) "+registro[3].strftime('%d/%m/%Y')
+                horas = registro[4]
+                if horas==None:
+                    horas = 0
+                msg = msg + "\n\n"+str(i)+"a) *"+atividade[0]+"*; b) "+str(registro[0])+"; c) "+registro[1]+"; d) "+registro[2].strftime('%d/%m/%Y')+"; e) "+registro[3].strftime('%d/%m/%Y')+"; f) "+str(horas)
+                i+=1
         if msg!="":
-            response_message = "Lista de atividades em andamento dos TDPFs Monitorados:\na)TDPF; b) Código; c) Descrição; d) Início; e) Vencimento" + msg            
+            response_message = "Lista de atividades em andamento dos TDPFs Monitorados:\na)TDPF; b) Código; c) Descrição; d) Início; e) Vencimento; f) Horas" + msg            
             if ambiente=="TESTE":
                 response_message = response_message+"\n\nAmbiente: "+ambiente			
-    if response_message!="":        
-        bot.send_message(userId, text=response_message)
+    if response_message!="": 
+        response_message = response_message.replace(".", "\.").replace("_", "\_").replace("[", "\[").replace("]", "\]").replace(")", "\)").replace("(", "\(").replace("-","\-")#.replace("*", "\\*")        
+        bot.send_message(userId, text=response_message, parse_mode= 'MarkdownV2')                
     mostraMenuPrincipal(update, context)
     return
 
@@ -2263,6 +2258,12 @@ def mostraSupervisionados(update, context): #Relação de TDPFs supervisionados 
         sheet.cell(row=1, column=8).value = "Documento que Efetivou a Ciência"            
         sheet.cell(row=1, column=9).value = "Dias p/ Vencimento do TDPF"
         sheet.cell(row=1, column=10).value = "Horas Alocadas (TODOS os AFRFBs)"
+        sheet.row_dimensions[1].height = 42    
+        larguras = [18, 13, 32, 32, 11, 13, 14.5, 25, 13, 13.5]
+        for col in range(len(larguras)):
+            sheet.column_dimensions[get_column_letter(col+1)].width = larguras[col]  
+            currentCell = sheet.cell(row=1, column=col+1)
+            currentCell.alignment = Alignment(horizontal='center', vertical='center', wrap_text=True)                     
     i = 1
     msg = ""
     conn = conecta()  
@@ -2279,42 +2280,50 @@ def mostraSupervisionados(update, context): #Relação de TDPFs supervisionados 
         if documento==None:
             documento = ""
         email = ""
+        consulta = """
+                    Select TDPFS.Emissao, TDPFS.Nome, Fiscais.Nome, TDPFS.Codigo From TDPFS, Alocacoes, Fiscais 
+                    Where TDPFS.Numero=%s and TDPFS.Codigo=Alocacoes.TDPF and Alocacoes.Desalocacao Is Null and
+                    Alocacoes.Supervisor='N' and Alocacoes.Fiscal=Fiscais.Codigo
+                    """
+        fiscal = ""
+        fiscalizado = ""
+        emissao = None   
+        chaveTdpf = None                    
+        if conn:
+            cursor.execute(consulta, (getAlgarismos(tdpf),))
+            linhas = cursor.fetchall()
+            for linha in linhas:
+                emissao = linha[0]
+                if emissao!=None:
+                    emissao = emissao.date()
+                else:
+                    emissao = ""    
+                fiscalizado = linha[1]
+                fiscal = linha[2]
+                chaveTdpf = linha[3]
+                break
         if resposta=='S':
-            consulta = """
-                       Select TDPFS.Emissao, TDPFS.Nome, Fiscais.Nome From TDPFS, Alocacoes, Fiscais 
-                       Where TDPFS.Numero=%s and TDPFS.Numero=Alocacoes.TDPF and Alocacoes.Desalocacao Is Null and
-                       Alocacoes.Supervisor='N' and Alocacoes.CPF=Fiscais.CPF
-                       """
-            fiscal = ""
-            fiscalizado = ""
-            emissao = None                       
-            if conn:
-                cursor.execute(consulta, (getAlgarismos(tdpf),))
-                linhas = cursor.fetchall()
-                for linha in linhas:
-                    emissao = linha[0]
-                    if emissao!=None:
-                        emissao = emissao.date()
-                    else:
-                        emissao = ""    
-                    fiscalizado = linha[1]
-                    fiscal = linha[2]
-                    break
-                consulta = "Select email from Usuarios Where idTelegram=%s"  
-                cursor.execute(consulta, (userId,))   
-                linhas = cursor.fetchall()
-                for linha in linhas:
-                    email = linha[0]
-                    break          
-            sheet.cell(row=i+1, column=1).value = tdpf
-            sheet.cell(row=i+1, column=2).value = emissao
+            consulta = "Select email from Usuarios Where idTelegram=%s"  
+            cursor.execute(consulta, (userId,))   
+            linhas = cursor.fetchall()
+            for linha in linhas:
+                email = linha[0]
+                break          
+            currentCell = sheet.cell(row=i+1, column=1)
+            currentCell.value = tdpf
+            currentCell.alignment = Alignment(horizontal='center') 
+            currentCell = sheet.cell(row=i+1, column=2)
+            currentCell.value = emissao
+            currentCell.alignment = Alignment(horizontal='center')             
             sheet.cell(row=i+1, column=3).value = fiscalizado
             sheet.cell(row=i+1, column=4).value = fiscal
-            sheet.cell(row=i+1, column=5).value = monitorado
+            currentCell = sheet.cell(row=i+1, column=5)
+            currentCell.value = monitorado
+            currentCell.alignment = Alignment(horizontal='center')              
             sheet.cell(row=i+1, column=9).value = getAlgarismos(vctoTDPF)
             consulta = "Select SUM(Horas) from Alocacoes Where TDPF=%s"
             if conn:
-                cursor.execute(consulta,(getAlgarismos(tdpf),))
+                cursor.execute(consulta,(chaveTdpf,))
                 horasAloc = cursor.fetchone()
                 if horasAloc:
                     horas = horasAloc[0]
@@ -2325,8 +2334,10 @@ def mostraSupervisionados(update, context): #Relação de TDPFs supervisionados 
             delta = ciencia.date() + timedelta(days=60)-datetime.today().date()
             dias = delta.days
             if resposta=='S':
-                sheet.cell(row=i+1, column=6).value = ciencia.date()
-                sheet.cell(row=i+1, column=7).value = dias  
+                currentCell = sheet.cell(row=i+1, column=6)
+                currentCell.value = ciencia.date()
+                currentCell.alignment = Alignment(horizontal='center')                 
+                sheet.cell(row=i+1, column=7).value = int(dias)
                 sheet.cell(row=i+1, column=8).value = documento
                 cor = None
                 if dias<=15: #se faltar 15 dias ou menos para recuperar a espontaneidade, a linha fica azul
@@ -2340,27 +2351,29 @@ def mostraSupervisionados(update, context): #Relação de TDPFs supervisionados 
                 dias = " d) "+str(dias)+" (recuperada); e) "+vctoTDPF
             else:
                 dias = " d) "+ str(dias) + "; e) "+vctoTDPF
-            msg = msg+"\n\n"+str(i)+"a) "+tdpf+"; b) "+monitorado+";\nc) "+ciencia.strftime('%d/%m/%Y')+";"+dias
+            msg = msg+"\n\n"+str(i)+"a) *"+tdpf+"*("+fiscal.strip().split()[0]+"); b) "+monitorado+"; c) "+ciencia.strftime('%d/%m/%Y')+";"+dias
         else:
-            msg = msg+"\n\n"+str(i)+"a) "+tdpf+"; b) "+monitorado+";\nc) ND; d) ND; e) "+vctoTDPF              
+            msg = msg+"\n\n"+str(i)+"a) "+tdpf+"; b) "+monitorado+";c) ND; d) ND; e) "+vctoTDPF              
         if (i % 15) == 0: #há limite de tamanho de msg - enviamos 15 TDPFs por vez, no máximo
-            response_message = "TDPFs Supervisionados Por Você (somente):\na) TDPF; b) Monitorado Por Algum Fiscal; c) Data da última ciência; d) Dias restantes p/ recuperação da espontaneidade; e) Dias restantes para o vencto. do TDPF:" 
+            response_message = "TDPFs Supervisionados Por Você:\na) TDPF; b) Monitorado Por Algum Fiscal; c) Data da última ciência; d) Dias restantes p/ recuperação da espontaneidade; e) Dias restantes para o vencto. do TDPF:" 
             response_message = response_message + msg  
             response_message = response_message + "\n\nVencimento do TDPF pode ser inferior ao do Ação Fiscal, pois as informações do serviço se baseiam"
             response_message = response_message + " na data de distribuição, que pode ter ocorrido antes da assinatura e emissão do TDPF."            
             if ambiente=="TESTE":
-                response_message = response_message+"\n\nAmbiente: "+ambiente	                    
-            bot.send_message(userId, text=response_message)                  
+                response_message = response_message+"\n\nAmbiente: "+ambiente
+            response_message = response_message.replace(".", "\.").replace("_", "\_").replace("[", "\[").replace("]", "\]").replace(")", "\)").replace("(", "\(").replace("-","\-")#.replace("*", "\\*")        
+            bot.send_message(userId, text=response_message, parse_mode= 'MarkdownV2')                  	                                  
             msg = ""
         i+=1  
     if conn:
         conn.close()                   
     if msg!="":    
-        response_message = "TDPFs Supervisionados Por Você (somente):\na) TDPF; b) Monitorado Por Algum Fiscal; c) Data da última ciência; d) Dias restantes p/ recuperação da espontaneidade; e) Dias restantes para o vencto. do TDPF:"  
+        response_message = "TDPFs Supervisionados Por Você:\na) TDPF; b) Monitorado Por Algum Fiscal; c) Data da última ciência; d) Dias restantes p/ recuperação da espontaneidade; e) Dias restantes para o vencto. do TDPF:"  
         response_message = response_message+msg
         if ambiente=="TESTE":
             response_message = response_message+"\n\nAmbiente: "+ambiente		
-        bot.send_message(userId, text=response_message)
+            response_message = response_message.replace(".", "\.").replace("_", "\_").replace("[", "\[").replace("]", "\]").replace(")", "\)").replace("(", "\(").replace("-","\-")#.replace("*", "\\*")        
+            bot.send_message(userId, text=response_message, parse_mode= 'MarkdownV2')   
     if resposta=='S':
         if email!="" and "@rfb.gov.br" in email:
             nomeArq = "Sup_"+str(userId)+"_"+datetime.now().strftime("%Y_%m_%d_%H_%M_%S")+".xlsx"
@@ -2393,10 +2406,10 @@ def opcaoEnviaAtividades(update, context): #envia relação de atividades de TDP
             mostraMenuPrincipal(update, context)
             return
         consulta = """
-                   Select TDPFS.Numero, TDPFS.Emissao, TDPFS.Nome, Usuarios.email
-                   From TDPFS, Usuarios, Supervisores
+                   Select TDPFS.Numero, TDPFS.Emissao, TDPFS.Nome, Usuarios.email, TDPFS.Codigo
+                   From TDPFS, Usuarios, Supervisores, Fiscais
                    Where Usuarios.idTelegram=%s and Usuarios.Saida Is Null and Usuarios.Adesao Is Not Null and TDPFS.Encerramento Is Null 
-                   and Usuarios.CPF=Supervisores.CPF and Supervisores.Fim Is Null and Supervisores.Equipe=TDPFS.Grupo
+                   and Usuarios.CPF=Fiscais.CPF and Fiscais.Codigo=Supervisores.Fiscal and Supervisores.Fim Is Null and Supervisores.Equipe=TDPFS.Grupo
                    Order by TDPFS.Numero
                    """
         cursor = conn.cursor(buffered=True)           
@@ -2434,8 +2447,14 @@ def opcaoEnviaAtividades(update, context): #envia relação de atividades de TDP
         sheet.cell(row=1, column=7).value = "Vencimento"
         sheet.cell(row=1, column=8).value = "Término"
         sheet.cell(row=1, column=9).value = "Horas"
+        larguras = [19, 13, 32, 32, 27, 14, 13, 13, 10]
+        for col in range(len(larguras)):
+            sheet.column_dimensions[get_column_letter(col+1)].width = larguras[col]  
+            currentCell = sheet.cell(row=1, column=col+1)
+            currentCell.alignment = Alignment(horizontal='center', vertical='center', wrap_text=True)         
         i = 1
-        for linha in linhas:                             
+        for linha in linhas:  
+            chaveTdpf = linha[4]                           
             tdpf = linha[0]
             emissao = linha[1]
             if emissao==None:
@@ -2446,23 +2465,27 @@ def opcaoEnviaAtividades(update, context): #envia relação de atividades de TDP
             if fiscalizado==None:
                 fiscalizado = ""                
             consulta = "Select Atividade, Inicio, Vencimento, Termino, Horas from Atividades Where TDPF=%s Order by Inicio"
-            cursor.execute(consulta,(tdpf,))
+            cursor.execute(consulta,(chaveTdpf,))
             rows = cursor.fetchall()
             if not rows:
                 continue
             if len(rows)==0:
                 continue 
             fiscal = ""
-            consulta = "Select Fiscais.Nome From Alocacoes, Fiscais Where Alocacoes.CPF=Fiscais.CPF and Alocacoes.Desalocacao Is Null and Alocacoes.TDPF=%s"
-            cursor.execute(consulta,(tdpf,))
+            consulta = "Select Fiscais.Nome From Alocacoes, Fiscais Where Alocacoes.Fiscal=Fiscais.Codigo and Alocacoes.Desalocacao Is Null and Alocacoes.TDPF=%s"
+            cursor.execute(consulta,(chaveTdpf,))
             rowFisc = cursor.fetchone()
             if rowFisc:
                 if len(rowFisc)>0:
                     fiscal = rowFisc[0]  
                     #print(fiscal)                       
             for row in rows:
-                sheet.cell(row=i+1, column=1).value = formataTDPF(tdpf)
-                sheet.cell(row=i+1, column=2).value = emissao
+                currentCell = sheet.cell(row=i+1, column=1)
+                currentCell.value = formataTDPF(tdpf)
+                currentCell.alignment = Alignment(horizontal='center')                                             
+                currentCell = sheet.cell(row=i+1, column=2)
+                currentCell.value = emissao
+                currentCell.alignment = Alignment(horizontal='center')                
                 sheet.cell(row=i+1, column=3).value = fiscalizado 
                 sheet.cell(row=i+1, column=4).value = fiscal                             
                 sheet.cell(row=i+1, column=5).value = row[0]
@@ -2474,6 +2497,9 @@ def opcaoEnviaAtividades(update, context): #envia relação de atividades de TDP
                     sheet.cell(row=i+1, column=8).value = row[3].date() 
                 if row[4]!=None:                              
                     sheet.cell(row=i+1, column=9).value = row[4]
+                for col in range(6, 9):
+                    currentCell = sheet.cell(row=i+1, column=col)
+                    currentCell.alignment = Alignment(horizontal='center')                    
                 if row[2]!=None and row[3]==None:
                     cor = None
                     if row[2].date()==datetime.now().date(): #se a atividade está vencendo, a linha fica azul
@@ -2584,9 +2610,9 @@ def mostraSupervisorEspontaneidade(update, context): #exibe os TDPFs da equipe q
         return        
     cursor = conn.cursor(buffered=True)
     consulta = """
-                Select TDPFS.Numero
-                From TDPFS, Usuarios, Supervisores
-                Where Usuarios.idTelegram=%s and Usuarios.Saida Is Null and TDPFS.Encerramento Is Null and Usuarios.CPF=Supervisores.CPF and 
+                Select TDPFS.Numero, TDPFS.Codigo
+                From TDPFS, Usuarios, Supervisores, Fiscais
+                Where Usuarios.idTelegram=%s and Usuarios.Saida Is Null and TDPFS.Encerramento Is Null and Usuarios.CPF=Fiscais.CPF and Fiscais.Codigo=Supervisores.Fiscal and 
                 Supervisores.Fim Is Null and Supervisores.Equipe=TDPFS.Grupo and TDPFS.Encerramento Is Null
                 """
     cursor.execute(consulta, (userId,))
@@ -2594,9 +2620,17 @@ def mostraSupervisorEspontaneidade(update, context): #exibe os TDPFs da equipe q
     msg = ""
     i = 1
     for linha in linhas:
+        chaveTdpf = linha[1]
         tdpf = linha[0]
+        consulta = "Select Fiscais.Nome from Alocacoes, Fiscais Where Alocacoes.TDPF=%s and Alocacoes.Fiscal=Fiscais.Codigo and Alocacoes.Desalocacao Is Null"
+        cursor.execute(consulta, (chaveTdpf,))
+        linhaFiscal = cursor.fetchone()
+        if linhaFiscal:
+            fiscalPrimNome = linhaFiscal[0].strip().split()[0]
+        else:
+            fiscalPrimNome = "ND"
         consulta = "Select Ciencias.Data, Ciencias.Documento From Ciencias Where Ciencias.TDPF=%s Order By Ciencias.Data DESC"
-        cursor.execute(consulta, (tdpf,))
+        cursor.execute(consulta, (chaveTdpf,))
         ciencia = cursor.fetchone() #busca a última
         if ciencia:
             if ciencia[0]!=None:
@@ -2607,16 +2641,20 @@ def mostraSupervisorEspontaneidade(update, context): #exibe os TDPFs da equipe q
                         documento = "ND"
                     else:
                         documento = ciencia[1]
-                    msg = msg +"\n"+str(i)+") TDPF: "+formataTDPF(tdpf)+"; Documento: "+documento+"; Ciência: "+dataCiencia.strftime("%d/%m/%Y")+"; Recupera em "+str(prazoRestante)+" dias"
+                    if msg!="":
+                        msg = msg + "\n"
+                    msg = msg +"\n"+str(i)+") *TDPF: "+formataTDPF(tdpf)+"* ("+fiscalPrimNome+"); Documento: "+documento+"; Ciência: "+dataCiencia.strftime("%d/%m/%Y")+"; Recupera em "+str(prazoRestante)+" dias"
+                    i+=1
     if msg!="":
         response_message = "Relação de TDPFs cuja recuperação da espontaneidade tributária ocorrerá em "+str(prazo[0])+" a "+str(prazo[1])+" dias:"+msg
+        response_message = response_message.replace(".", "\.").replace("_", "\_").replace("[", "\[").replace("]", "\]").replace(")", "\)").replace("(", "\(").replace("-","\-")#.replace("*", "\\*")
     else:
-        response_message = "Não haverá recuperação da espontaneidade tributária para nenhum TDPF neste intervalo." 
-    bot.send_message(userId, text=response_message)                          
+        response_message = "Não haverá recuperação da espontaneidade tributária para nenhum TDPF neste intervalo."        
+    bot.send_message(userId, text=response_message, parse_mode= 'MarkdownV2')                          
     conn.close()
     mostraMenuPrincipal(update, context)  
     return
-
+    
 def opcaoEMail(update, context): #cadastra e-mail para o recebimento de avisos
     global pendencias
     if update.effective_user.is_bot:
@@ -2780,7 +2818,7 @@ def disparaMensagens(): #avisos diários (produção) ou de hora em hora (teste)
             msgCofis = msgCofis+";\n"
         msgCofis = msgCofis+mensagem[0]
     if msgCofis!="":
-        msgCofis = "Mensagens Cofis:\n"+msgCofis+"."    
+        msgCofis = "Mensagens Cofis:\n"+msgCofis+"."   #todos os usuários receberão essa mensagem na data informada pela Cofis, com ou sem alertas do dia 
     comando = "Select idTelegram, CPF, d1, d2, d3, email from Usuarios Where Adesao Is Not Null and Saida Is Null and idTelegram Is Not Null and idTelegram<>0"
     cursor.execute(comando)
     usuarios = cursor.fetchall()
@@ -2809,26 +2847,27 @@ def disparaMensagens(): #avisos diários (produção) ou de hora em hora (teste)
         email = usuario[5]
         #selecionamos os TDPFs do usuário em andamento e monitorados (ativos) pelo serviço
         comando = """
-                Select CadastroTDPFs.TDPF as tdpf, Supervisor
-                from CadastroTDPFs, TDPFS, Alocacoes
-                Where CadastroTDPFs.Fiscal=%s and CadastroTDPFs.TDPF=TDPFS.Numero and 
+                Select TDPFS.Numero, Supervisor, TDPFS.Codigo
+                from CadastroTDPFs, TDPFS, Alocacoes, Fiscais
+                Where Fiscais.CPF=%s and CadastroTDPFs.Fiscal=Fiscais.Codigo and CadastroTDPFs.TDPF=TDPFS.Codigo and 
                 CadastroTDPFs.TDPF=Alocacoes.TDPF and  
-                CadastroTDPFs.Fiscal=Alocacoes.CPF and TDPFS.Encerramento Is Null and 
+                CadastroTDPFs.Fiscal=Alocacoes.Fiscal and TDPFS.Encerramento Is Null and 
                 CadastroTDPFs.Fim Is Null and Alocacoes.Desalocacao Is Null
-                Order by CadastroTDPFs.TDPF 
+                Order by TDPFS.Numero
                 """
         cursor.execute(comando, (cpf,))        
         fiscalizacoes = cursor.fetchall()
         comandoCiencias = "Select Data from Ciencias Where TDPF=%s Order By Data DESC"
-        comandoAtividades = "Select Atividade, Vencimento, Inicio from Atividades Where TDPF=%s and Vencimento>=%s and Termino Is Null Order by Vencimento"
+        comandoAtividades = "Select Atividade, Vencimento, Inicio from Atividades Where TDPF=%s and Vencimento>=%s and Termino Is Null Order by Inicio, Vencimento"
         if fiscalizacoes:
             for fiscalizacao in fiscalizacoes: #percorremos os TDPFs MONITORADOS do usuário
                 if termina: #foi solicitado o término do bot
-                    return            
+                    return  
+                chaveTdpf = fiscalizacao[2]          
                 tdpf = fiscalizacao[0] 
                 tdpfFormatado = formataTDPF(tdpf)
                 supervisor = fiscalizacao[1]
-                cursor.execute(comandoCiencias, (tdpf,)) #buscamos as ciências do TDPF
+                cursor.execute(comandoCiencias, (chaveTdpf,)) #buscamos as ciências do TDPF
                 ciencias = cursor.fetchall() #buscamos todas por questões técnicas do mysqlconnector
                 if len(ciencias)>0:       
                     dataCiencia = ciencias[0][0].date()  #só é necessária a última (selecionamos por ordem descendente)      
@@ -2843,7 +2882,7 @@ def disparaMensagens(): #avisos diários (produção) ou de hora em hora (teste)
                         listaUsuario = listaUsuario+"\n"+tdpfFormatado2+ " | "+str(prazoRestante)+" (a)"
            
                 #buscamos as atividades do TDPF    
-                cursor.execute(comandoAtividades, (tdpf, dataAtual))
+                cursor.execute(comandoAtividades, (chaveTdpf, dataAtual))
                 atividades = cursor.fetchall()
                 for atividade in atividades:
                     prazoRestante = (atividade[1].date()-dataAtual).days
@@ -2851,28 +2890,31 @@ def disparaMensagens(): #avisos diários (produção) ou de hora em hora (teste)
                         if len(listaUsuario)==0:
                             listaUsuario = cabecalho
                         listaUsuario = listaUsuario+"\n"+tdpfFormatado+" | "+str(prazoRestante)+" (b)"
-                        listaUsuario = listaUsuario+"\nAtividade: "+atividade[0]+"; Início: "+atividade[2].strftime("%d/%m/%Y")
+                        #listaUsuario = listaUsuario+"\nAtividade: "+atividade[0]+"; Início: "+atividade[2].strftime("%d/%m/%Y")
+                        listaUsuario = listaUsuario+"\nAtividade: "+atividade[0]+"; Início: "+atividade[2].strftime("%d/%m/%Y")+"; Vencimento: "+atividade[1].strftime("%d/%m/%Y")
 
         #selecionamos as datas de vencimento dos TDPFs em que o usuário está alocado, mesmo que não monitorados
         comando = """
-                Select TDPFS.Numero as tdpf, TDPFS.Vencimento as vencimento, Supervisor from TDPFS, Alocacoes
-                Where Alocacoes.CPF=%s and TDPFS.Numero=Alocacoes.TDPF and TDPFS.Encerramento Is Null and 
+                Select TDPFS.Numero, TDPFS.Vencimento, Supervisor, TDPFS.Codigo, Fiscais.Codigo from TDPFS, Alocacoes, Fiscais
+                Where Fiscais.CPF=%s and Alocacoes.Fiscal=Fiscais.Codigo and TDPFS.Codigo=Alocacoes.TDPF and TDPFS.Encerramento Is Null and 
                 Alocacoes.Desalocacao Is Null
                 """        
         cursor.execute(comando, (cpf,))     
-        comandoVencimento = "Select Codigo, Data from AvisosVencimento Where TDPF=%s and CPF=%s"                   
+        comandoVencimento = "Select Codigo, Data from AvisosVencimento Where TDPF=%s and Fiscal=%s"                   
         tdpfUsuarios = cursor.fetchall()
         for tdpfUsuario in tdpfUsuarios: #percorremos os TDPFs do usuário para ver suas datas de vencimento (TODOS em andamento no qual o usuário esteja atualmente alocado)
             vencimento = tdpfUsuario[1]
             tdpf = tdpfUsuario[0]
             tdpfFormatado = formataTDPF(tdpf)
             supervisor = tdpfUsuario[2]
+            chaveTdpf = tdpfUsuario[3]
+            chaveFiscal = tdpfUsuario[4]
             if vencimento: #não deve ser nulo, mas garantimos ...
                 vencimento = vencimento.date()
                 prazoVenctoTDPF = (vencimento-dataAtual).days
                 if not (1<=prazoVenctoTDPF<=15): #se não estiver próximo do vencimento (1 a 15 dias), prosseguimos (pulamos)
                     continue 
-                cursor.execute(comandoVencimento, (tdpf, cpf))  #buscamos as datas de aviso para o CPF e TDPF  
+                cursor.execute(comandoVencimento, (chaveTdpf, chaveFiscal))  #buscamos as datas de aviso para o CPF e TDPF  
                 avisos = cursor.fetchall()
                 if len(avisos)==0: #não há avisos para o tdpf (este cpf)
                     avisou = None
@@ -2882,7 +2924,7 @@ def disparaMensagens(): #avisos diários (produção) ou de hora em hora (teste)
                 #não avisamos do vencimento de TDPF recentemente avisado (prazo: 7 dias - depende da carga)
                 if not avisou:
                     podeAvisar = True
-                    tdpfsAvisadosInsert.add(tdpf+cpf)
+                    tdpfsAvisadosInsert.add(str(chaveTdpf).rjust(15,"0")+str(chaveFiscal).rjust(12,"0"))     
                 else:
                     if (avisou+timedelta(days=7))<dataAtual: #vai depender da periodicidade da extração e carga - aqui estamos considerando 7 dias
                         podeAvisar = True
@@ -2938,16 +2980,15 @@ def disparaMensagens(): #avisos diários (produção) ou de hora em hora (teste)
 
     logging.info("Total de mensagens disparadas: "+str(totalMsg))        
     #se avisamos do vencimento do TDPF, colocamos a data na tabela para não avisarmos novamente
-    #todo dia (espera 7 dias)            
+    #todo dia (espera 7 dias)    
     lista = []
     for tdpfCpf in tdpfsAvisadosInsert:
-        tupla = (tdpfCpf[:16], tdpfCpf[16:], dataAtual)
-        print(tupla)
+        tupla = (int(tdpfCpf[:15]), int(tdpfCpf[15:]), dataAtual) #ao adicionar, o código do TDPF ocupou 15 posições e a chave do fiscal, 12
         lista.append(tupla)
     if len(lista)>0:
         logging.info("Inserção:")
         logging.info(lista)
-        comando = "Insert Into AvisosVencimento (TDPF, CPF, Data) Values (%s, %s, %s)"
+        comando = "Insert Into AvisosVencimento (TDPF, Fiscal, Data) Values (%s, %s, %s)"
         try:
             cursor.executemany(comando, lista)    
             conn.commit()
@@ -2974,13 +3015,14 @@ def disparaMensagens(): #avisos diários (produção) ou de hora em hora (teste)
     #buscamos todos os TDPFs para os quais não foram registradas nenhuma data de ciência após 30 dias (exatos) de sua distribuição
     # e avisamos o supervisor
     comando = """
-              Select Distinctrow Supervisores.CPF, TDPFS.Numero, Usuarios.idTelegram, Supervisores.Equipe
-              From TDPFS, Usuarios, Supervisores 
+              Select Distinctrow Fiscais.CPF, TDPFS.Numero, Usuarios.idTelegram, Supervisores.Equipe, TDPFS.Codigo
+              From TDPFS, Usuarios, Supervisores, Fiscais
               Where Supervisores.Fim Is Null and Supervisores.Equipe=TDPFS.Grupo and TDPFS.Emissao=cast((now() - interval 30 day) as date) 
-              and TDPFS.Encerramento Is Null and Supervisores.CPF=Usuarios.CPF and Usuarios.idTelegram Is Not Null and Usuarios.idTelegram<>0 and Usuarios.Adesao Is Not Null and 
-              Usuarios.Saida Is Null and TDPFS.Numero not in (Select TDPF from Ciencias Where Data Is Not Null)
-              Order By Supervisores.CPF, Supervisores.Equipe, TDPFS.Numero
+              and TDPFS.Encerramento Is Null and Supervisores.Fiscal=Fiscais.Codigo and Fiscais.CPF=Usuarios.CPF and Usuarios.idTelegram Is Not Null and 
+              Usuarios.idTelegram<>0 and Usuarios.Adesao Is Not Null and Usuarios.Saida Is Null and TDPFS.Codigo not in (Select TDPF from Ciencias Where Data Is Not Null)
+              Order By Fiscais.CPF, Supervisores.Equipe, TDPFS.Numero
               """
+    consultaFiscal = "Select Fiscais.Nome From TDPFS, Alocacoes, Fiscais Where TDPFS.Codigo=%s and TDPFS.Codigo=Alocacoes.TDPF and Alocacoes.Fiscal=Fiscais.Codigo and Alocacoes.Desalocacao Is Null Order By Alocacoes.Alocacao"
     cursor.execute(comando)
     linhas = cursor.fetchall() 
     msg = ""  
@@ -3002,8 +3044,15 @@ def disparaMensagens(): #avisos diários (produção) ou de hora em hora (teste)
             cpfAnt = linha[0]    
         if linha[3]!=equipe:
             equipe = linha[3]
-            msg = msg+"\nEquipe " + equipe[:7]+"."+equipe[7:11]+"."+equipe[11:] + ":"                      
-        msg = msg + "\n  "+formataTDPF(linha[1])
+            msg = msg+"\nEquipe " + equipe[:7]+"."+equipe[7:11]+"."+equipe[11:] + ":"    
+        chaveTdpf = linha[4]    
+        cursor.execute(consultaFiscal, (chaveTdpf,))              
+        fiscal = cursor.fetchone()
+        if fiscal==None:
+            nomeFiscal = "ND"
+        else:
+            nomeFiscal = fiscal[0]
+        msg = msg + "\n  "+formataTDPF(linha[1])+" ("+nomeFiscal+")"
         userId = linha[2]    
     if msg!="":
         msg = cabecalho+msg
@@ -3013,12 +3062,12 @@ def disparaMensagens(): #avisos diários (produção) ou de hora em hora (teste)
 
     #buscamos todos os TDPFs que estão recuperando a espontaneidade em 15 dias exatos e avisamos o supervisor
     comando = """
-              Select Distinctrow Supervisores.CPF, TDPFS.Numero, Usuarios.idTelegram, Supervisores.Equipe
-              From TDPFS, Usuarios, Supervisores 
+              Select Distinctrow Fiscais.CPF, TDPFS.Numero, Usuarios.idTelegram, Supervisores.Equipe, TDPFS.Codigo
+              From TDPFS, Usuarios, Supervisores, Fiscais 
               Where Supervisores.Fim Is Null and Supervisores.Equipe=TDPFS.Grupo and TDPFS.Encerramento Is Null and
-              Supervisores.CPF=Usuarios.CPF and Usuarios.idTelegram Is Not Null and Usuarios.idTelegram<>0 and Usuarios.Adesao Is Not Null and 
-              Usuarios.Saida Is Null and TDPFS.Numero in (Select TDPF from Ciencias Where Data Is Not Null)
-              Order By Supervisores.CPF, Supervisores.Equipe, TDPFS.Numero
+              Supervisores.Fiscal=Fiscais.Codigo and Fiscais.CPF=Usuarios.CPF and Usuarios.idTelegram Is Not Null and Usuarios.idTelegram<>0 and Usuarios.Adesao Is Not Null and 
+              Usuarios.Saida Is Null and TDPFS.Codigo in (Select TDPF from Ciencias Where Data Is Not Null)
+              Order By Fiscais.CPF, Supervisores.Equipe, TDPFS.Numero
               """         
     cursor.execute(comando)
     linhas = cursor.fetchall() 
@@ -3043,7 +3092,14 @@ def disparaMensagens(): #avisos diários (produção) ou de hora em hora (teste)
             cpfAnt = linha[0]    
         if linha[3]!=equipe:
             equipe = linha[3]
-        cursor.execute(consulta, (tdpf,))
+        chaveTdpf = linha[4]
+        cursor.execute(consultaFiscal, (chaveTdpf,))              
+        fiscal = cursor.fetchone()
+        if fiscal==None:
+            nomeFiscal = "ND"
+        else:
+            nomeFiscal = fiscal[0]        
+        cursor.execute(consulta, (chaveTdpf,))
         cienciaReg = cursor.fetchone() #buscamos a última data de ciência do TDPF
         if cienciaReg:
             if len(cienciaReg)>0:
@@ -3052,7 +3108,7 @@ def disparaMensagens(): #avisos diários (produção) ou de hora em hora (teste)
                 if prazoRestante==15:
                     if msg=="":
                         msg = msg+"\nEquipe " + equipe[:7]+"."+equipe[7:11]+"."+equipe[11:] + ":"                                
-                    msg = msg + "\n  "+formataTDPF(tdpf)
+                    msg = msg + "\n  "+formataTDPF(tdpf)+" ("+nomeFiscal+")"
                     if cienciaReg[1]: #documento informado
                         msg = msg +" - "+cienciaReg[1]
         userId = linha[2]               
@@ -3115,7 +3171,7 @@ else:
 logging.basicConfig(filename=dirLog+datetime.now().strftime('%Y-%m-%d %H_%M')+' Bot'+sistema+'.log', format='%(asctime)s - %(message)s', level=logging.INFO)
 
 MYSQL_ROOT_PASSWORD = os.getenv("MYSQL_ROOT_PASSWORD", "EXAMPLE")
-MYSQL_DATABASE = os.getenv("MYSQL_DATABASE", "testedb")
+MYSQL_DATABASE = os.getenv("MYSQL_DATABASE", "databasenormal")
 MYSQL_USER = os.getenv("MYSQL_USER", "my_user")
 MYSQL_PASSWORD = os.getenv("MYSQL_PASSWORD", "mypass1234")
 token = os.getenv("TOKEN", "ERRO")

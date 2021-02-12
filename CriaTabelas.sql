@@ -2,15 +2,15 @@ DROP TABLE IF EXISTS `Alocacoes`;
 
 CREATE TABLE `Alocacoes` (
   `Codigo` INTEGER NOT NULL AUTO_INCREMENT, 
-  `CPF` VARCHAR(11), 
-  `TDPF` VARCHAR(16), 
+  `Fiscal` INTEGER, 
+  `TDPF` INTEGER, 
   `Alocacao` DATETIME, 
   `Desalocacao` DATETIME, 
   `Supervisor` VARCHAR(1), 
   `Horas` INTEGER DEFAULT 0,
-  INDEX (`CPF`), 
-  INDEX (`CPF`, `Supervisor`), 
-  INDEX (`CPF`, `TDPF`), 
+  INDEX (`Fiscal`), 
+  INDEX (`Fiscal`, `Supervisor`), 
+  INDEX (`Fiscal`, `TDPF`), 
   PRIMARY KEY (`Codigo`)
 ) ENGINE=innodb DEFAULT CHARSET=utf8;
 
@@ -18,8 +18,8 @@ DROP TABLE IF EXISTS `CadastroTDPFs`;
 
 CREATE TABLE `CadastroTDPFs` (
   `Codigo` INTEGER NOT NULL AUTO_INCREMENT, 
-  `Fiscal` VARCHAR(11), 
-  `TDPF` VARCHAR(16), 
+  `Fiscal` INTEGER, 
+  `TDPF` INTEGER, 
   `Inicio` DATETIME, 
   `Fim` DATETIME, 
   INDEX (`Fiscal`), 
@@ -31,7 +31,7 @@ DROP TABLE IF EXISTS `Ciencias`;
 
 CREATE TABLE `Ciencias` (
   `Codigo` INTEGER NOT NULL AUTO_INCREMENT, 
-  `TDPF` VARCHAR(16), 
+  `TDPF` INTEGER, 
   `Data` DATETIME, 
   `Documento` VARCHAR(50),
   PRIMARY KEY (`Codigo`), 
@@ -92,7 +92,7 @@ DROP TABLE IF EXISTS `Atividades`;
 
 CREATE TABLE `Atividades` (
   `Codigo` INTEGER NOT NULL AUTO_INCREMENT, 
-  `TDPF` VARCHAR(16), 
+  `TDPF` INTEGER, 
   `Atividade` VARCHAR(50), 
   `Vencimento` DATETIME, 
   `Termino` DATETIME,
@@ -106,13 +106,13 @@ DROP TABLE IF EXISTS `AvisosVencimento`;
 
 CREATE TABLE `AvisosVencimento` (
   `Codigo` INTEGER NOT NULL AUTO_INCREMENT, 
-  `TDPF` VARCHAR(16), 
-  `CPF` VARCHAR(11), 
+  `TDPF` INTEGER, 
+  `Fiscal` INTEGER, 
   `Data` DATETIME, 
   PRIMARY KEY (`Codigo`), 
   INDEX (`TDPF`),
-  INDEX (`CPF`),
-  UNIQUE (`TDPF`, `CPF`)
+  INDEX (`Fiscal`),
+  UNIQUE (`TDPF`, `Fiscal`)
 ) ENGINE=innodb DEFAULT CHARSET=utf8;
 
 DROP TABLE IF EXISTS `MensagensCofis`;
@@ -140,10 +140,24 @@ DROP TABLE IF EXISTS `Supervisores`;
 CREATE TABLE `Supervisores` (
   `Codigo` INTEGER NOT NULL AUTO_INCREMENT, 
   `Equipe` VARCHAR(14), 
-  `CPF` VARCHAR(11),
+  `Fiscal` INTEGER,
   `Inicio` DATETIME, 
   `Fim` DATETIME, 
   PRIMARY KEY (`Codigo`), 
-  INDEX (`CPF`),
+  INDEX (`Fiscal`),
   INDEX (`Equipe`)
+) ENGINE=innodb DEFAULT CHARSET=utf8;
+
+DROP TABLE IF EXISTS `DiarioFiscalizacao`;
+
+CREATE TABLE `DiarioFiscalizacao` (
+  `Codigo` BIGINT NOT NULL AUTO_INCREMENT, 
+  `Fiscal` BIGINT,
+  `TDPF` BIGINT,
+  `Data` DATETIME, 
+  `Entrada` VARBINARY(16384),  
+  PRIMARY KEY (`Codigo`), 
+  INDEX (`Fiscal`),
+  INDEX (`TDPF`),
+  INDEX (`Fiscal`, `TDPF`)
 ) ENGINE=innodb DEFAULT CHARSET=utf8;
