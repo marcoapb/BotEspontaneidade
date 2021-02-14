@@ -19,9 +19,10 @@ import threading
 from Crypto.PublicKey import RSA
 from Crypto.Cipher import PKCS1_OAEP
 
-def descriptografa(chaveCripto):
-    global decryptor
-    decrypted = decryptor.decrypt(chaveCripto).decode("utf-8")
+def descriptografa(msgCripto):
+    global decryptor, chavesCripto
+    decrypted = chavesCripto[0].decrypt(msgCripto).decode("utf-8")
+    #decrypted = decryptor.decrypt(chaveCripto).decode("utf-8")
     return decrypted    
 
 def getAlgarismos(texto): #retorna apenas os algarismos de uma string
@@ -237,10 +238,49 @@ def tdpfMonitoradoCPF(conn, tdpf, cpf): #verifica se o TDPF está sendo monitora
                 monitoramentoAtivo = False
     return tdpfMonitorado, monitoramentoAtivo, chave #indica se o tdpf está sendo monitorado; se True, o segundo retorno indica se tal monitoramento está ativo e o terceiro a chave do registro     
 
+def geraChaves(): #gera a chave (par) do usuário, coloca no dicionário de validades e retorna a chave pública para ser encaminhada a ele
+    global chavesCripto
+    #import binascii
+    keyPair = RSA.generate(2048)
+    decryptor = PKCS1_OAEP.new(keyPair)        
+    chavesCripto = [decryptor, datetime.now()+timedelta(hours=1)] #validade de 1h para este conjunto de chaves
+    pubKey = keyPair.publickey()
+    return pubKey
+    #print(f"Public key:  (n={hex(pubKey.n)}, e={hex(pubKey.e)})")
+    #pubKeyPEM = pubKey.exportKey()   
+
+def estaoChavesValidas():
+    global chavesCripto
+    if chavesCripto==[]:
+        return False #não há chave a ser revalidada
+    if chavesCripto[1]<datetime.now():
+        return False
+    else:
+        return True
+
 def trataMsgRecebida(msgRecebida, c): #c é o socket estabelecido com o cliente que será utilizado para a resposta
+    global pubKey, chavesCripto
     tamChave = 6 #tamanho da chave do ContÁgil (chave de registro) 
     tamMsg = 100
     tamNome = 100
+    try:
+        msgOrigem = msgRecebida.decode("utf-8")     
+        if len(msgOrigem)==13:
+            if msgOrigem[:2]=="00" and validaCPF(msgOrigem[2:]): #está fazendo uma requisição de chave pública (msg sem criptografia)
+                if not estaoChavesValidas(): #meio difícil de ocorrer aqui, pq tem lá no servidor, mas ...
+                    pubKey = geraChaves() 
+                enviaRespostaSemFechar("0000"+chavesCripto[1].strftime("%d/%m/%Y %H:%M:%S"), c)
+                try:
+                    msg = c.recv(1024).decode("utf-8") #só aguarda um 00
+                    if msg=="00":
+                        c.sendall(pubKey.export_key()) #duas mensagens na sequência sem aguardar resposta
+                except:
+                    logging.info("Não enviou o flag para receber a chave "+msgOrigem[2:])
+                c.close()
+                return
+    except:
+        pass #não conseguiu decodificar a msgRecebida
+                      
     msgRecebida = descriptografa(msgRecebida)
     c.settimeout(10)
     #todas as mensagens tem um código, um cpf, um tdpf para acesso e uma chave deste - total: 39 caracteres
@@ -251,36 +291,40 @@ def trataMsgRecebida(msgRecebida, c): #c é o socket estabelecido com o cliente 
     
     codigoStr = msgRecebida[:2]
     cpf = msgRecebida[2:13]
-    chaveContagil = msgRecebida[13:(13+tamChave)]     
+    codigo = int(codigoStr)    
+    chaveContagil = msgRecebida[13:(13+tamChave)]      
 
     logging.info(codigoStr)
     logging.info(cpf)
     logging.info(chaveContagil)     
+   
     if not codigoStr.isdigit():
         resposta = "99REQUISIÇÃO INVÁLIDA (B)"
         enviaResposta(resposta, c)       
         return     
     
-    codigo = int(codigoStr)
-    if codigo<1 or codigo>20:
-        resposta = "99REQUISIÇÃO INVÁLIDA (C)" 
-        enviaResposta(resposta, c)          
-        return     
-    
-    if not chaveContagil.isdigit():
-        resposta = "90CHAVE DE ACESSO VIA CONTAGIL NÃO É NUMÉRICA"
-        enviaResposta(resposta, c)        
-        return  
+
     if cpf=="12345678909": #este CPF flag não vem por aqui - ele é esperado dentro de alguns lugares neste procedimento para mandar mais informações da requisição
         resposta = "97CPF INVÁLIDO PARA ESTA REQUISIÇÃO"
         enviaResposta(resposta, c)        
         return
     
     if not validaCPF(cpf):
-        resposta = "97PF INVÁLIDO"
+        resposta = "97CPF INVÁLIDO"
+        enviaResposta(resposta, c)        
+        return  
+
+        
+    if codigo<1 or codigo>20:
+        resposta = "99REQUISIÇÃO INVÁLIDA (C)" 
+        enviaResposta(resposta, c)          
+        return     
+         
+    
+    if not chaveContagil.isdigit():
+        resposta = "90CHAVE DE ACESSO VIA CONTAGIL NÃO É NUMÉRICA"
         enviaResposta(resposta, c)        
         return     
-
     #dbpath = "C:\\Users\\marco\\Downloads\\"
     #db = "BotTelegramCofisDisaf.accdb"
     #driver = "{Microsoft Access Driver (*.mdb, *.accdb)}"
@@ -1671,7 +1715,7 @@ def trataMsgRecebida(msgRecebida, c): #c é o socket estabelecido com o cliente 
       
                              
 def servidor(): 
-    global  threads, s
+    global  threads, s, pubKey
 
     s = socket.socket()          
     logging.info("Socket successfully created")
@@ -1697,6 +1741,8 @@ def servidor():
             logging.info('Got connection from ' + str(addr))    
             c.settimeout(10)
             try:
+                if not estaoChavesValidas():
+                    pubKey = geraChaves()
                 msgRecebida = c.recv(2048)#.decode('utf-8') #recebe a mensagem  (era 1024)
                 #logging.info(binascii.hexlify(msgRecebida))
                 #logging.info(len(msgRecebida))
@@ -1716,9 +1762,16 @@ def servidor():
        #c.close() #com as threads, vai ter que fechar lá na função (thread)
 
 
-h = open('mykeyPrivada.pem','rb')
-privKey = RSA.import_key(h.read())
-decryptor = PKCS1_OAEP.new(privKey)
+chavesCripto = [] #contém a função de descriptografia [0] e a data/hora de vencimento [1] (2 h a partir da geração)
+pubKey = geraChaves()
+#encryptor = PKCS1_OAEP.new(pubKey) #<-- lado cliente (abaixo exemplo)
+#msgCripto = encryptor.encrypt(str.encode("Testando Cripto 1111111111111 00000000000000 44444444444444444 55555555555555555555555 6666666666666666666666 77777777777777777777777777"))
+#decrypted = chavesCripto[0].decrypt(msgCripto).decode("utf-8") #<-- exemplo para o servidor (aqui)
+#print(decrypted)
+#h = open('mykeyPrivada.pem','rb') <-- antigamente
+#privKey = RSA.import_key(h.read()) <-- antigamente
+#decryptor = PKCS1_OAEP.new(privKey) <-- antigamente
+
 s = None
 interrompe = False
 sistema = sys.platform.upper()
