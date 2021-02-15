@@ -98,6 +98,7 @@ CREATE TABLE `Atividades` (
   `Termino` DATETIME,
   `Inicio` DATETIME,
   `Horas` INTEGER DEFAULT 0,
+  `Observacoes` VARCHAR(100),
   PRIMARY KEY (`Codigo`), 
   INDEX (`TDPF`)
 ) ENGINE=innodb DEFAULT CHARSET=utf8;
@@ -161,3 +162,4 @@ CREATE TABLE `DiarioFiscalizacao` (
   INDEX (`TDPF`),
   INDEX (`Fiscal`, `TDPF`)
 ) ENGINE=innodb DEFAULT CHARSET=utf8;
+

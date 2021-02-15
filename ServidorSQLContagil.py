@@ -19,9 +19,12 @@ import threading
 from Crypto.PublicKey import RSA
 from Crypto.Cipher import PKCS1_OAEP
 
-def descriptografa(msgCripto):
-    global decryptor, chavesCripto
-    decrypted = chavesCripto[0].decrypt(msgCripto).decode("utf-8")
+def descriptografa(msgCripto, addr):
+    global chavesCripto
+    try:
+        decrypted = chavesCripto[segmentoIP(addr)][1].decrypt(msgCripto).decode("utf-8")
+    except:
+        return "000000000A" #só uma mensagem dummy para demonstrar o erro quando não for possível descriptografar
     #decrypted = decryptor.decrypt(chaveCripto).decode("utf-8")
     return decrypted    
 
@@ -238,28 +241,38 @@ def tdpfMonitoradoCPF(conn, tdpf, cpf): #verifica se o TDPF está sendo monitora
                 monitoramentoAtivo = False
     return tdpfMonitorado, monitoramentoAtivo, chave #indica se o tdpf está sendo monitorado; se True, o segundo retorno indica se tal monitoramento está ativo e o terceiro a chave do registro     
 
-def geraChaves(): #gera a chave (par) do usuário, coloca no dicionário de validades e retorna a chave pública para ser encaminhada a ele
+def segmentoIP(addr):
+    return sum(map(int, addr.split("."))) % 10
+
+def geraChaves(addr): #gera a chave (par) do usuário, coloca no dicionário de validades e retorna a chave pública para ser encaminhada a ele
     global chavesCripto
-    #import binascii
     keyPair = RSA.generate(2048)
     decryptor = PKCS1_OAEP.new(keyPair)        
-    chavesCripto = [decryptor, datetime.now()+timedelta(hours=1)] #validade de 1h para este conjunto de chaves
-    pubKey = keyPair.publickey()
-    return pubKey
+    chavesCripto[segmentoIP(addr)] = [keyPair, decryptor, datetime.now()+timedelta(hours=1)] #validade de 1h para este conjunto de chaves
+    #pubKey = keyPair.publickey()
+    return #pubKey
     #print(f"Public key:  (n={hex(pubKey.n)}, e={hex(pubKey.e)})")
     #pubKeyPEM = pubKey.exportKey()   
 
-def estaoChavesValidas():
+def inicializaChaves():
+    global chavesCripto    
+    for i in range(10):
+        keyPair = RSA.generate(2048)
+        decryptor = PKCS1_OAEP.new(keyPair)        
+        chavesCripto[i] = [keyPair, decryptor, datetime.now()+timedelta(hours=1)]
+    return
+
+def estaoChavesValidas(addr):
     global chavesCripto
-    if chavesCripto==[]:
+    if chavesCripto==None:
         return False #não há chave a ser revalidada
-    if chavesCripto[1]<datetime.now():
+    if chavesCripto[segmentoIP(addr)][2]<datetime.now():
         return False
     else:
         return True
 
-def trataMsgRecebida(msgRecebida, c): #c é o socket estabelecido com o cliente que será utilizado para a resposta
-    global pubKey, chavesCripto
+def trataMsgRecebida(msgRecebida, c, addr): #c é o socket estabelecido com o cliente que será utilizado para a resposta
+    global chavesCripto
     tamChave = 6 #tamanho da chave do ContÁgil (chave de registro) 
     tamMsg = 100
     tamNome = 100
@@ -267,23 +280,32 @@ def trataMsgRecebida(msgRecebida, c): #c é o socket estabelecido com o cliente 
         msgOrigem = msgRecebida.decode("utf-8")     
         if len(msgOrigem)==13:
             if msgOrigem[:2]=="00" and validaCPF(msgOrigem[2:]): #está fazendo uma requisição de chave pública (msg sem criptografia)
-                if not estaoChavesValidas(): #meio difícil de ocorrer aqui, pq tem lá no servidor, mas ...
-                    pubKey = geraChaves() 
-                enviaRespostaSemFechar("0000"+chavesCripto[1].strftime("%d/%m/%Y %H:%M:%S"), c)
+                if not estaoChavesValidas(addr): #meio difícil de ocorrer aqui, pq tem lá no servidor, mas ...
+                    geraChaves(addr) 
+                enviaRespostaSemFechar("0000"+chavesCripto[segmentoIP(addr)][2].strftime("%d/%m/%Y %H:%M:%S"), c)
                 try:
                     msg = c.recv(1024).decode("utf-8") #só aguarda um 00
                     if msg=="00":
-                        c.sendall(pubKey.export_key()) #duas mensagens na sequência sem aguardar resposta
+                        c.sendall(chavesCripto[segmentoIP(addr)][0].publickey().export_key()) #duas mensagens na sequência sem aguardar resposta
                 except:
                     logging.info("Não enviou o flag para receber a chave "+msgOrigem[2:])
                 c.close()
                 return
     except:
         pass #não conseguiu decodificar a msgRecebida
-                      
-    msgRecebida = descriptografa(msgRecebida)
+
+    if not estaoChavesValidas(addr):
+        resposta = "99REQUISIÇÃO RECUSADA - CHAVE CRIPTOGRÁFICA VENCIDA - REINICIE O SCRIPT" #código de erro na mensagem recebida
+        enviaResposta(resposta, c)
+        return        
+
+    msgRecebida = descriptografa(msgRecebida, addr)
+    if msgRecebida=="000000000A": #houve falha na descriptografia
+        resposta = "99REQUISIÇÃO RECUSADA - CRIPTOGRAFIA INVÁLIDA - REINICIE O SCRIPT" #código de erro na mensagem recebida
+        enviaResposta(resposta, c)
+        return   
     c.settimeout(10)
-    #todas as mensagens tem um código, um cpf, um tdpf para acesso e uma chave deste - total: 39 caracteres
+    #todas as mensagens tem, no mínimo, um código, um cpf para acesso e uma chave deste - total: 19 caracteres (chave de 6 dígitos)
     if len(msgRecebida)<(13+tamChave):
         resposta = "99REQUISIÇÃO INVÁLIDA (A)" #código de erro na mensagem recebida
         enviaResposta(resposta, c)
@@ -566,7 +588,7 @@ def trataMsgRecebida(msgRecebida, c): #c é o socket estabelecido com o cliente 
             enviaResposta(resposta, c)  
             conn.close()
             return             
-        requisicao = descriptografa(mensagemRec) 
+        requisicao = descriptografa(mensagemRec, addr) 
         codReq = ""
         if len(requisicao)>=2:
             codReq = requisicao[:2]
@@ -781,7 +803,7 @@ def trataMsgRecebida(msgRecebida, c): #c é o socket estabelecido com o cliente 
                 if total<tam: #ainda não chegou ao final - aguardamos a requisição da continuação
                     try:
                         mensagemRec = c.recv(1024) #.decode('utf-8') #chegou a requisicao
-                        requisicao = descriptografa(mensagemRec)
+                        requisicao = descriptografa(mensagemRec, addr)
                         if requisicao!="0612345678909":
                             resposta = "99REQUISIÇÃO INVÁLIDA (5)"
                             enviaResposta(resposta, c)    
@@ -1012,7 +1034,7 @@ def trataMsgRecebida(msgRecebida, c): #c é o socket estabelecido com o cliente 
                 if total<tam: #ainda não chegou ao final - aguardamos a requisição da continuação
                     try:
                         mensagemRec = c.recv(1024) #.decode('utf-8') #chegou a requisicao
-                        requisicao = descriptografa(mensagemRec)
+                        requisicao = descriptografa(mensagemRec, addr)
                         if requisicao!="1212345678909":
                             resposta = "99REQUISIÇÃO INVÁLIDA (5)"
                             enviaResposta(resposta, c) 
@@ -1126,18 +1148,18 @@ def trataMsgRecebida(msgRecebida, c): #c é o socket estabelecido com o cliente 
                 return                             
 
     if codigo==14: #inclui atividade em um tdpf
-        if len(msgRecebida)!=(112+tamChave):
+        if len(msgRecebida)!=(113+tamChave):
             resposta = "99REQUISIÇÃO INVÁLIDA (14A)"
             enviaResposta(resposta, c) 
             conn.close()
             return          
-        atividade = msgRecebida[-83:-33].strip()     
+        atividade = msgRecebida[-84:-34].strip()     
         if len(atividade)<4:
             resposta = "99REQUISIÇÃO INVÁLIDA - ATIVIDADE - DESCRIÇÃO CURTA (14C)"
             enviaResposta(resposta, c) 
             conn.close()
             return                  
-        inicio = msgRecebida[-33:-23]
+        inicio = msgRecebida[-34:-24]
         try:
             inicio = datetime.strptime(inicio, "%d/%m/%Y")
         except:
@@ -1155,7 +1177,7 @@ def trataMsgRecebida(msgRecebida, c): #c é o socket estabelecido com o cliente 
             enviaResposta(resposta, c)  
             conn.close()
             return                                               
-        vencimento = msgRecebida[-23:-13]
+        vencimento = msgRecebida[-24:-14]
         try:
             vencimento = datetime.strptime(vencimento,"%d/%m/%Y")
         except:
@@ -1168,8 +1190,8 @@ def trataMsgRecebida(msgRecebida, c): #c é o socket estabelecido com o cliente 
             enviaResposta(resposta, c) 
             conn.close()
             return 
-        termino = msgRecebida[-13:-3]
-        horas = msgRecebida[-3:]
+        termino = msgRecebida[-14:-4]
+        horas = msgRecebida[-4:-1]
         if termino!="00/00/0000":
             try:
                 terminoAux = datetime.strptime(termino, "%d/%m/%Y")
@@ -1201,7 +1223,26 @@ def trataMsgRecebida(msgRecebida, c): #c é o socket estabelecido com o cliente 
             resposta = "99REQUISIÇÃO INVÁLIDA - HORAS INVÁLIDAS (14K)"
             enviaResposta(resposta, c) 
             conn.close()
-            return                                  
+            return
+        haObservacoes = msgRecebida[-1:]
+        if haObservacoes=="S":
+            enviaRespostaSemFechar("1400", c) #envia este para que o cliente envie as observações
+            try:
+                mensagemRec = c.recv(1024) #.decode('utf-8') #chegou a requisicao criptografada
+                requisicao = descriptografa(mensagemRec, addr)
+                if requisicao[:2]!="14":
+                    resposta = "99REQUISIÇÃO INVÁLIDA (14L)"
+                    enviaResposta(resposta, c) 
+                    conn.close()
+                    return
+                observacoes = requisicao[2:102].strip()
+            except:
+                c.close()
+                conn.close()
+                logging.info("Erro de time out 14 - provavelmente cliente não respondeu no prazo. Abandonando operação.")
+                return            
+        else:
+            observacoes = ""
         #já foi verificado se está alocado
         #verificamos se o tdpf existe e se é de responsabilidade do usuário e está em andamento
         #if not verificaAlocacao(conn, cpf, tdpf):
@@ -1212,8 +1253,8 @@ def trataMsgRecebida(msgRecebida, c): #c é o socket estabelecido com o cliente 
         #podemos incluir a atividade 
         tdpfMonitorado, monitoramentoAtivo, chave = tdpfMonitoradoCPF(conn, tdpf, cpf) #tdpf e cpf vêm da rotina comum às requisições 2-5 e 14-17
         try:
-            comando = "Insert Into Atividades (TDPF, Atividade, Inicio, Vencimento, Termino, Horas) Values (%s, %s, %s, %s, %s, %s)"           
-            cursor.execute(comando, (chaveTdpf, atividade, inicio, vencimento, terminoAux, horas))  #chaveTdpf vem da rotina comum às requisições 2-5 e 14-17
+            comando = "Insert Into Atividades (TDPF, Atividade, Inicio, Vencimento, Termino, Horas, Observacoes) Values (%s, %s, %s, %s, %s, %s, %s)"           
+            cursor.execute(comando, (chaveTdpf, atividade, inicio, vencimento, terminoAux, horas, observacoes))  #chaveTdpf vem da rotina comum às requisições 2-5 e 14-17
             resposta = "14REGISTRO INCLUÍDO"            
             if tdpfMonitorado and monitoramentoAtivo==False: #monitoramento do tdpf estava desativado - ativa
                 comando = "Update CadastroTDPFs Set Fim=Null Where Codigo=%s"
@@ -1273,7 +1314,7 @@ def trataMsgRecebida(msgRecebida, c): #c é o socket estabelecido com o cliente 
         #vencimento = dataTexto(row[2])             
         #emissao = dataTexto(row[3])  
         #consulta as atividades
-        comando = "Select Codigo, Atividade, Vencimento, Inicio, Termino, Horas from Atividades Where TDPF=%s Order by Inicio "+offsetReg
+        comando = "Select Codigo, Atividade, Vencimento, Inicio, Termino, Horas, Observacoes from Atividades Where TDPF=%s Order by Inicio "+offsetReg
         cursor.execute(comando, (chaveTdpf,))
         rows = cursor.fetchall()
         if rows:
@@ -1307,7 +1348,8 @@ def trataMsgRecebida(msgRecebida, c): #c é o socket estabelecido com o cliente 
             if horas==None:
                 horas = 0                            
             horas = str(horas)[:3].rjust(3, "0")
-            registro = registro + codigoAtiv + atividade + inicio + termino + vencimentoAtiv + horas
+            observacoes = row[6] if row[6]!=None else ""
+            registro = registro + codigoAtiv + atividade + inicio + termino + vencimentoAtiv + horas + observacoes.ljust(100)
             total+=1
             i+=1
             if i%10==0 or total==tam: #de 10 em 10 ou no último registro enviamos a mensagem
@@ -1383,12 +1425,12 @@ def trataMsgRecebida(msgRecebida, c): #c é o socket estabelecido com o cliente 
         return             
 
     if codigo==17: #altera atividade de um tdpf
-        if len(msgRecebida)!=(122+tamChave):
+        if len(msgRecebida)!=(123+tamChave):
             resposta = "99REQUISIÇÃO INVÁLIDA (17A)"
             enviaResposta(resposta, c) 
             conn.close()
             return   
-        codAtividade = msgRecebida[-93:-83].strip()     
+        codAtividade = msgRecebida[-94:-84].strip()     
         if not codAtividade.isdigit():
             resposta = "99REQUISIÇÃO INVÁLIDA - CÓD ATIVIDADE NÃO NUMÉRICO (17C)"
             enviaResposta(resposta, c) 
@@ -1401,13 +1443,13 @@ def trataMsgRecebida(msgRecebida, c): #c é o socket estabelecido com o cliente 
             enviaResposta(resposta, c) 
             conn.close()
             return                   
-        atividade = msgRecebida[-83:-33].strip()     
+        atividade = msgRecebida[-84:-34].strip()     
         if len(atividade)<4:
             resposta = "99REQUISIÇÃO INVÁLIDA - ATIVIDADE - DESCRIÇÃO CURTA (17E)"
             enviaResposta(resposta, c) 
             conn.close()
             return                  
-        inicio = msgRecebida[-33:-23]
+        inicio = msgRecebida[-34:-24]
         try:
             inicio = datetime.strptime(inicio, "%d/%m/%Y")
         except:
@@ -1425,7 +1467,7 @@ def trataMsgRecebida(msgRecebida, c): #c é o socket estabelecido com o cliente 
             enviaResposta(resposta, c)  
             conn.close()
             return                                            
-        vencimento = msgRecebida[-23:-13]
+        vencimento = msgRecebida[-24:-14]
         try:
             vencimento = datetime.strptime(vencimento,"%d/%m/%Y")
         except:
@@ -1438,7 +1480,7 @@ def trataMsgRecebida(msgRecebida, c): #c é o socket estabelecido com o cliente 
             enviaResposta(resposta, c) 
             conn.close()
             return 
-        termino = msgRecebida[-13:-3]
+        termino = msgRecebida[-14:-4]
         if termino!="00/00/0000":
             try:
                 terminoAux = datetime.strptime(termino, "%d/%m/%Y")
@@ -1454,7 +1496,7 @@ def trataMsgRecebida(msgRecebida, c): #c é o socket estabelecido com o cliente 
                 return
         else:
             terminoAux = None
-        horas = msgRecebida[-3:]
+        horas = msgRecebida[-4:-1]
         if not horas.isdigit() and horas!="AAA":
             resposta = "99REQUISIÇÃO INVÁLIDA - HORAS INVÁLIDAS (17L)"
             enviaResposta(resposta, c) 
@@ -1472,6 +1514,25 @@ def trataMsgRecebida(msgRecebida, c): #c é o socket estabelecido com o cliente 
             enviaResposta(resposta, c) 
             conn.close()
             return   
+        haObservacoes = msgRecebida[-1:]
+        if haObservacoes=="S":
+            enviaRespostaSemFechar("1700", c) #envia este para que o cliente envie as observações
+            try:
+                mensagemRec = c.recv(1024) #.decode('utf-8') #chegou a requisicao criptografada
+                requisicao = descriptografa(mensagemRec, addr)
+                if requisicao[:2]!="17":
+                    resposta = "99REQUISIÇÃO INVÁLIDA (17O)"
+                    enviaResposta(resposta, c) 
+                    conn.close()
+                    return
+                observacoes = requisicao[2:102].strip()
+            except:
+                c.close()
+                conn.close()
+                logging.info("Erro de time out 17 - provavelmente cliente não respondeu no prazo. Abandonando operação.")
+                return            
+        else:
+            observacoes = ""
         tdpfMonitorado, monitoramentoAtivo, chave = tdpfMonitoradoCPF(conn, tdpf, cpf)  
         if not tdpfMonitorado or monitoramentoAtivo==False:
             resposta = "17TDPF NÃO ESTÁ SENDO MONITORADO PELO USUÁRIO - ALTERAÇÃO NÃO PERMITIDA"
@@ -1487,8 +1548,8 @@ def trataMsgRecebida(msgRecebida, c): #c é o socket estabelecido com o cliente 
         #    return 
         #podemos alterar a atividade 
         try:
-            comando = "Update Atividades Set TDPF=%s, Atividade=%s, Inicio=%s, Vencimento=%s, Termino=%s, Horas=%s Where Codigo=%s"           
-            cursor.execute(comando, (chaveTdpf, atividade, inicio, vencimento, terminoAux, horas, codAtividade))                
+            comando = "Update Atividades Set TDPF=%s, Atividade=%s, Inicio=%s, Vencimento=%s, Termino=%s, Horas=%s, Observacoes=%s Where Codigo=%s"           
+            cursor.execute(comando, (chaveTdpf, atividade, inicio, vencimento, terminoAux, horas, observacoes, codAtividade))                
             conn.commit()
             resposta = "17ALTERAÇÃO EFETIVADA"
         except:
@@ -1738,16 +1799,16 @@ def servidor():
     while True:  
         try:
             c, addr = s.accept()      
+            #print(addr)
+            #print(type(addr))
             logging.info('Got connection from ' + str(addr))    
             c.settimeout(10)
             try:
-                if not estaoChavesValidas():
-                    pubKey = geraChaves()
                 msgRecebida = c.recv(2048)#.decode('utf-8') #recebe a mensagem  (era 1024)
                 #logging.info(binascii.hexlify(msgRecebida))
                 #logging.info(len(msgRecebida))
     
-                threadTrata = threading.Thread(target=trataMsgRecebida, args=(msgRecebida,c))
+                threadTrata = threading.Thread(target=trataMsgRecebida, args=(msgRecebida,c, addr[0]))
                 threads.append(threadTrata)
                 threadTrata.start()   #inicia a thread que vai tratar a requisição       
                 #trataMsgRecebida(msgRecebida, c) #monta a resposta e a envia
@@ -1762,8 +1823,10 @@ def servidor():
        #c.close() #com as threads, vai ter que fechar lá na função (thread)
 
 
-chavesCripto = [] #contém a função de descriptografia [0] e a data/hora de vencimento [1] (2 h a partir da geração)
-pubKey = geraChaves()
+#contém as chaves [0], a função de descriptografia [1] e a data/hora de vencimento [2] para cada segmento IP (resto da divisão da soma das partes do IP por 10; 10 segmentos)
+chavesCripto = dict()
+inicializaChaves()
+
 #encryptor = PKCS1_OAEP.new(pubKey) #<-- lado cliente (abaixo exemplo)
 #msgCripto = encryptor.encrypt(str.encode("Testando Cripto 1111111111111 00000000000000 44444444444444444 55555555555555555555555 6666666666666666666666 77777777777777777777777777"))
 #decrypted = chavesCripto[0].decrypt(msgCripto).decode("utf-8") #<-- exemplo para o servidor (aqui)
@@ -1788,7 +1851,7 @@ MYSQL_USER = os.getenv("MYSQL_USER", "my_user")
 MYSQL_PASSWORD = os.getenv("MYSQL_PASSWORD", "mypass1234")
 token = os.getenv("TOKEN", "ERRO")
 ambiente = os.getenv("AMBIENTE", "TESTE")
-conn = conecta() #testa a conexão com o BD
+conn = conecta() #testa a conexão com o BD 
 if conn!=None:
     conn.close()
     threads = list() 
@@ -1810,3 +1873,4 @@ if conn!=None:
     logging.info(str(i) + " threads estavam em andamento.")
 else:
     print("Corrija o problema do Banco de Dados e reinicie este serviço.")
+    logging.info("Erro ao tentar conectar ao BD - Saindo ...")

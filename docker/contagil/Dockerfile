@@ -14,7 +14,7 @@ RUN apt-get update \
 RUN pip install --upgrade pip
 COPY ./reqServContagil.txt /bot
 COPY ./ServidorSQLContagil.py /bot
-COPY ./mykeyPrivada.pem /bot
+#COPY ./mykeyPrivada.pem /bot
 RUN pip install -r /bot/reqServContagil.txt
 RUN mkdir /Log
 #COPY . .
