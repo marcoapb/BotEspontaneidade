@@ -61,9 +61,11 @@ CREATE TABLE `TDPFS` (
   `Nome` VARCHAR(150), 
   `NI` VARCHAR(18), 
   `Vencimento` DATETIME, 
+  `DCC` CHAR(17), 
   PRIMARY KEY (`Codigo`), 
   UNIQUE (`Numero`), 
-  UNIQUE (`Numero`, `Grupo`)
+  UNIQUE (`Numero`, `Grupo`),
+  UNIQUE (`DCC`)
 ) ENGINE=innodb DEFAULT CHARSET=utf8;
 
 DROP TABLE IF EXISTS `Usuarios`;

@@ -1555,7 +1555,7 @@ def opcaoUsuario(update, context): #Cadastra usuário
     conn = None
     if msgOpcao1=="Registra Usuário" or msgOpcao1=="Reativa Usuário":       
         pendencias[userId] = 'registra' #usuário agora tem uma pendência de informação
-        response_message = "Envie /menu para ver o menu principal. Envie agora, numa única mensagem, seu *CPF e o código de registro (chave)* (separe as informações com espaço):"  
+        response_message = "Envie /menu para ver o menu principal.\nEnvie agora, numa única mensagem, seu *CPF e o código de registro (chave)* (separe as informações com espaço):"  
         bot.send_message(userId, text=limpaMarkdown(response_message), parse_mode= 'MarkdownV2')
     else:
         conn = conecta()
@@ -1589,7 +1589,7 @@ def solicitaChaveRegistro(update, context): #envia chave de registro para o e-ma
         return #não atendemos bots  
     eliminaPendencia(userId)                          
     pendencias[userId] = 'envioChave' #usuário agora tem uma pendência de informação (atividade)
-    response_message = "Envie /menu para ver o menu principal. Envie agora, numa única mensagem, o *nº do CPF (11 dígitos)* do usuário (fiscal) p/ o qual a chave será enviada:"  
+    response_message = "Envie /menu para ver o menu principal.\nEnvie agora, numa única mensagem, o *nº do CPF (11 dígitos)* do usuário (fiscal) p/ o qual a chave será enviada:"  
     bot.send_message(userId, text=limpaMarkdown(response_message), parse_mode= 'MarkdownV2')
     return    
 
@@ -1629,13 +1629,13 @@ def opcaoInformaAtividade(update, context): #informa atividade relativa a TDPF e
     achou = verificaUsuario(userId, bot)       
     if achou:                      
         pendencias[userId] = 'atividade' #usuário agora tem uma pendência de informação (atividade)
-        response_message = "Envie /menu para ver o menu principal. Envie agora, numa única mensagem, o *nº do TDPF (16 dígitos), a data de vencimento (dd/mm/aaaa) ou o prazo de vencimento em dias (contados de hoje) e a data de início da atividade (dd/mm/aaaa)* - separe as informações com espaço:"  
+        response_message = "Envie /menu para ver o menu principal.\nEnvie agora, numa única mensagem, o *nº do TDPF (16 dígitos), a data de vencimento (dd/mm/aaaa) ou o prazo de vencimento em dias (contados de hoje) e a data de início da atividade (dd/mm/aaaa)* - separe as informações com espaço:"  
         bot.send_message(userId, text=limpaMarkdown(response_message), parse_mode= 'MarkdownV2')
     else:
         mostraMenuPrincipal(update, context)
     return    
 
-def exibeAtividadesEmAndamento(bot, userId, conn): #exibe atividades em andamento de TDPFs não encerrados para anulação ou informação do término
+def exibeAtividadesEmAndamento(bot, userId, conn): #exibe atividades em andamento de TDPFs não encerrados para anulação, informação do término ou de horas dispendidas
     consulta = """
                 Select Atividades.Codigo, TDPFS.Numero, Atividades.Atividade, Atividades.Inicio, Atividades.Vencimento, Atividades.Horas
                 from Atividades, TDPFS, Alocacoes, Usuarios, Fiscais
@@ -1683,7 +1683,7 @@ def opcaoAnulaAtividade(update, context): #anula informação de atividade
             mostraMenuPrincipal(update, context) 
             return                
         pendencias[userId] = 'anulaAtividade'  #usuário agora tem uma pendência de informação   
-        response_message = "Envie /menu para ver o menu principal. Envie o *nº do TDPF (16 dígitos, sem espaços) e, opcionalmente, o código da atividade* a ser excluída (se o código não for informado, será excluída a última cadastrada p/ o TDPF) - separe as informa;óes (TDPF e código) com espaço."
+        response_message = "Envie /menu para ver o menu principal.\nEnvie o *nº do TDPF (16 dígitos, sem espaços) e, opcionalmente, o código da atividade* a ser excluída (se o código não for informado, será excluída a última cadastrada p/ o TDPF) - separe as informa;óes (TDPF e código) com espaço."
         bot.send_message(userId, text=limpaMarkdown(response_message), parse_mode= 'MarkdownV2')
         conn.close()
     else:
@@ -1710,7 +1710,7 @@ def opcaoInformaTerminoAtividade(update, context):
             mostraMenuPrincipal(update, context) 
             return
         pendencias[userId] = 'informaTerminoAtividade' #usuário agora tem uma pendência de informação (término atividade)
-        response_message = "Envie /menu para ver o menu principal. Envie agora, numa única mensagem, *o código da atividade, a data de seu término (dd/mm/aaaa) e quantidade de horas dispendidas (número inteiro)* até o momento - separe as informações com espaço:"  
+        response_message = "Envie /menu para ver o menu principal.\nEnvie agora, numa única mensagem, *o código da atividade, a data de seu término (dd/mm/aaaa) e quantidade de horas dispendidas (número inteiro)* até o momento - separe as informações com espaço:"  
         bot.send_message(userId, text=limpaMarkdown(response_message), parse_mode= 'MarkdownV2')
         conn.close()
     else:
@@ -1737,7 +1737,7 @@ def opcaoInformaHorasAtividade(update, context):
             mostraMenuPrincipal(update, context) 
             return
         pendencias[userId] = 'informaHorasAtividade' #usuário agora tem uma pendência de informação (horas atividade)
-        response_message = "Envie /menu para ver o menu principal. Envie agora, numa única mensagem, *o código da atividade e a quantidade de horas dispendidas* até o momento (número inteiro) - separe as informações com espaço:"  
+        response_message = "Envie /menu para ver o menu principal.\nEnvie agora, numa única mensagem, *o código da atividade e a quantidade de horas dispendidas* até o momento (número inteiro) - separe as informações com espaço:"  
         bot.send_message(userId, text=limpaMarkdown(response_message), parse_mode= 'MarkdownV2')
         conn.close()
     else:
@@ -1929,7 +1929,7 @@ def opcaoInformaCiencia(update, context): #Informa ciência de TDPF
     achou = verificaUsuario(userId, bot)       
     if achou:                      
         pendencias[userId] = 'ciencia' #usuário agora tem uma pendência de informação (ciência)
-        response_message = "Envie /menu para ver o menu principal. Envie agora, numa única mensagem, *o nº do TDPF (16 dígitos) e a data de ciência (dd/mm/aaaa)* válida para fins de perda da espontaneidade tributária relativa ao respectivo procedimento fiscal - separe as informações com espaço:"  
+        response_message = "Envie /menu para ver o menu principal.\nEnvie agora, numa única mensagem, *o nº do TDPF (16 dígitos) e a data de ciência (dd/mm/aaaa)* válida para fins de perda da espontaneidade tributária relativa ao respectivo procedimento fiscal - separe as informações com espaço:"  
         bot.send_message(userId, text=limpaMarkdown(response_message), parse_mode= 'MarkdownV2')
     else:
         mostraMenuPrincipal(update, context) 
@@ -1972,7 +1972,7 @@ def opcaoPrazos(update, context): #Informa prazos para receber avisos
             response_message = "Usuário está inativo no serviço. "+textoRetorno            
         else:    
             pendencias[userId] = 'prazos'   #usuário agora tem uma pendência de informação
-            response_message = "Envie /menu para ver o menu principal. Prazos vigentes para receber alertas: *{} (d1), {} (d2) e {} (d3) dias* antes de o contribuinte readquirir a espontaneidade.\nEnvie agora, numa única mensagem, *três quantidades de dias (1 a 50) distintas* antes de o contribuinte readquirir a espontaneidade tributária em que você deseja receber alertas (separe as informações com espaço):".format(d1, d2, d3)
+            response_message = "Envie /menu para ver o menu principal.\nPrazos vigentes para receber alertas: *{} (d1), {} (d2) e {} (d3) dias* antes de o contribuinte readquirir a espontaneidade.\nEnvie agora, numa única mensagem, *três quantidades de dias (1 a 50) distintas* antes de o contribuinte readquirir a espontaneidade tributária em que você deseja receber alertas (separe as informações com espaço):".format(d1, d2, d3)
     bot.send_message(userId, text=limpaMarkdown(response_message), parse_mode= 'MarkdownV2')
     conn.close()  
     return
@@ -1987,7 +1987,7 @@ def opcaoAnulaCiencia(update, context): #Anula ciência de TDPF
     achou = verificaUsuario(userId, bot)       
     if achou:            
         pendencias[userId] = 'anulaCiencia'  #usuário agora tem uma pendência de informação   
-        response_message = "Envie /menu para ver o menu principal. Envie agora *o nº do TDPF (16 dígitos)* para o qual você deseja anular a última ciência informada que impedia a recuperação da espontaneidade (retornará para a anterior):"
+        response_message = "Envie /menu para ver o menu principal.\nEnvie agora *o nº do TDPF (16 dígitos)* para o qual você deseja anular a última ciência informada que impedia a recuperação da espontaneidade (retornará para a anterior):"
         bot.send_message(userId, text=limpaMarkdown(response_message), parse_mode= 'MarkdownV2')
     else:
         mostraMenuPrincipal(update, context)         
@@ -2003,7 +2003,7 @@ def opcaoFinalizaAvisos(update, context): #Finaliza avisos para um certo TDPF
     achou = verificaUsuario(userId, bot)       
     if achou:   
         pendencias[userId] = 'fim'     #usuário agora tem uma pendência de informação
-        response_message = "Envie /menu para ver o menu principal. Envie agora *o nº do TDPF (16 dígitos) ou a palavra TODOS* para finalizar alertas/monitoramento de um ou de todos os TDPFs:"
+        response_message = "Envie /menu para ver o menu principal.\nEnvie agora *o nº do TDPF (16 dígitos) ou a palavra TODOS* para finalizar alertas/monitoramento de um ou de todos os TDPFs:"
         bot.send_message(userId, text=limpaMarkdown(response_message), parse_mode= 'MarkdownV2')
     else:
         mostraMenuPrincipal(update, context)         
@@ -2019,7 +2019,7 @@ def opcaoAcompanhaTDPFs(update, context): #acompanha um TDPF ou todos os TDPFs e
     achou = verificaUsuario(userId, bot)       
     if achou:   
         pendencias[userId] = 'acompanha' #usuário agora tem uma pendência de informação
-        response_message = "Envie /menu para ver o menu principal. Envie agora o *nº do TDPF (16 dígitos) ou a palavra TODOS* para receber alertas relativos ao TDPF informado ou a todos em que estiver alocado e/ou que for supervisor:"  
+        response_message = "Envie /menu para ver o menu principal.\nEnvie agora o *nº do TDPF (16 dígitos) ou a palavra TODOS* para receber alertas relativos ao TDPF informado ou a todos em que estiver alocado e/ou que for supervisor:"  
         bot.send_message(userId, text=limpaMarkdown(response_message), parse_mode= 'MarkdownV2')
     else:
         mostraMenuPrincipal(update, context)         
@@ -2221,7 +2221,7 @@ def opcaoMostraSupervisionados(update, context): #acompanha um TDPF ou todos os 
     achou = verificaUsuario(userId, bot)       
     if achou:   
         pendencias[userId] = 'mostraSuperv' #usuário agora tem uma pendência de informação
-        response_message = "Envie /menu para ver o menu principal. Deseja que envie também e-mail (SIM ou NÃO)?"  
+        response_message = "Envie /menu para ver o menu principal.\nDeseja que envie também e-mail (SIM/S ou NÃO/N)?"  
         bot.send_message(userId, text=response_message)
     else:
         mostraMenuPrincipal(update, context)         
@@ -2266,14 +2266,15 @@ def mostraSupervisionados(update, context): #Relação de TDPFs supervisionados 
         sheet.cell(row=1, column=2).value = "Data Emissão"
         sheet.cell(row=1, column=3).value = "Nome Fiscalizado"
         sheet.cell(row=1, column=4).value = "Auditor-Fiscal"
-        sheet.cell(row=1, column=5).value = "Monitorado"
-        sheet.cell(row=1, column=6).value = "Última Ciência"
-        sheet.cell(row=1, column=7).value = "Dias p/ Recuperação da Espontaneidade"   
-        sheet.cell(row=1, column=8).value = "Documento que Efetivou a Ciência"            
-        sheet.cell(row=1, column=9).value = "Dias p/ Vencimento do TDPF"
-        sheet.cell(row=1, column=10).value = "Horas Alocadas (TODOS os AFRFBs)"
+        sheet.cell(row=1, column=5).value = "DCC"
+        sheet.cell(row=1, column=6).value = "Monitorado"
+        sheet.cell(row=1, column=7).value = "Última Ciência"
+        sheet.cell(row=1, column=8).value = "Dias p/ Recuperação da Espontaneidade"   
+        sheet.cell(row=1, column=9).value = "Documento que Efetivou a Ciência"            
+        sheet.cell(row=1, column=10).value = "Dias p/ Vencimento do TDPF"
+        sheet.cell(row=1, column=11).value = "Horas Alocadas (TODOS os AFRFBs)"
         sheet.row_dimensions[1].height = 42    
-        larguras = [18, 13, 32, 32, 11, 13, 14.5, 25, 13, 13.5]
+        larguras = [18, 13, 32, 32, 25, 11, 13, 14.5, 25, 13, 13.5]
         for col in range(len(larguras)):
             sheet.column_dimensions[get_column_letter(col+1)].width = larguras[col]  
             currentCell = sheet.cell(row=1, column=col+1)
@@ -2295,7 +2296,7 @@ def mostraSupervisionados(update, context): #Relação de TDPFs supervisionados 
             documento = ""
         email = ""
         consulta = """
-                    Select TDPFS.Emissao, TDPFS.Nome, Fiscais.Nome, TDPFS.Codigo From TDPFS, Alocacoes, Fiscais 
+                    Select TDPFS.Emissao, TDPFS.Nome, Fiscais.Nome, TDPFS.Codigo, TDPFS.DCC From TDPFS, Alocacoes, Fiscais 
                     Where TDPFS.Numero=%s and TDPFS.Codigo=Alocacoes.TDPF and Alocacoes.Desalocacao Is Null and
                     Alocacoes.Supervisor='N' and Alocacoes.Fiscal=Fiscais.Codigo
                     """
@@ -2315,6 +2316,11 @@ def mostraSupervisionados(update, context): #Relação de TDPFs supervisionados 
                 fiscalizado = linha[1]
                 fiscal = linha[2]
                 chaveTdpf = linha[3]
+                dcc = linha[4]
+                if dcc==None:
+                    dcc = ""
+                else:
+                    dcc = dcc[:5]+"."+dcc[5:11]+"/"+dcc[11:15]+"-"+dcc[-2:]
                 break
         if resposta=='S':
             consulta = "Select email from Usuarios Where idTelegram=%s"  
@@ -2332,9 +2338,12 @@ def mostraSupervisionados(update, context): #Relação de TDPFs supervisionados 
             sheet.cell(row=i+1, column=3).value = fiscalizado
             sheet.cell(row=i+1, column=4).value = fiscal
             currentCell = sheet.cell(row=i+1, column=5)
+            currentCell.value = dcc
+            currentCell.alignment = Alignment(horizontal='center')             
+            currentCell = sheet.cell(row=i+1, column=6)
             currentCell.value = monitorado
             currentCell.alignment = Alignment(horizontal='center')              
-            sheet.cell(row=i+1, column=9).value = getAlgarismos(vctoTDPF)
+            sheet.cell(row=i+1, column=10).value = getAlgarismos(vctoTDPF)
             consulta = "Select SUM(Horas) from Alocacoes Where TDPF=%s"
             if conn:
                 cursor.execute(consulta,(chaveTdpf,))
@@ -2343,23 +2352,23 @@ def mostraSupervisionados(update, context): #Relação de TDPFs supervisionados 
                     horas = horasAloc[0]
                 else:
                     horas = 0    
-                sheet.cell(row=i+1, column=10).value = horas
+                sheet.cell(row=i+1, column=11).value = horas
         if ciencia:
             delta = ciencia.date() + timedelta(days=60)-datetime.today().date()
             dias = delta.days
             if resposta=='S':
-                currentCell = sheet.cell(row=i+1, column=6)
+                currentCell = sheet.cell(row=i+1, column=7)
                 currentCell.value = ciencia.date()
                 currentCell.alignment = Alignment(horizontal='center')                 
-                sheet.cell(row=i+1, column=7).value = int(dias)
-                sheet.cell(row=i+1, column=8).value = documento
+                sheet.cell(row=i+1, column=8).value = int(dias)
+                sheet.cell(row=i+1, column=9).value = documento
                 cor = None
                 if dias<=15: #se faltar 15 dias ou menos para recuperar a espontaneidade, a linha fica azul
                     cor = Font(color="0000FF")
                 if dias<0: #se a espontaneidade já foi recuperada, a linha fica vermelha
                     cor = Font(color="FF0000") 
                 if cor!=None:
-                    for col in range(5,8):
+                    for col in range(6,9):
                         sheet.cell(row=i+1, column=col+1).font = cor                 
             if dias<0:
                 dias = " d) "+str(dias)+" (recuperada); e) "+vctoTDPF
@@ -2552,7 +2561,7 @@ def opcaoSupervisorEspontaneidade(update, context): #exibição de TDPFS que est
     achou = verificaUsuario(userId, bot)       
     if achou:   
         pendencias[userId] = 'supervisorEspontaneidade' #usuário agora tem uma pendência de informação
-        response_message = "Envie /menu para ver o menu principal. Envie agora um intervalo de dias (um ou dois dígitos para cada) em que haverá a recuperação da espontaneidade tributária - TDFPs de sua EQUIPE:"  
+        response_message = "Envie /menu para ver o menu principal.\nEnvie agora um intervalo de dias (um ou dois dígitos para cada) em que haverá a recuperação da espontaneidade tributária - TDFPs de sua EQUIPE:"  
         bot.send_message(userId, text=response_message)
     else:
         mostraMenuPrincipal(update, context)         
@@ -2700,9 +2709,9 @@ def opcaoEMail(update, context): #cadastra e-mail para o recebimento de avisos
         return False     
     pendencias[userId] = 'email'     #usuário agora tem uma pendência de informação
     if email!=None and email!="":
-        response_message = "Envie /menu para ver o menu principal. Email atualmente cadastrado - "+email+". Informe seu *novo nome de usuário do endereço de e-mail institucional ou a palavra NULO* para descadastrar o atual (exemplo - se seu e-mail é fulano@rfb.gov.br, envie fulano):"
+        response_message = "Envie /menu para ver o menu principal.\nEmail atualmente cadastrado - "+email+". Informe seu *novo nome de usuário do endereço de e-mail institucional ou a palavra NULO* para descadastrar o atual (exemplo - se seu e-mail é fulano@rfb.gov.br, envie fulano):"
     else:    
-        response_message = "Envie /menu para ver o menu principal. Envie agora seu *nome de usuário do endereço de e-mail institucional* no qual você também receberá alertas (exemplo - se seu e-mail é fulano@rfb.gov.br, envie fulano):"
+        response_message = "Envie /menu para ver o menu principal.\nEnvie agora seu *nome de usuário do endereço de e-mail institucional* no qual você também receberá alertas (exemplo - se seu e-mail é fulano@rfb.gov.br, envie fulano):"
     bot.send_message(userId, text=limpaMarkdown(response_message), parse_mode= 'MarkdownV2')  
     return  
 
