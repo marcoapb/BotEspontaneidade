@@ -146,12 +146,17 @@ def conectaRaw():
             logging.error("Erro na conexão com o Banco de Dados")
         return None              
 
-def enviaRespostaSemFechar(resposta, c):
+def enviaRespostaSemFechar(resposta, c, cont=0):
     #logging.info(resposta)    
-    resposta = resposta.encode('utf-8')   
+    if cont==0:
+        resposta = resposta.encode('utf-8')   
     try:    
-        c.sendall(resposta)
-        return 
+        ret = c.send(resposta)
+        if ret > 0 and ret < len(resposta):
+            logging.info("Não enviou tudo")
+            return enviaRespostaSemFechar(resposta[ret:], c, 1)
+        else:
+            return 
     except:
         logging.info("Erro ao enviar a resposta - exceção - "+str(resposta))
     return
@@ -292,7 +297,7 @@ def estaoChavesValidas(addr):
         return True
 
 def trataMsgRecebida(msgRecebida, c, addr): #c é o socket estabelecido com o cliente que será utilizado para a resposta
-    global chavesCripto, ambiente
+    global chavesCripto
     tamChave = 6 #tamanho da chave do ContÁgil (chave de registro) 
     tamMsg = 100
     tamNome = 100
@@ -302,11 +307,11 @@ def trataMsgRecebida(msgRecebida, c, addr): #c é o socket estabelecido com o cl
             if msgOrigem[:2]=="00" and validaCPF(msgOrigem[2:]): #está fazendo uma requisição de chave pública (msg sem criptografia)
                 if not estaoChavesValidas(addr): #meio difícil de ocorrer aqui, pq tem lá no servidor, mas ...
                     geraChaves(addr) 
-                enviaRespostaSemFechar("0000"+chavesCripto[segmentoIP(addr)][2].strftime("%d/%m/%Y %H:%M:%S"), c) #envia a validade da chave
+                enviaRespostaSemFechar("0000"+chavesCripto[segmentoIP(addr)][2].strftime("%d/%m/%Y %H:%M:%S"), c)
                 try:
                     msg = c.recv(1024).decode("utf-8") #só aguarda um 00
                     if msg=="00":
-                        c.sendall(chavesCripto[segmentoIP(addr)][0].publickey().export_key()) #envia a chave pública
+                        c.sendall(chavesCripto[segmentoIP(addr)][0].publickey().export_key()) #duas mensagens na sequência sem aguardar resposta
                 except:
                     logging.info("Não enviou o flag para receber a chave "+msgOrigem[2:])
                 c.close()
@@ -344,6 +349,7 @@ def trataMsgRecebida(msgRecebida, c, addr): #c é o socket estabelecido com o cl
         enviaResposta(resposta, c)       
         return     
     
+
     if cpf=="12345678909": #este CPF flag não vem por aqui - ele é esperado dentro de alguns lugares neste procedimento para mandar mais informações da requisição
         resposta = "97CPF INVÁLIDO PARA ESTA REQUISIÇÃO"
         enviaResposta(resposta, c)        
@@ -355,11 +361,12 @@ def trataMsgRecebida(msgRecebida, c, addr): #c é o socket estabelecido com o cl
         return  
 
         
-    if codigo<1 or codigo>25:
+    if codigo<1 or codigo>21:
         resposta = "99CÓD DA REQUISIÇÃO É INVÁLIDO (C)" 
         enviaResposta(resposta, c)          
         return     
-             
+         
+    
     if not chaveContagil.isdigit():
         resposta = "90CHAVE DE ACESSO VIA CONTAGIL NÃO É NUMÉRICA"
         enviaResposta(resposta, c)        
@@ -372,19 +379,9 @@ def trataMsgRecebida(msgRecebida, c, addr): #c é o socket estabelecido com o cl
     if not conn:
         resposta = "97ERRO NA CONEXÃO COM O BANCO DE DADOS" #erro de conexão ou de BD
         enviaResposta(resposta, c) 
-        return            
+        return         
+    
     cursor = conn.cursor(buffered=True)    
-
-    if codigo!=18 and ambiente!="TESTE": #fazemos o log no ambiente de produção, exceto para envio de entrada do diário da fiscalização 
-                                         #e solicitação de chave pública (acima - cód = 00)
-        comando = "Insert Into Log (IP, Requisicao, Mensagem, Data) Values (%s, %s, %s, %s)"
-        try:
-            cursor.execute(comando, (c.getpeername()[0], codigo, msgRecebida[2:], datetime.now()))
-            conn.commit()
-        except:
-            logging.info("Falhou o log - IP: "+c.getpeername()[0]+"; Msg: "+msgRecebida)
-            conn.rollback()
-
     if codigo==1: #status do usuário 
         comando = "Select Codigo, CPF, Adesao, Saida, d1, d2, d3, email, Chave, ValidadeChave, Tentativas from Usuarios Where CPF=%s"
         cursor.execute(comando, (cpf,))
@@ -485,61 +482,8 @@ def trataMsgRecebida(msgRecebida, c, addr): #c é o socket estabelecido com o cl
     #    enviaResposta(resposta, c)
     #    conn.close()
     #    return           
-
-    if codigo==22: #troca de senha
-        if len(msgRecebida)!=(13+2*tamChave):
-            resposta = "99REQUISIÇÃO INVÁLIDA (22A)"
-            enviaResposta(resposta, c)  
-            conn.close()
-            return 
-        novaChave = msgRecebida[-6:]
-        if not novaChave.isdigit():
-            resposta = "22NCHAVE DEVE SER NUMÉRICA (A)"
-            enviaResposta(resposta, c)  
-            conn.close()
-            return
-        if novaChave==chaveContagil:
-            resposta = "22NVALIDAÇÃO FEITA PELO SCRIPT FOI BURLADA"
-            enviaResposta(resposta, c)  
-            conn.close()
-            return 
-        try:
-            chaveNum = int(novaChave)
-        except:
-            resposta = "22NCHAVE DEVE SER NUMÉRICA (B)"
-            enviaResposta(resposta, c)  
-            conn.close()
-            return
-        if chaveNum<100000 or chaveNum>999999:
-            resposta = "22NCHAVE DEVE CONTER 6 ALGARISMOS, SENDO O PRIMEIRO DIFERENTE DE ZERO"
-            enviaResposta(resposta, c)  
-            conn.close()
-            return 
-        if (novaChave in '12345678909876543210'):  
-            resposta = "22NCHAVE NÃO PODE SER UMA SEQUÊNCIA DE ALGARISMOS"
-            enviaResposta(resposta, c)  
-            conn.close()
-            return   
-        if (novaChave in ['111111', '222222', '333333', '444444', '555555', '666666', '777777', '888888', '999999']):  
-            resposta = "22NCHAVE NÃO PODE SER COMPOSTA DOS MESMOS ALGARISMOS"
-            enviaResposta(resposta, c)  
-            conn.close()
-            return                                
-        comando = "Update Usuarios Set Chave=%s, ValidadeChave=%s Where CPF=%s"
-        try:
-            validade = datetime.now().date()+timedelta(days=30)
-            cursor.execute(comando, (chaveNum, validade, cpf))
-            resposta = "22STROCA DE SENHA EFETUADA - CHAVE VÁLIDA ATÉ "+validade.strftime("%d/%m/%Y")
-            conn.commit()
-        except:
-            resposta = "22NERRO AO ATUALIZAR TABELA"   
-            conn.rollback()       
-        enviaResposta(resposta, c)  
-        conn.close()
-        return 
-
-
-    #obtemos a chave do fiscal para ser utilizada em todas as requisições  que não sejam a troca de senha, nem status - acima  
+    
+    #obtemos a chave do fiscal para ser utilizada em todas as requisições    
     comando = "Select Fiscais.Codigo From Fiscais Where Fiscais.CPF=%s"          
     cursor.execute(comando, (cpf,))
     rowFiscal = cursor.fetchone()
@@ -550,7 +494,7 @@ def trataMsgRecebida(msgRecebida, c, addr): #c é o socket estabelecido com o cl
         return 
     chaveFiscal = rowFiscal[0] #<---
 
-    if codigo in [2, 3, 4, 5, 14, 15, 16, 17, 18, 19, 20, 21, 23, 24]: #verificações COMUNS relativas ao TDPF - TDPF existe, em andamento (p/ alguns), cpf está alocado nele
+    if codigo in [2, 3, 4, 5, 14, 15, 16, 17, 18, 19, 20, 21]: #verificações COMUNS relativas ao TDPF - TDPF existe, em andamento (p/ alguns), cpf está alocado nele
         if len(msgRecebida)<(29+tamChave):
             resposta = "99REQUISIÇÃO INVÁLIDA (D)"
             enviaResposta(resposta, c)  
@@ -573,17 +517,17 @@ def trataMsgRecebida(msgRecebida, c, addr): #c é o socket estabelecido com o cl
             if nome==None or nome=="":
                 nome = "NOME INDISPONÍVEL"
             nome = nome[:tamNome].ljust(tamNome)
-            if encerramento!=None and not codigo in [4, 15, 19, 23, 24]: #nestes códigos podemos listar ciências, atividades, entradas do diário ou incluir/listar pontuação de TDPFs encerrados
+            if encerramento!=None and not codigo in [4, 15, 19]: #nos códigos 4, 15 e 19, podemos listar ciências, atividades ou entradas do diário de TDPFs encerrados
                 msg = "TDPF encerrado"
                 msg = msg.ljust(tamMsg)
-                resposta = codigoStr+(("N"+msg+nome) if (2<=codigo<=5) else msg)
+                resposta = codigoStr+(("N"+msg+nome) if 2<=codigo<=5 else msg)
                 enviaResposta(resposta, c) 
                 conn.close()
                 return               
         else: 
             msg = "TDPF NÃO foi localizado ou foi encerrado há muito tempo e não colocado na base deste serviço"
             msg = msg.ljust(tamMsg)          
-            resposta = codigoStr+(("I"+msg) if (2<=codigo<=5 or codigo in [23, 24]) else msg)
+            resposta = codigoStr+(("I"+msg) if 2<=codigo<=5 else msg)
             enviaResposta(resposta, c) 
             conn.close()
             return              
@@ -591,31 +535,34 @@ def trataMsgRecebida(msgRecebida, c, addr): #c é o socket estabelecido com o cl
         cursor.execute(comando, (chaveFiscal, chaveTdpf))
         row = cursor.fetchone()    
         bSupervisor = False 
-        if codigo in [4, 15, 21, 23, 24]: #supervisor pode relacionar ciências (4), atividades (15) de TDPF, incluir ou lista pontuação (23, 24) ou incluir DCC (21)
+        if codigo in [4, 15, 21]: #supervisor pode relacionar ciências (4) ou atividades (15) de TDPF ou incluir DCC (21)
             bSupervisor, _ = verificaSupervisao(conn, cpf, tdpf)    
-        #if not bSupervisor and codigo==23: #só supervisor pode incluir pontuação - VERIFICAR (creio que o melhor é permitir tb fiscal alocado)
-        #    msg = "Usuário NÃO é supervisor do TDPF"
-        #    resposta = "23N"+msg.ljust(tamMsg)            
-        #    enviaResposta(resposta, c)   
-        #    conn.close()
-        #    return              
         achou = False
         if row and not bSupervisor:
             achou = True
             if row[0]!=None:
                 msg = "CPF NÃO está mais alocado ao TDPF ou não é supervisor, em requisições em que isso seria relevante"
                 msg = msg.ljust(tamMsg)                
-                resposta = codigoStr+(("N"+msg+nome) if (2<=codigo<=5 or codigo==23) else msg)
+                resposta = codigoStr+(("N"+msg+nome) if 2<=codigo<=5 else msg)
                 enviaResposta(resposta, c)  
                 conn.close()
-                return                         
+                return                
         if not achou and not bSupervisor:
             msg = "CPF NÃO está alocado ao TDPF ou não é supervisor, em requisições em que isso seria relevante"
             msg = msg.ljust(tamMsg)            
-            resposta = codigoStr+(("N"+msg+nome) if (2<=codigo<=5 or codigo in [23, 24]) else msg)     
+            resposta = codigoStr+(("N"+msg+nome) if 2<=codigo<=5 else msg)     
             enviaResposta(resposta, c)   
             conn.close()
             return            
+    
+    comando = "Insert Into Log (IP, Requisicao, Mensagem, Data) Values (%s, %s, %s, %s)"
+    try:
+        #cursor.execute(comando, (c.getpeername()[0], codigo, msgRecebida[2:], datetime.now()))
+        #conn.commit()
+        pass #<--- IMPLEMENTAR O LOG (?)
+    except:
+        logging.info("Falhou o log - IP: "+c.getpeername()[0]+"; Msg: "+msgRecebida)
+        conn.rollback()
     
     if codigo==2: #informa data de ciência relativa a TDPF 
         try:   #deve enviar imediatamente a descrição do documento que efetivou a ciência (sem criptografia)
@@ -834,8 +781,10 @@ def trataMsgRecebida(msgRecebida, c, addr): #c é o socket estabelecido com o cl
         if tam>=100: #limite de 99 tdpfs
             nn = "99"
             tam = 99
+        elif tam>=10:
+            nn = str(tam)
         else:
-            nn = str(tam).rjust(2,"0")
+            nn = "0"+str(tam)
         registro = "" 
         resposta = "06"+nn
         i = 0
@@ -1056,7 +1005,7 @@ def trataMsgRecebida(msgRecebida, c, addr): #c é o socket estabelecido com o cl
 
     if codigo==12: #Relação de TDPFs alocados ao CPF - indica se está sendo monitorado (se estiver em andamento) e se o cpf é supervisor
         if len(msgRecebida)>(14+tamChave):
-            resposta = "99REQUISIÇÃO INVÁLIDA (12A)"
+            resposta = "99REQUISIÇÃO INVÁLIDA (12)"
             enviaResposta(resposta, c) 
             conn.close()
             return 
@@ -1070,7 +1019,7 @@ def trataMsgRecebida(msgRecebida, c, addr): #c é o socket estabelecido com o cl
                     Where Alocacoes.Fiscal=%s and Alocacoes.Desalocacao Is Null and Alocacoes.TDPF=TDPFS.Codigo and
                     TDPFS.Encerramento Is Not Null Order by TDPFS.Encerramento DESC, TDPFS.Numero ASC""" 
         else:
-            resposta = "99INDICADOR DE ENCERRAMENTO INVÁLIDO (12B)"
+            resposta = "99INDICADOR DE ENCERRAMENTO INVÁLIDO (12)"
             enviaResposta(resposta, c) 
             conn.close()
             return                        
@@ -1085,8 +1034,10 @@ def trataMsgRecebida(msgRecebida, c, addr): #c é o socket estabelecido com o cl
         if tam>=100: #limite de 99 tdpfs
             nn = "99"
             tam = 99
+        elif tam>=10:
+            nn = str(tam)
         else:
-            nn = str(tam).rjust(2,"0")         
+            nn = "0"+str(tam)            
         registro = "" 
         resposta = "12"+nn
         i = 0
@@ -1136,35 +1087,35 @@ def trataMsgRecebida(msgRecebida, c, addr): #c é o socket estabelecido com o cl
                 i = 0
                 if total==tam:
                     c.close()
-                    return #percorreu os registros ou 99 deles, que é o limite
+                    break #percorreu os registros ou 99 deles, que é o limite
                 if total<tam: #ainda não chegou ao final - aguardamos a requisição da continuação
                     try:
                         mensagemRec = c.recv(1024) #.decode('utf-8') #chegou a requisicao
                         requisicao = descriptografa(mensagemRec, addr)
                         if requisicao!="1212345678909":
-                            resposta = "99REQUISIÇÃO INVÁLIDA (12C)"
+                            resposta = "99REQUISIÇÃO INVÁLIDA (5)"
                             enviaResposta(resposta, c) 
                             conn.close()
                             return
                     except:
                         c.close()
                         conn.close()
-                        logging.info("Erro de time out 12 - provavelmente cliente não respondeu no prazo. Abandonando operação.")
+                        logging.info("Erro de time out 12 - provavelmente cliente não respondeu no prazo. Abandonando operação (2).")
                         return 
 
     if codigo==13: #mostra lista de tdpfs ativos e últimas ciências sob supervisão do CPF - semelhante ao código 6
-        if len(msgRecebida)!=(18+tamChave):
+        if len(msgRecebida)!=(17+tamChave):
             resposta = "99REQUISIÇÃO INVÁLIDA (13A)"
             enviaResposta(resposta, c) 
             conn.close()
             return 
-        encerrados = msgRecebida[-5:-4]
+        encerrados = msgRecebida[-4:-3]
         if not encerrados in ["S", "N"]:
             resposta = "99INDICADOR DE ENCERRAMENTO INVÁLIDO (13B)"
             enviaResposta(resposta, c) 
             conn.close()
             return                   
-        regInicial = msgRecebida[-4:]
+        regInicial = msgRecebida[-3:]
         if not regInicial.isdigit():
             resposta = "99REQUISIÇÃO INVÁLIDA (13C)"
             enviaResposta(resposta, c) 
@@ -1177,53 +1128,41 @@ def trataMsgRecebida(msgRecebida, c, addr): #c é o socket estabelecido com o cl
             enviaResposta(resposta, c) 
             conn.close()
             return
-        c.settimeout(20)            
-        if regInicial>0: #se foi informado o registro, devemos buscar a partir dele, limitado a CINCO
-            offsetReg = "Limit 5 Offset "+str(regInicial-1)             
-        else: #caso contrário, buscamos todos para informar a quantidade total que existe, mas só enviamos 5 (conforme if ao final do for abaixo)
-             offsetReg = "Limit 5 Offset 0"
+        if regInicial>0: #se foi informado o registro, devemos buscar a partir dele, limitado a dez
+            offsetReg = "Limit 10 Offset "+str(regInicial-1)             
+        else: #caso contrário, buscamos todos para informar a quantidade total que existe, mas só enviamos 10 (conforme if ao final do for abaixo)
+             offsetReg = ""
         logging.info("Offset: "+offsetReg)     
         if encerrados=="N": 
             comando = """Select TDPFS.Numero, TDPFS.Nome, TDPFS.Vencimento, TDPFS.Emissao, TDPFS.Codigo, TDPFS.DCC, TDPFS.Encerramento
                         from TDPFS, Supervisores 
                         Where Supervisores.Fiscal=%s and Supervisores.Equipe=TDPFS.Grupo and TDPFS.Encerramento Is Null Order by TDPFS.Numero """+offsetReg
-            if regInicial==0: #contamos a quantidade de registros para informar na primeira consulta
-                consulta = """Select Count(TDPFS.Numero)
-                              from TDPFS, Supervisores 
-                              Where Supervisores.Fiscal=%s and Supervisores.Equipe=TDPFS.Grupo and TDPFS.Encerramento Is Null"""
         else:
             comando = """Select TDPFS.Numero, TDPFS.Nome, TDPFS.Vencimento, TDPFS.Emissao, TDPFS.Codigo, TDPFS.DCC, TDPFS.Encerramento
                         from TDPFS, Supervisores 
                         Where Supervisores.Fiscal=%s and Supervisores.Equipe=TDPFS.Grupo and TDPFS.Encerramento Is Not Null Order by TDPFS.Encerramento DESC, TDPFS.Numero ASC """+offsetReg            
-            if regInicial==0: #contamos a quantidade de registros para informar na primeira consulta
-                consulta = """Select Count(TDPFS.Numero)
-                              from TDPFS, Supervisores 
-                              Where Supervisores.Fiscal=%s and Supervisores.Equipe=TDPFS.Grupo and TDPFS.Encerramento Is Not Null"""
-        if regInicial==0:
-            cursor.execute(consulta, (chaveFiscal,))
-            quantidadeReg = cursor.fetchone()
-            if quantidadeReg:
-                tam = quantidadeReg[0]
-            else:
-                tam = 0
-            if tam==0:
-                resposta = "130000"
-                enviaResposta(resposta, c) 
-                conn.close()
-                return             
-            if tam>4995: #limite de  tdpfs
-                nnnn = "4995"
-                tam = 4995
-            else:
-                nnnn = str(tam).rjust(4, "0")
-            resposta = "13"+nnnn #código da resposta e qtde de TDPFs que serão retornados
+        cursor.execute(comando, (chaveFiscal,))
+        rows = cursor.fetchall()
+        if rows:
+            tam = len(rows)
+        else:
+            tam = 0
+        if tam==0:
+            resposta = "13000"
+            enviaResposta(resposta, c) 
+            conn.close()
+            return             
+        if tam>=1000: #limite de 999 tdpfs
+            nnn = "999"
+            tam = 999
+        else:
+            nnn= str(tam).rjust(3, "0")
+        c.settimeout(10)
+        registro = "" 
+        if regInicial==0: 
+            resposta = "13"+nnn #código da resposta e qtde de TDPFs que serão retornados
         else:
             resposta = "13"
-        cursor.execute(comando, (chaveFiscal,))
-        rows = cursor.fetchall()   
-        if regInicial>0:
-            tam = len(rows)     
-        registro = "" 
         i = 0
         total = 0           
         for row in rows:
@@ -1285,7 +1224,7 @@ def trataMsgRecebida(msgRecebida, c, addr): #c é o socket estabelecido com o cl
             #logging.info(registro)
             total+=1
             i+=1
-            if i%5==0 or total==tam: #de CINCO em CINCO ou no último registro enviamos a mensagem
+            if i%10==0 or total==tam: #de dez em dez ou no último registro enviamos a mensagem
                 enviaResposta(resposta+registro, c)
                 return                             
 
@@ -1946,651 +1885,16 @@ def trataMsgRecebida(msgRecebida, c, addr): #c é o socket estabelecido com o cl
             resposta = "21ERRO NO REGISTRO DA INFORMAÇÃO"
         enviaResposta(resposta, c)  
         conn.close()
-        return   
-
-    if codigo==23: #inclui/atualiza/exclui parâmetros de pontuação do TDPF
-        if len(msgRecebida)!=(29+tamChave) and len(msgRecebida)!=(68+tamChave):
-            resposta = "99REQUISIÇÃO INVÁLIDA - TAMANHO DO REGISTRO "+str(len(msgRecebida))+" (23A)"
-            enviaResposta(resposta, c) 
-            conn.close()
-            return  
-        comando = "Select Encerramento from TDPFS Where Codigo=%s"
-        cursor.execute(comando, (chaveTdpf,))          
-        row = cursor.fetchone()
-        if row[0]!=None:
-            if row[0].date()<datetime.now().date()-timedelta(days=180): #TDPF não pode estar encerrado há mais de 180 dias
-                resposta = "23V"
-                enviaResposta(resposta, c) 
-                conn.close()
-                return                 
-        if len(msgRecebida)==(29+tamChave): #apaga o registro para o TDPF (não vieram as informações dos resultados obtidos)
-            comando = "Delete From Resultados Where TDPF=%s"
-            try:
-                cursor.execute(comando, (chaveTdpf,))
-                conn.commit()
-                resposta = "23SREGISTRO PORVENTURA EXISTENTE FOI EXCLUÍDO"
-            except:                
-                conn.rollback()
-                resposta = "23NERRO NA EXCLUSÃO DO REGISTRO"
-            enviaResposta(resposta, c) 
-            conn.close()
-            return
-        parametros = msgRecebida[29+tamChave:]
-        arrolamentos = parametros[:2]
-        medCautelar = parametros[2:3]
-        rffps = parametros[3:5]
-        inaptidoes = parametros[5:7]
-        baixas = parametros[7:9]
-        excSimples = parametros[9:11]
-        sujPassivos = parametros[11:13]
-        dvs = parametros[13:16]
-        situacao11 = parametros[16:17]
-        interposicao = parametros[17:18]
-        situacao15 = parametros[18:19] 
-        estabPrev1 = parametros[19:22]
-        estabPrev2 = parametros[22:24]
-        segurados = parametros[24:28]
-        prestadores = parametros[28:31]
-        tomadores = parametros[31:34]
-        qtdePER = parametros[34:36] 
-        lancMuldi = parametros[36:37]
-        compensacao = parametros[37:38]
-        creditoExt = parametros[38:39]   
-        try:
-            arrolamentos = int(arrolamentos)
-            if arrolamentos<0:
-                resposta = "99REQUISIÇÃO INVÁLIDA - Nº DE ARROLAMENTOS INVÁLIDO (23B1)"
-                enviaResposta(resposta, c) 
-                conn.close()
-                return                 
-        except:
-            resposta = "99REQUISIÇÃO INVÁLIDA - Nº DE ARROLAMENTOS INVÁLIDO (23B)"
-            enviaResposta(resposta, c) 
-            conn.close()
-            return  
-        try:
-            rffps = int(rffps)
-            if rffps<0:
-                resposta = "99REQUISIÇÃO INVÁLIDA - Nº DE RFFPS INVÁLIDO (23C1)"
-                enviaResposta(resposta, c) 
-                conn.close()
-                return             
-        except:
-            resposta = "99REQUISIÇÃO INVÁLIDA - Nº DE RFFPS INVÁLIDO (23C)"
-            enviaResposta(resposta, c) 
-            conn.close()
-            return
-        try:
-            inaptidoes = int(inaptidoes)
-            if inaptidoes<0:
-                resposta = "99REQUISIÇÃO INVÁLIDA - Nº DE INAPTIDÕES INVÁLIDO (23D1)"
-                enviaResposta(resposta, c) 
-                conn.close()
-                return             
-        except:
-            resposta = "99REQUISIÇÃO INVÁLIDA - Nº DE INAPTIDÕES INVÁLIDO (23D)"
-            enviaResposta(resposta, c) 
-            conn.close()
-            return
-        try:
-            baixas = int(baixas)
-            if baixas<0:
-                resposta = "99REQUISIÇÃO INVÁLIDA - Nº DE BAIXAS INVÁLIDO (23E1)"
-                enviaResposta(resposta, c) 
-                conn.close()
-                return                
-        except:
-            resposta = "99REQUISIÇÃO INVÁLIDA - Nº DE BAIXAS INVÁLIDO (23E)"
-            enviaResposta(resposta, c) 
-            conn.close()
-            return                                                
-        try:
-            excSimples = int(excSimples)
-            if excSimples<0:
-                resposta = "99REQUISIÇÃO INVÁLIDA - Nº DE EXCLUSÕES DO SIMPLES INVÁLIDO (23F1)"
-                enviaResposta(resposta, c) 
-                conn.close()
-                return            
-        except:
-            resposta = "99REQUISIÇÃO INVÁLIDA - Nº DE EXCLUSÕES DO SIMPLES INVÁLIDO (23F)"
-            enviaResposta(resposta, c) 
-            conn.close()
-            return
-        try:
-            sujPassivos = int(sujPassivos)
-            if sujPassivos<0:
-                resposta = "99REQUISIÇÃO INVÁLIDA - Nº DE SUJEITOS PASSIVOS INVÁLIDO (23G1)"
-                enviaResposta(resposta, c) 
-                conn.close()
-                return                
-        except:
-            resposta = "99REQUISIÇÃO INVÁLIDA - Nº DE SUJEITOS PASSIVOS INVÁLIDO (23G)"
-            enviaResposta(resposta, c) 
-            conn.close()
-            return
-        try:
-            dvs = int(dvs)
-            if dvs<0:
-                resposta = "99REQUISIÇÃO INVÁLIDA - Nº DE DILIGÊNCIAS VINCULADAS INVÁLIDO (23H1)"
-                enviaResposta(resposta, c) 
-                conn.close()
-                return             
-        except:
-            resposta = "99REQUISIÇÃO INVÁLIDA - Nº DE DILIGÊNCIAS VINCULADAS INVÁLIDO (23H)"
-            enviaResposta(resposta, c) 
-            conn.close()
-            return 
-        if not medCautelar in ["S", "N"]:
-            resposta = "99REQUISIÇÃO INVÁLIDA - EXISTÊNCIA DE MED CAUTELAR INVÁLIDA (23I)"
-            enviaResposta(resposta, c) 
-            conn.close()
-            return       
-        if not situacao11 in ["S", "N"]:
-            resposta = "99REQUISIÇÃO INVÁLIDA - EXISTÊNCIA DE SITUAÇÃO 11 INVÁLIDA (23J)"
-            enviaResposta(resposta, c) 
-            conn.close()
-            return   
-        if not interposicao in ["S", "N"]:
-            resposta = "99REQUISIÇÃO INVÁLIDA - EXISTÊNCIA DE INTERPOSIÇÃO INVÁLIDA (23K)"
-            enviaResposta(resposta, c) 
-            conn.close()
-            return 
-        if not situacao15 in ["S", "N"]:
-            resposta = "99REQUISIÇÃO INVÁLIDA - EXISTÊNCIA DE SITUAÇÃO 15 INVÁLIDA (23L)"
-            enviaResposta(resposta, c) 
-            conn.close()
-            return 
-        try:
-            estabPrev1 = int(estabPrev1)
-            if estabPrev1<0:
-                resposta = "99REQUISIÇÃO INVÁLIDA - Nº DE ESTAB PREV INVÁLIDO (23L1)"
-                enviaResposta(resposta, c) 
-                conn.close()
-                return             
-        except:
-            resposta = "99REQUISIÇÃO INVÁLIDA - Nº DE ESTAB PREV INVÁLIDO (23L2)"
-            enviaResposta(resposta, c) 
-            conn.close()
-            return 
-        try:
-            estabPrev2 = int(estabPrev2)
-            if estabPrev2<0:
-                resposta = "99REQUISIÇÃO INVÁLIDA - Nº DE CEI/CAEPF/OBRA INVÁLIDO (23L3)"
-                enviaResposta(resposta, c) 
-                conn.close()
-                return             
-        except:
-            resposta = "99REQUISIÇÃO INVÁLIDA - Nº DE CEI/CAEPF/OBRA INVÁLIDO (23L4)"
-            enviaResposta(resposta, c) 
-            conn.close()
-            return 
-        try:
-            segurados = int(segurados)
-            if segurados<0:
-                resposta = "99REQUISIÇÃO INVÁLIDA - Nº DE SEGURADOS INVÁLIDO (23L5)"
-                enviaResposta(resposta, c) 
-                conn.close()
-                return             
-        except:
-            resposta = "99REQUISIÇÃO INVÁLIDA - Nº DE SEGURADOS INVÁLIDO (23L6)"
-            enviaResposta(resposta, c) 
-            conn.close()
-            return 
-        try:
-            prestadores = int(prestadores)
-            if prestadores<0:
-                resposta = "99REQUISIÇÃO INVÁLIDA - Nº DE PRESTADORES INVÁLIDO (23L7)"
-                enviaResposta(resposta, c) 
-                conn.close()
-                return             
-        except:
-            resposta = "99REQUISIÇÃO INVÁLIDA - Nº DE PRESTADORES INVÁLIDO (23L8)"
-            enviaResposta(resposta, c) 
-            conn.close()
-            return 
-        try:
-            tomadores = int(tomadores)
-            if tomadores<0:
-                resposta = "99REQUISIÇÃO INVÁLIDA - Nº DE TOMADORES INVÁLIDO (23L9)"
-                enviaResposta(resposta, c) 
-                conn.close()
-                return             
-        except:
-            resposta = "99REQUISIÇÃO INVÁLIDA - Nº DE TOMADORES INVÁLIDO (23L10)"
-            enviaResposta(resposta, c) 
-            conn.close()
-            return 
-        try:
-            qtdePER = int(qtdePER)
-            if qtdePER<0:
-                resposta = "99REQUISIÇÃO INVÁLIDA - Nº DE PERS INVÁLIDO (23L11)"
-                enviaResposta(resposta, c) 
-                conn.close()
-                return             
-        except:
-            resposta = "99REQUISIÇÃO INVÁLIDA - Nº DE PERS INVÁLIDO (23L12)"
-            enviaResposta(resposta, c) 
-            conn.close()
-            return                                                                         
-        if not lancMuldi in ["S", "N"]:
-            resposta = "99REQUISIÇÃO INVÁLIDA - EXISTÊNCIA DE LANÇAMENTO DE MULDI/MULDI-PREV INVÁLIDA (23M)"
-            enviaResposta(resposta, c) 
-            conn.close()
-            return   
-        if not compensacao in ["S", "N"]:
-            resposta = "99REQUISIÇÃO INVÁLIDA - EXISTÊNCIA DE COMPENSAÇÃO NÃO CPRB INVÁLIDA (23N)"
-            enviaResposta(resposta, c) 
-            conn.close()
-            return 
-        if not creditoExt in ["S", "N"]:
-            resposta = "99REQUISIÇÃO INVÁLIDA - EXISTÊNCIA DE CRÉDITO EXTEMPORÂNEO PIS/COFINS/IPI INVÁLIDA (23O)"
-            enviaResposta(resposta, c) 
-            conn.close()
-            return                                                                                                                        
-        comando = "Select * from Resultados Where TDPF=%s"
-        cursor.execute(comando, (chaveTdpf,))
-        row = cursor.fetchone() 
-        try:
-            if row!=None:
-                comando = """Update Resultados Set Arrolamentos=%s, MedCautelar=%s, RepPenais=%s, Inaptidoes=%s, Baixas=%s, ExcSimples=%s, 
-                             SujPassivos=%s, DigVincs=%s, Situacao11=%s, Interposicao=%s, Situacao15=%s, EstabPrev1=%s, EstabPrev2=%s, Segurados=%s,
-                             Prestadores=%s, Tomadores=%s, QtdePER=%s, LancMuldi=%s, Compensacao=%s, CreditoExt=%s, Data=%s, CPF=%s Where TDPF=%s"""
-                msg = "ATUALIZAÇÃO"
-            else:
-                comando = """Insert Into Resultados (Arrolamentos, MedCautelar, RepPenais, Inaptidoes, Baixas, ExcSimples, SujPassivos, DigVincs, 
-                             Situacao11, Interposicao, Situacao15, EstabPrev1, EstabPrev2, Segurados, Prestadores, Tomadores, QtdePER, LancMuldi, Compensacao,
-                             CreditoExt, Data, CPF, TDPF) Values (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)"""
-                msg = "INCLUSÃO"
-            cursor.execute(comando, (arrolamentos, medCautelar, rffps, inaptidoes, baixas, excSimples, sujPassivos, dvs, situacao11, interposicao, situacao15,
-                                     estabPrev1, estabPrev2, segurados, prestadores, tomadores, qtdePER, lancMuldi, compensacao, creditoExt, datetime.now().date(), cpf, chaveTdpf))
-            conn.commit()
-            resposta = "23SREGISTRO EFETIVADO COM SUCESSO - "+msg
-        except:
-            conn.rollback()
-            resposta = "23NERRO NA "+msg+" DO REGISTRO"
-        enviaResposta(resposta, c) 
-        conn.close()
-        return 
-
-    if codigo==24: #recupera parâmetros de pontuação do TDPF, calcula e informa a quantidade de PONTOS dele   
-        #pontuação de cada tributo (código) por porte [p, m, g]
-        pontosTribPJ = {2141: [111, 131, 176], 2096: [111, 131, 176], 694: [118, 210, 223], 1167: [131, 155, 155], 1011: [130, 148, 159],
-                        221: [132, 174, 247], 238: [87, 87, 151], 8103: [67, 101, 148], 3880: [137, 177, 210], 6121: [137, 177, 210], 3333: [122, 122, 122]} 
-        pontosTribPF = {2141: [40, 40, 40], 2096: [40, 40, 40], 210: [75, 75, 105]}
-
-        #para PJ, se não estiver na relação de pontosTrib, pega essa aí como pontuação e sempre como base do multiplicado para cada porte [p, m, g]
-        pontosOutrosPJ = [118, 158, 194]
-
-        #para PF, se não estiver na relação de pontosTrib, pega essa aí como pontuação e sempre como base do multiplicado para cada porte [p, m, g]
-        pontosOutrosPF = [68, 68, 85]  #preenchi a posição do meio com o mesmo valor da primeira (demais) para não correr riscos
-
-        #acréscimos (percentuais) na pontuação base (pontosTrib ou, subsidiariamente, pontosOutrosPF/PJ) de acordo com algum tributo a mais programado
-        acrescimos = {2141: 0.4, 2096: 0.4, 1011: 0.4, 210: 0.4, 221: 0.4, 8103: 0.4,  3880: 0.4, 6121: 0.4, 1167: 0.1, 238: 0.1}
-
-        if len(msgRecebida)!=(29+tamChave):
-            resposta = "99REQUISIÇÃO INVÁLIDA (24A)"
-            enviaResposta(resposta, c) 
-            conn.close()
-            return   
-        comando = "Select Porte, Encerramento, NI, Acompanhamento from TDPFS Where TDPFS.Codigo=%s"
-        cursor.execute(comando, (chaveTdpf,))
-        row = cursor.fetchone()
-        if not row: #o TDPF não existe (??)
-            resposta = "99REQUISIÇÃO INVÁLIDA - TDPF NÃO FOI LOCALIZADO (24B)"
-            enviaResposta(resposta, c) 
-            conn.close()
-            return  
-        porte = row[0]        
-        if porte==None:
-            porte = "DEM"  
-        if row[1]==None:
-            encerrado = "N"
-        else:
-            encerrado = "S" 
-        ni = row[2]
-        #verificamos se o contribuinte está sujeito a acompanhamento especial pela Comac
-        acompanhamento = "N"
-        if row[3]!=None:
-            if row[3]=="S":
-                acompanhamento = "S"
-        #contamos as operações do TDPF
-        comando = "Select Count(Distinct Operacao) from Operacoes Where TDPF=%s"
-        cursor.execute(comando, (chaveTdpf,))
-        row = cursor.fetchone()
-        if not row:
-            qtdeOperacoes = 0
-        else:
-            qtdeOperacoes = row[0]   
-        #temos que ver se há operações de PIS/Cofins programados e diminuir, da quantidade obtida acima, a quantidade de programação de um tributo destes que for menor
-        comando = """Select Count(Distinct Operacoes.Operacao) from Operacoes, OperacoesFiscais, Tributos 
-                     Where TDPF=%s and Operacoes.Operacao=OperacoesFiscais.Codigo and OperacoesFiscais.Tributo=Tributos.Codigo and Tributos.Tributo=%s"""
-        cursor.execute(comando, (chaveTdpf, 3880)) #PIS
-        row = cursor.fetchone()
-        qtdePis = 0
-        if row:
-            qtdePis = row[0]
-        cursor.execute(comando, (chaveTdpf, 6121)) #Cofins
-        row = cursor.fetchone()        
-        qtdeCofins = 0
-        if row:
-            qtdeCofins = row[0]
-        qtdeOperacoes = qtdeOperacoes - min(qtdePis, qtdeCofins)
-        #contamos os anos programados do TDPF     
-        comando = "Select Min(PeriodoInicial), Max(PeriodoFinal) from Operacoes Where TDPF=%s"
-        cursor.execute(comando, (chaveTdpf,))
-        row = cursor.fetchone()
-        if not row:
-            qtdeAnos = 0
-        else:
-            qtdeAnos = int(row[1].strftime("%Y"))-int(row[0].strftime("%Y"))+1    
-        #buscamos os parâmetros para cálculo do multiplicador 
-        comando = """Select Arrolamentos, MedCautelar, RepPenais, Inaptidoes, Baixas, ExcSimples, SujPassivos, DigVincs, Situacao11, Interposicao,
-                     Situacao15, EstabPrev1, EstabPrev2, Segurados, Prestadores, Tomadores, QtdePER, LancMuldi, Compensacao, CreditoExt
-                     from Resultados Where TDPF=%s"""        
-        cursor.execute(comando, (chaveTdpf,))
-        row = cursor.fetchone()
-        if row:
-            arrolamentos = row[0]
-            medCautelar = row[1]
-            rffps = row[2]
-            inaptidoes = row[3]
-            baixas = row[4]
-            excSimples = row[5]
-            sujPassivos = row[6]
-            digVincs = row[7]
-            situacao11 = row[8]
-            interposicao = row[9]
-            situacao15 = row[10]
-            estabPrev1 = row[11]
-            estabPrev2 = row[12]
-            segurados = row[13]
-            prestadores = row[14]
-            tomadores = row[15]
-            qtdePER = row[16]            
-            lancMuldi = row[17]
-            compensacao = row[18]
-            creditoExt = row[19]
-            parametros = str(arrolamentos).rjust(2,"0")+medCautelar+str(rffps).rjust(2,"0")+str(inaptidoes).rjust(2,"0")+str(baixas).rjust(2,"0")+str(excSimples).rjust(2,"0")
-            parametros = parametros + str(sujPassivos).rjust(2,"0")+str(digVincs).rjust(3,"0")+situacao11+interposicao+situacao15
-            parametros = parametros + str(estabPrev1).rjust(3,"0")+str(estabPrev2).rjust(2,"0")+str(segurados).rjust(4,"0")+str(prestadores).rjust(3,"0")+str(tomadores).rjust(3,"0")
-            parametros = parametros + str(qtdePER).rjust(2,"0")+lancMuldi+compensacao+creditoExt
-            #calculamos os pontos
-            #para calcular, estabelecemos a posição do porte do fiscalizado na lista de pontos que utilizaremos
-            if "DEM" in porte:
-                posicao = 0
-            elif "DIF" in porte:
-                posicao = 2
-            else:
-                posicao = 1
-            #buscamos todos os tributos
-            comando = """Select Tributos.Tributo, OperacoesFiscais.Operacao From Operacoes, OperacoesFiscais, Tributos 
-                         Where Operacoes.TDPF=%s and Operacoes.Operacao=OperacoesFiscais.Codigo and OperacoesFiscais.Tributo=Tributos.Codigo"""
-            cursor.execute(comando, (chaveTdpf,))
-            rows = cursor.fetchall()
-            pontos = float(0)
-            tributoPrincipal = 0
-            if len(ni)==18: #PJ
-                pontosTrib = pontosTribPJ
-                baseMultiplicador = pontosOutrosPJ[posicao]
-            else:
-                pontosTrib = pontosTribPF
-                baseMultiplicador = pontosOutrosPF[posicao]
-            #vemos qual tributo programado oferece a maior pontuação
-            listaTributos = []
-            operacao40111 = 'N'
-            for tributo in rows:
-                listaTributos.append(tributo[0])
-                if tributo[1]==40111: #operação livro caixa em IRPF que justifica acréscimo da situação11
-                    operacao40111 = 'S'
-                pontos2 = max(pontos, pontosTrib.get(tributo[0],[0,0,0])[posicao])
-                if pontos2>pontos:
-                    pontos = pontos2
-                    tributoPrincipal = tributo[0]      
-            acrescimo = float(0)            
-            if pontos==0:
-                pontos = baseMultiplicador #se não achou o tributo em pontosTrib, a pontuação fica sendo a subsidiária que depende do tipo da pessoa (F ou J)
-            else:
-                for tributo in rows: #se  achou o tributo em pontosTrib, pode haver um acréscimo por outro tributo programado
-                    if tributo[0]==tributoPrincipal: #que não seja aquele que utilizamos em pontosTrib
-                        continue
-                    acrescimo = max(acrescimo, acrescimos.get(tributo[0],0))
-            print("Pontos Iniciais", pontos)
-            print("Acréscimo", acrescimo)
-            pontos = pontos * (1.0+acrescimo)
-            #vemos qual a operação com o maior valor
-            comando = "Select MAX(OperacoesFiscais.Valor) From Operacoes, OperacoesFiscais Where Operacoes.TDPF=%s and Operacoes.Operacao=OperacoesFiscais.Codigo"
-            cursor.execute(comando, (chaveTdpf,))
-            row = cursor.fetchone()
-            multOp = 1.0
-            if row!=None:
-                multOp = (1.0 if row[0]==None else row[0])
-            print("Multiplicador Operação", multOp)
-            pontos = pontos * float(multOp) #anexo único da Portaria Cofis 46/2020
-            print("Pontos", pontos)
-            multiplicador = float(0)
-            #obtemos o multiplicador com os demais parâmetros
-            if 0<arrolamentos<=2:
-                multiplicador = 0.1*arrolamentos
-            elif arrolamentos>2:
-                multiplicador = 0.1+0.05*arrolamentos        
-            if medCautelar=="S":
-                multiplicador+=0.5        
-            multiplicador = multiplicador + 0.1*rffps + (0.05 if inaptidoes>0 else 0) + (0.1 if baixas>0 else 0) + (0.35 if excSimples>0 else 0)     
-            if acompanhamento=="S":
-                if len(ni)==18:
-                    multiplicador+=0.4
-                else:
-                    multiplicador+=0.3       
-            if 1<=sujPassivos<=2:
-                multiplicador+=0.15
-            elif 2<sujPassivos<=10:
-                multiplicador+=0.25
-            elif sujPassivos>10:
-                multiplicador+=0.35             
-            if 0<digVincs<=5:
-                multiplicador+=0.1
-            elif 5<digVincs<=20:
-                multiplicador+=0.2
-            elif 20<digVincs<=60:
-                multiplicador+=0.3
-            elif digVincs>60:
-                multiplicador+=0.4
-            if situacao11=="S" and operacao40111=="S" and len(ni)==11: #fiscalização PF, operação 40111 e usuário marcou, então pode ter o acréscimo
-                multiplicador+=0.2
-            if qtdeOperacoes==2:
-                multiplicador+=0.05
-            elif qtdeOperacoes>2:
-                multiplicador+=0.1      
-            if interposicao=="S":
-                multiplicador+=0.3
-            if qtdeAnos==2:
-                multiplicador+=0.1
-            elif qtdeAnos>2:
-                multiplicador+=0.2
-            if situacao15=="S":
-                multiplicador+=0.3
-            if 2141 in listaTributos or 2096 in listaTributos: #situação 16 só se aplica a tributos previdenciários
-                multPrev1 = 0
-                multPrev2 = 0
-                if 25<=estabPrev1<100:
-                    multPrev1=0.1
-                elif 100<=estabPrev1<250:
-                    multPrev1=0.2
-                elif estabPrev1>=250:
-                    multPrev1=0.3
-                if 10<=estabPrev2<20:
-                    multPrev2=0.1
-                elif 20<=estabPrev2<50:
-                    multPrev2=0.2
-                elif estabPrev2>=50:
-                    multPrev2=0.3    
-                multiplicador+=max(multPrev1, multPrev2)           
-            if 2096 in listaTributos: #situação 17 só se aplica a fiscalização da contribuição do segurado
-                multPrev = 0
-                if 250<=segurados<500:
-                    multPrev=0.05
-                elif 500<=segurados<1000:
-                    multPrev=0.1
-                elif segurados>=1000:
-                    multPrev=0.2              
-                multiplicador+=multPrev
-            if 2141 in listaTributos or 2096 in listaTributos: #situações 18  e a 19 só se aplicam a tributos previdenciários
-                multPrev1 = 0
-                multPrev2 = 0                
-                if 10<=prestadores<25:
-                    multPrev1=0.1
-                elif 25<=prestadores<40:
-                    multPrev1=0.2
-                elif prestadores>=40:
-                    multPrev1=0.3  
-                if 5<=tomadores<15:
-                    multPrev2=0.1
-                elif 15<=tomadores<30:
-                    multPrev2=0.2
-                elif tomadores>=30:
-                    multPrev2=0.3 
-                multiplicador = multiplicador+multPrev1+multPrev2
-            if 3880 in listaTributos or 6121 in listaTributos or 1011 in listaTributos: #situação 20 só se aplica a PIS, Cofins e IPI
-                multPer = 0
-                if 9<=qtdePER<17:
-                    multPer = 0.1
-                elif 17<=qtdePER<25:
-                    multPer = 0.15
-                elif qtdePER>=25:
-                    multPer = 0.2
-                multiplicador+=multPer       
-            if lancMuldi=="S":
-                multiplicador+=0.05
-            if compensacao=="S":
-                multiplicador+=0.3
-            if creditoExt=="S" and (3880 in listaTributos or 6121 in listaTributos or 1011 in listaTributos): #situação 23 só se aplica a PIS, Cofins e IPI
-                multiplicador+=0.15 
-            print("Multiplicador", multiplicador)  
-            totalPontos = str(int(pontos+baseMultiplicador*multiplicador)).rjust(4,"0")
-            print("Total Pontos "+totalPontos)
-            resposta = "24E"+encerrado+totalPontos+parametros     
-        else:
-            resposta = "24P"+encerrado+"0000"
-        enviaResposta(resposta, c) 
-        conn.close()
         return             
-
-    if codigo==25: #Relação de TDPFs alocados ao CPF ou de que este seja supervisor sem ciência entre XX e YY dias após a emissão
-        if len(msgRecebida)!=(17+tamChave):
-            resposta = "99REQUISIÇÃO INVÁLIDA (25A)"
-            enviaResposta(resposta, c) 
-            conn.close()
-            return
-        inicial = msgRecebida[-4:-2]
-        final = msgRecebida[-2:]
-        try:
-            inicial = int(inicial)
-        except:
-            resposta = "99REQUISIÇÃO INVÁLIDA - QTDE DIAS INICIAL INVÁLIDA (25B)"
-            enviaResposta(resposta, c) 
-            conn.close()
-            return    
-        try:
-            final = int(final)
-        except:
-            resposta = "99REQUISIÇÃO INVÁLIDA - QTDE DIAS FINAL INVÁLIDA (25C)"
-            enviaResposta(resposta, c) 
-            conn.close()
-            return   
-        comando = """
-                Select Distinctrow TDPFS.Numero, TDPFS.Nome, TDPFS.Emissao, TDPFS.Vencimento, TDPFS.Codigo
-                From TDPFS, Supervisores
-                Where (Supervisores.Fim Is Null and Supervisores.Equipe=TDPFS.Grupo and Supervisores.Fiscal=%s) 
-                and TDPFS.Emissao<=cast((now() - interval %s day) as date) and TDPFS.Emissao>=cast((now() - interval %s day) as date) 
-                and TDPFS.Encerramento Is Null and TDPFS.Codigo not in (Select TDPF from Ciencias Where Data Is Not Null)
-                Union
-                Select Distinctrow TDPFS.Numero, TDPFS.Nome, TDPFS.Emissao, TDPFS.Vencimento, TDPFS.Codigo
-                From TDPFS, Alocacoes              
-                Where (Alocacoes.Fiscal=%s and Alocacoes.Desalocacao Is Null and Alocacoes.TDPF=TDPFS.Codigo)
-                and TDPFS.Emissao<=cast((now() - interval %s day) as date) and TDPFS.Emissao>=cast((now() - interval %s day) as date) 
-                and TDPFS.Encerramento Is Null and TDPFS.Codigo not in (Select TDPF from Ciencias Where Data Is Not Null)                
-                Order By Numero
-                """                                                       
-        cursor.execute(comando, (chaveFiscal, inicial, final, chaveFiscal, inicial, final))
-        rows = cursor.fetchall()
-        tam = len(rows)
-        if tam==0:
-            resposta = "2500"
-            enviaResposta(resposta, c) 
-            conn.close()
-            return             
-        if tam>=100: #limite de 99 tdpfs
-            nn = "99"
-            tam = 99
-        else:
-            nn = str(tam).rjust(2,"0")          
-        registro = "" 
-        resposta = "25"+nn
-        i = 0
-        total = 0            
-        for row in rows:
-            tdpf = row[0]
-            nome = row[1]
-            emissao = row[2]
-            if emissao==None:
-                emissao = "00/00/0000"
-            else:
-                emissao = emissao.strftime("%d/%m/%Y")
-            vencimento = row[3]
-            if vencimento==None:
-                vencimento = "00/00/0000"
-            else:
-                vencimento = vencimento.strftime("%d/%m/%Y")            
-            if nome==None or nome=="":
-                nome = "ND"  
-            nome = nome[:tamNome].ljust(tamNome) 
-            #obtem o fiscal há mais tempo alocado ao TDPF
-            consulta = "Select Fiscais.Nome From Fiscais, Alocacoes Where Alocacoes.TDPF=%s and Alocacoes.Desalocacao Is Null and Alocacoes.Fiscal=Fiscais.Codigo Order By Alocacoes.Alocacao"
-            cursor.execute(consulta, (row[4],)) #passa como parâmetro a chave primária da tabela TDPFS
-            fiscaisRow = cursor.fetchone()
-            nomeFiscal = None
-            if fiscaisRow:
-                nomeFiscal = fiscaisRow[0]
-            if nomeFiscal==None:
-                nomeFiscal = "ND"
-            else:
-                nomeFiscal = nomeFiscal.split()[0][:20] #manda o primeiro nome do fiscal tb (limitado a 20 caracteres)
-            nomeFiscal = nomeFiscal.ljust(20) 
-            registro = registro + tdpf + nome + emissao + vencimento + nomeFiscal
-            i+=1
-            total+=1
-            if i==5 or total==tam: #de cinco em cinco ou no último registro, enviamos
-                enviaRespostaSemFechar(resposta+registro, c)
-                resposta = "25"
-                registro = ""
-                i = 0
-                if total==tam:
-                    c.close()
-                    return #percorreu os registros ou 99 deles, que é o limite
-                if total<tam: #ainda não chegou ao final - aguardamos a requisição da continuação
-                    try:
-                        mensagemRec = c.recv(1024) #.decode('utf-8') #chegou a requisicao
-                        requisicao = descriptografa(mensagemRec, addr)
-                        if requisicao!="2512345678909":
-                            resposta = "99REQUISIÇÃO INVÁLIDA (25D)"
-                            enviaResposta(resposta, c) 
-                            conn.close()
-                            return
-                    except:
-                        c.close()
-                        conn.close()
-                        logging.info("Erro de time out 25 - provavelmente cliente não respondeu no prazo. Abandonando operação.")
-                        return 
-
     return #não chega aqui, mas ...
       
 
 def servidor(): 
     global  threads, s, pubKey
 
-    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)          
+    s = socket.socket()          
     logging.info("Socket successfully created")
-     
+      
     port = 1352             
       
     # Next bind to the port 
@@ -2602,7 +1906,7 @@ def servidor():
     logging.info("socket binded to %s" %(port))
       
     # put the socket into listening mode 
-    s.listen(5)     
+    s.listen(5)      
     logging.info("socket is listening")
       
     #só fica escutando a rede, pega a mensagem e encaminha para tratamento 
@@ -2634,11 +1938,7 @@ def servidor():
        
 #contém as chaves [0], a função de descriptografia [1] e a data/hora de vencimento [2] para cada segmento IP (resto da divisão da soma das partes do IP por 10; 10 segmentos)
 chavesCripto = dict()
-print("Gerando chaves criptográficas ...")
-start = time.time()
 inicializaChaves()
-end = time.time()
-print("Chaves geradas em "+str(end - start)[:7]+" segundos.")
 
 #encryptor = PKCS1_OAEP.new(pubKey) #<-- lado cliente (abaixo exemplo)
 #msgCripto = encryptor.encrypt(str.encode("Testando Cripto 1111111111111 00000000000000 44444444444444444 55555555555555555555555 6666666666666666666666 77777777777777777777777777"))

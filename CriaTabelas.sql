@@ -1,9 +1,9 @@
 DROP TABLE IF EXISTS `Alocacoes`;
 
 CREATE TABLE `Alocacoes` (
-  `Codigo` INTEGER NOT NULL AUTO_INCREMENT, 
+  `Codigo` BIGINT NOT NULL AUTO_INCREMENT, 
   `Fiscal` INTEGER, 
-  `TDPF` INTEGER, 
+  `TDPF` BIGINT, 
   `Alocacao` DATETIME, 
   `Desalocacao` DATETIME, 
   `Supervisor` VARCHAR(1), 
@@ -17,9 +17,9 @@ CREATE TABLE `Alocacoes` (
 DROP TABLE IF EXISTS `CadastroTDPFs`;
 
 CREATE TABLE `CadastroTDPFs` (
-  `Codigo` INTEGER NOT NULL AUTO_INCREMENT, 
+  `Codigo` BIGINT NOT NULL AUTO_INCREMENT, 
   `Fiscal` INTEGER, 
-  `TDPF` INTEGER, 
+  `TDPF` BIGINT, 
   `Inicio` DATETIME, 
   `Fim` DATETIME, 
   INDEX (`Fiscal`), 
@@ -30,8 +30,8 @@ CREATE TABLE `CadastroTDPFs` (
 DROP TABLE IF EXISTS `Ciencias`;
 
 CREATE TABLE `Ciencias` (
-  `Codigo` INTEGER NOT NULL AUTO_INCREMENT, 
-  `TDPF` INTEGER, 
+  `Codigo` BIGINT NOT NULL AUTO_INCREMENT, 
+  `TDPF` BIGINT, 
   `Data` DATETIME, 
   `Documento` VARCHAR(50),
   PRIMARY KEY (`Codigo`), 
@@ -52,16 +52,17 @@ CREATE TABLE `Fiscais` (
 DROP TABLE IF EXISTS `TDPFS`;
 
 CREATE TABLE `TDPFS` (
-  `Codigo` INTEGER NOT NULL AUTO_INCREMENT, 
+  `Codigo` BIGINT NOT NULL AUTO_INCREMENT, 
   `Numero` VARCHAR(16), 
   `Grupo` VARCHAR(25), 
   `Emissao` DATETIME, 
-  `CodigoAcesso` INTEGER DEFAULT 0, 
   `Encerramento` DATETIME, 
   `Nome` VARCHAR(150), 
   `NI` VARCHAR(18), 
   `Vencimento` DATETIME, 
   `DCC` CHAR(17), 
+  `Porte` VARCHAR(50),
+  `Acompanhamento` VARCHAR(1)
   PRIMARY KEY (`Codigo`), 
   UNIQUE (`Numero`), 
   UNIQUE (`Numero`, `Grupo`),
@@ -93,8 +94,8 @@ CREATE TABLE `Usuarios` (
 DROP TABLE IF EXISTS `Atividades`;
 
 CREATE TABLE `Atividades` (
-  `Codigo` INTEGER NOT NULL AUTO_INCREMENT, 
-  `TDPF` INTEGER, 
+  `Codigo` BIGINT NOT NULL AUTO_INCREMENT,
+  `TDPF` BIGINT, 
   `Atividade` VARCHAR(50), 
   `Vencimento` DATETIME, 
   `Termino` DATETIME,
@@ -108,8 +109,8 @@ CREATE TABLE `Atividades` (
 DROP TABLE IF EXISTS `AvisosVencimento`;
 
 CREATE TABLE `AvisosVencimento` (
-  `Codigo` INTEGER NOT NULL AUTO_INCREMENT, 
-  `TDPF` INTEGER, 
+  `Codigo` BIGINT NOT NULL AUTO_INCREMENT, 
+  `TDPF` BIGINT, 
   `Fiscal` INTEGER, 
   `Data` DATETIME, 
   PRIMARY KEY (`Codigo`), 
@@ -155,7 +156,7 @@ DROP TABLE IF EXISTS `DiarioFiscalizacao`;
 
 CREATE TABLE `DiarioFiscalizacao` (
   `Codigo` BIGINT NOT NULL AUTO_INCREMENT, 
-  `Fiscal` BIGINT,
+  `Fiscal` INTEGER,
   `TDPF` BIGINT,
   `Data` DATETIME, 
   `Entrada` VARBINARY(16384),  
@@ -164,4 +165,71 @@ CREATE TABLE `DiarioFiscalizacao` (
   INDEX (`TDPF`),
   INDEX (`Fiscal`, `TDPF`)
 ) ENGINE=innodb DEFAULT CHARSET=utf8;
+
+DROP TABLE IF EXISTS `Resultados`;
+
+CREATE TABLE `Resultados` (
+  `Codigo` BIGINT NOT NULL AUTO_INCREMENT, 
+  `TDPF` BIGINT,
+  `Arrolamentos` INTEGER,
+  `MedCautelar` VARCHAR(1),
+  `RepPenais` INTEGER,
+  `Inaptidoes` INTEGER,
+  `Baixas` INTEGER,
+  `ExcSimples` INTEGER,
+  `Monitoramento` VARCHAR(1),
+  `SujPassivos` INTEGER,
+  `DigVincs` INTEGER,
+  `Situacao11` VARCHAR(1),
+  `Interposicao` VARCHAR(1),
+  `Situacao15` VARCHAR(1),
+  `EstabPrev1` INTEGER,
+  `EstabPrev2` INTEGER,  
+  `Segurados` INTEGER,
+  `Prestadores` INTEGER,
+  `Tomadores` INTEGER,
+  `QtdePER` INTEGER,
+  `LancMuldi` VARCHAR(1),
+  `Compensacao` VARCHAR(1),
+  `CreditoExt` VARCHAR(1),
+  `Data` DATETIME,  
+  `CPF` VARCHAR(11),
+  PRIMARY KEY (`Codigo`), 
+  UNIQUE (`TDPF`)
+) ENGINE=innodb DEFAULT CHARSET=utf8;
+
+DROP TABLE IF EXISTS `Operacoes`;
+
+CREATE TABLE `Operacoes` (
+  `Codigo` BIGINT NOT NULL AUTO_INCREMENT, 
+  `TDPF` BIGINT,
+  `Operacao` BIGINT,
+  `PeriodoInicial` DATETIME, 
+  `PeriodoFinal` DATETIME,
+  PRIMARY KEY (`Codigo`), 
+  INDEX (`TDPF`),
+  UNIQUE (`TDPF`, `Operacao`)
+) ENGINE=innodb DEFAULT CHARSET=utf8;  
+
+DROP TABLE IF EXISTS `OperacoesFiscais`;
+
+CREATE TABLE `OperacoesFiscais` (
+  `Codigo` BIGINT NOT NULL AUTO_INCREMENT, 
+  `Operacao` INTEGER,
+  `Descricao` VARCHAR(200),
+  `Tributo` INTEGER, 
+  `Valor` DECIMAL(3,2),
+  PRIMARY KEY (`Codigo`), 
+  UNIQUE (`Operacao`)
+) ENGINE=innodb DEFAULT CHARSET=utf8; 
+
+DROP TABLE IF EXISTS `Tributos`;
+
+CREATE TABLE `Tributos` (
+  `Codigo` INTEGER NOT NULL AUTO_INCREMENT, 
+  `Tributo` INTEGER,
+  `Descricao` VARCHAR(200),
+  PRIMARY KEY (`Codigo`), 
+  UNIQUE (`Tributo`)
+) ENGINE=innodb DEFAULT CHARSET=utf8; 
 

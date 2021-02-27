@@ -56,7 +56,6 @@ def acrescentaZero(numero, n):
 def acrescentaZeroCPF(cpf):
     return acrescentaZero(cpf, 11)  
       
-
 def montaGrupoFiscal(linha):
     return acrescentaZero(linha['R028_GRSE_SUA_UA_CD'], 7) + acrescentaZero(linha['R028_GRSE_SUA_CD'], 4) + acrescentaZero(linha['R028_GRSE_CD'], 3)
 
@@ -92,10 +91,11 @@ def calculaDVCPF(cpfPar):
 def realizaCargaDados():
     global dirExcel, termina, hostSrv
     try:
-        dfTdpf = pd.read_excel(dirExcel+"TDPFS.xlsx")
+        dfTdpf = pd.read_excel(dirExcel+"TDPFS.xlsx", dtype={'Porte':object, 'Acompanhamento':object, 'Receita Programada(Tributo) Código': int})
         dfAloc = pd.read_excel(dirExcel+"ALOCACOES.xlsx")
         dfFiscais = pd.read_excel(dirExcel+"Fiscais.xlsx")
         dfSupervisores = pd.read_csv(dirExcel+"Supervisores.CSV", sep=";", encoding = "ISO-8859-1")
+        dfOperacoes = pd.read_excel(dirExcel+"Operacoes.xlsx")
     except:
         print("Erro no acesso aos arquivos xlsx e/ou csv")
         logging.info("Arquivos Excel não foram encontrados (um ou mais) - TDPFs.xlsx, Alocacoes.xlsx, Fiscais.xlsx ou Supervisores.CSV; outra tentativa será feita em 24h") 
@@ -103,7 +103,9 @@ def realizaCargaDados():
     dfFiscais['CPF']=dfFiscais['CPF'].astype(str).map(acrescentaZeroCPF) 
     dfSupervisores['CPF']=dfSupervisores['R028_RH_PF_NR'].astype(str).map(calculaDVCPF)
     dfSupervisores['Grupo Fiscal']=dfSupervisores.apply(montaGrupoFiscal, axis=1)
-    MYSQL_ROOT_PASSWORD = os.getenv("MYSQL_ROOT_PASSWORD", "EXAMPLE")
+    #dfTdpf['Porte']=dfTdpf['Porte'].astype(str)
+    #dfTdpf['Acompanhamento']=dfTdpf['Acompanhamento'].astype(str)
+    #MYSQL_ROOT_PASSWORD = os.getenv("MYSQL_ROOT_PASSWORD", "EXAMPLE")
     MYSQL_DATABASE = os.getenv("MYSQL_DATABASE", "databasenormal")
     MYSQL_USER = os.getenv("MYSQL_USER", "my_user")
     MYSQL_PASSWORD = os.getenv("MYSQL_PASSWORD", "mypass1234") 
@@ -146,17 +148,19 @@ def realizaCargaDados():
     logging.info(dfAloc.head())
     logging.info(dfFiscais.head())
     logging.info(dfSupervisores.head())
+    logging.info(dfOperacoes.head())
 
     logging.info(dfTdpf.dtypes)
     logging.info(dfAloc.dtypes)
     logging.info(dfFiscais.dtypes)
     logging.info(dfSupervisores.dtypes)
+    logging.info(dfOperacoes.dtypes)
 
     selectFisc = "Select Codigo, CPF, Nome from Fiscais Where CPF=%s"
     insereFisc = "Insert Into Fiscais (CPF, Nome) Values (%s, %s)"
 
     selectTDPF = "Select Codigo, Grupo, Encerramento, Vencimento from TDPFS Where Numero=%s"
-    insereTDPF = "Insert Into TDPFS (Numero, Grupo, Emissao, Nome, NI, Vencimento) Values (%s, %s, %s, %s, %s, %s)"
+    insereTDPF = "Insert Into TDPFS (Numero, Grupo, Emissao, Nome, NI, Vencimento, Porte, Acompanhamento) Values (%s, %s, %s, %s, %s, %s, %s, %s)"
     atualizaTDPFEnc = "Update TDPFS Set Encerramento=%s Where Codigo=%s"
     atualizaTDPFGrupoVencto = "Update TDPFS Set Grupo=%s, Vencimento=%s Where Codigo=%s"
 
@@ -168,6 +172,16 @@ def realizaCargaDados():
 
     selectCiencias = "Select * from Ciencias Where TDPF=%s" 
     insereCiencia = "Insert Into Ciencias (TDPF, Data, Documento) Values (%s, %s, %s)"
+
+    selectOperacoes = "Select Operacoes.Codigo, OperacoesFiscais.Operacao, PeriodoInicial, PeriodoFinal from Operacoes, OperacoesFiscais Where Operacoes.TDPF=%s and Operacoes.Operacao=OperacoesFiscais.Codigo"
+    insereOperacao = "Insert Into Operacoes (TDPF, Operacao, PeriodoInicial, PeriodoFinal) Values (%s, %s, %s, %s)"
+    apagaOperacao = "Delete from Operacoes Where Codigo=%s"
+
+    selectOpFiscal = "Select Codigo from OperacoesFiscais Where Operacao=%s"
+    insertOpFiscal = "Insert Into OperacoesFiscais (Operacao, Descricao, Tributo, Valor) Values (%s, %s, %s, %s)"
+
+    selectTributo = "Select Codigo from Tributos Where Tributo=%s"
+    insertTributo = "Insert Into Tributos (Tributo, Descricao) Values (%s, %s)"
 
     selectUsuario = "Select Codigo, CPF, email from Usuarios Where CPF=%s"
     insereUsuario = "Insert Into Usuarios (CPF, email) Values (%s, %s)"
@@ -189,23 +203,41 @@ def realizaCargaDados():
     logging.info("Iniciando loop na carga.")
     atualizou = False    
     for linha in range(dfTdpf.shape[0]): #percorre os TDPFs das planilhas Excel
-        tdpfAux = dfTdpf.iloc[linha,0]
+        tdpfAux = dfTdpf.iat[linha,0]
         tdpf = getAlgarismos(tdpfAux)
-        distribuicao = dfTdpf.iloc[linha, 9] #na verdade, aqui é a data de assinatura/emissão do TDPF (antes tinha apenas a distribuição) 
-                                              #<- a assinatura revelou-se pior que a distribuição - voltei a usar esta
-        inicio = dfTdpf.iloc[linha, 11]
-        encerramento = dfTdpf.iloc[linha, 12]
+        distribuicao = dfTdpf.iat[linha, 9] #na verdade, aqui é a data de assinatura/emissão do TDPF (antes tinha apenas a distribuição) 
+                                            #<- a assinatura revelou-se pior que a distribuição - voltei a usar esta
+        inicio = dfTdpf.iat[linha, 11]
+        encerramento = dfTdpf.iat[linha, 12]
         #situacao = dfTdpf.iloc[linha, 13]
-        ni = dfTdpf.iloc[linha, 17]
-        nome = dfTdpf.iloc[linha, 18]
+        ni = dfTdpf.iat[linha, 17]
+        nome = dfTdpf.iat[linha, 18]
+        porte = dfTdpf.iat[linha, 27]
+        acompanhamento = dfTdpf.iat[linha, 28]
+        if porte==np.nan or pd.isna(porte) or porte=="":
+            porte = None
+        if acompanhamento==np.nan or pd.isna(acompanhamento) or acompanhamento=="":
+            acompanhamento = None      
+        #comentei o trecho abaixo pq já vem certinho na planilha do Excel
+        #tipo = str(type(porte)).upper()
+        #if "STR" in tipo or "UNICODE" in tipo: 
+        #    porte = porte[:3]    
+        #tipo = str(type(acompanhamento)).upper()
+        #if "STR" in tipo or "UNICODE" in tipo: 
+        #    acompanhamento = acompanhamento[:1]                       
         cursor.execute(selectTDPF, (tdpf,))
         regTdpf = cursor.fetchone()    
         if not regTdpf and encerramento!="SD" and encerramento!="" and paraData(encerramento)!=None:    #TDPF encerrado e não existente na base - pulamos
             continue
-        if regTdpf:
-            chaveTdpf = regTdpf[0]  #chave do registro do TDPF            
+        if regTdpf: #TDPF consta da base
+            chaveTdpf = regTdpf[0]  #chave do registro do TDPF  - para poder atualizar o registro, se for necessário          
             if regTdpf[2]!=None:
                 continue #TDPF já encerrado na base - não há interesse em atualizar
+        else: #TDPF não existe na base
+            if porte==None or acompanhamento==None: #porte ou acompanhamento especial não foram obtidos do gerencial Ação Fiscal no DW - significa que não há necessidade de 
+                                                    #incluir o TDPF na base pois já está encerrado (por isso não consta do gerencial)
+                logging.info(f"TDPFs: {tdpfAux} não tem monitoramento e/ou porte sem constar na base - TDPF foi desprezado.")
+                continue            
         df = dfAloc.loc[dfAloc['Número do RPF Expresso']==tdpfAux] #selecionamos as alocações do TDPF
         if df.shape[0]==0:
             logging.info(f"TDPFs: {tdpfAux} não tem fiscal alocado - TDPF foi desprezado.")
@@ -231,10 +263,10 @@ def realizaCargaDados():
                 grupoAtu = grupo 
                 break 
         bInseriuCiencia = False                
-        if not regTdpf:
+        if not regTdpf: #TDPF não consta da base
             tabTdpfs+=1
             atualizou = True
-            cursor.execute(insereTDPF, (tdpf, grupoAtu, distData, nome, ni, vencimento))
+            cursor.execute(insereTDPF, (tdpf, grupoAtu, distData, nome, ni, vencimento, porte, acompanhamento))
             cursor.execute(selectTDPF, (tdpf,))
             regTdpf = cursor.fetchone()   
             chaveTdpf = regTdpf[0]  #chave do registro do TDPF                      
@@ -271,7 +303,7 @@ def realizaCargaDados():
             dfFiscal = dfFiscais.loc[dfFiscais['CPF']==cpf]
             email = None
             if dfFiscal.shape[0]>0:
-                if dfFiscal.iat[0, 4]!=np.nan and dfFiscal.iat[0, 4]!="": #email está na coluna 4 (coluna 'E' do Excel)
+                if dfFiscal.iat[0, 4]!=np.nan and not pd.isna(dfFiscal.iat[0, 4]) and dfFiscal.iat[0, 4]!="": #email está na coluna 4 (coluna 'E' do Excel)
                     email = dfFiscal.iat[0, 4]
             #print(email)        
             cursor.execute(selectUsuario, (cpf,))
@@ -319,7 +351,61 @@ def realizaCargaDados():
             else:
                 cursor.execute(atualizaAlocHoras, (horas, regAloc[0]))    
                 tabAlocAtu+=1
-                atualizou = True                                      
+                atualizou = True 
+        #percorremos as operações do TDPF - excluímos as que não mais existirem e incluímos as que não existirem
+        dfOp = dfOperacoes.loc[dfOperacoes['Número do RPF Expresso']==tdpfAux] #selecionamos as operações do TDPF
+        cursor.execute(selectOperacoes, (chaveTdpf,))
+        regOperacoes = cursor.fetchall()
+        opExistentes = []
+        for regOperacao in regOperacoes: #atualizamos as operações que mudaram algo no período ou excluímos aquelas que não existem mais
+            operacao = regOperacao[1]
+            codigoOperacao = regOperacao[0]
+            perInicial = regOperacao[2]
+            perFinal = regOperacao[3]
+            dfOpAux = dfOp.loc[dfOp['Operação Fiscal Atual Código']==operacao]
+            if dfOpAux.shape[0]>0: #operação existe no TDPF - temos que ver se há alguma divergência no período (aumentou ou diminuiu)
+                opExistentes.append(operacao)
+                menorMes = paraData(dfOpAux.loc[dfOpAux['Mês Início'].idxmin()]["Mês Início"])
+                maiorMes = paraData(dfOpAux.loc[dfOpAux['Mês Fim'].idxmax()]["Mês Fim"])
+                if maiorMes!=perFinal or menorMes!=perInicial:
+                    comando = "Update Operacoes Set PeriodoInicial=%s, PeriodoFinal=%s Where Codigo=%s"
+                    cursor.execute(comando, (menorMes, maiorMes, codigoOperacao))
+            else:
+                cursor.execute(apagaOperacao, (codigoOperacao,)) #operação foi removida do TDPF - removemos ela da base
+        #incluímos as operações do TDPF (as que não tiverem sido cadastradas)
+        for linha2 in range(dfOp.shape[0]):
+            operacao = int(dfOp.iat[linha2, 8])
+            valor = dfOp.iat[linha2, 11] #peso/valor da operação
+            if operacao in opExistentes: #operação já está na base
+                continue
+            opExistentes.append(operacao)
+            #não está na base - temos que incluí-la
+            #consultamos o tributo e o incluímos, se não existir
+            tributo = int(dfOp.iat[linha2, 1])
+            cursor.execute(selectTributo, (tributo,))
+            rowTributo = cursor.fetchone()
+            if not rowTributo:
+                cursor.execute(insertTributo, (tributo, dfOp.iat[linha2, 2].upper()))
+                cursor.execute(selectTributo, (tributo,))
+                rowTributo = cursor.fetchone()
+            codTributo = rowTributo[0]
+            #consultamos a operação fiscal e a incluímos, se não existir
+            cursor.execute(selectOpFiscal, (operacao,))
+            rowOperacao = cursor.fetchone()
+            if not rowOperacao:
+                cursor.execute(insertOpFiscal, (operacao, dfOp.iat[linha2, 9].upper(), codTributo, float(valor)))
+                cursor.execute(selectOpFiscal, (operacao,))
+                rowOperacao = cursor.fetchone()
+            codOperacao = rowOperacao[0]
+            #inserimos a operação vinculada ao TDPF
+            dfOpAux = dfOp.loc[dfOp['Operação Fiscal Atual Código']==operacao]
+            #selecionamos o menor e o maior mês do período da operação deste TDPF            
+            if dfOpAux.shape[0]>0:
+                perInicial = paraData(dfOpAux.loc[dfOpAux['Mês Início'].idxmin()]["Mês Início"])
+                perFinal = paraData(dfOpAux.loc[dfOpAux['Mês Fim'].idxmax()]["Mês Fim"])            
+            cursor.execute(insereOperacao, (chaveTdpf, codOperacao, perInicial, perFinal))
+    if termina:
+        return
     #atualizamos a tabela de supervisões de grupos/equipes fiscais (Supervisores)
     comando = "Select Distinctrow Grupo from TDPFS"
     cursor.execute(comando)
@@ -370,7 +456,7 @@ def realizaCargaDados():
                 dfFiscal = dfFiscais.loc[dfFiscais['CPF']==cpf]
                 email = None
                 if dfFiscal.shape[0]>0: 
-                    if dfFiscal.iat[0, 4]!=np.nan and dfFiscal.iat[0, 4]!="": #email está na coluna 4 (coluna 'E' do Excel)
+                    if dfFiscal.iat[0, 4]!=np.nan and not pd.isna(dfFiscal.iat[0,4]) and dfFiscal.iat[0, 4]!="": #email está na coluna 4 (coluna 'E' do Excel)
                         email = dfFiscal.iat[0, 4]                                   
                     cursor.execute(selectUsuario, (cpf,))
                     rows = cursor.fetchall()

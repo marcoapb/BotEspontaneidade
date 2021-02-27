@@ -57,7 +57,7 @@ def validaCPF(cpfPar):
     d2 = (sum(map(calc, enumerate(reversed(cpf[:-1])))) * 10) % 11
     return str(d1) == cpf[-2] and str(d2) == cpf[-1]
 
-def limpaMarkdown(texto):
+def limpaMarkdown(texto): #deixa o texto adequado para negritar com *
     return texto.replace(".", "\.").replace("_", "\_").replace("[", "\[").replace("]", "\]").replace(")", "\)").replace("(", "\(").replace("-","\-").replace("|","\|")#.replace("*", "\\*")        
 
 def getAlgarismos(texto): #retorna apenas os algarismos de uma string
@@ -2830,6 +2830,7 @@ def disparaMensagens(): #avisos diários (produção) ou de hora em hora (teste)
         server = None        
     conn = conecta()
     if not conn:
+        logging.info("Conexão ao BD falhou (disparaMensagens")
         return
     logging.info("Acionado o disparo de mensagens - "+datetime.now().strftime('%d/%m/%Y %H:%M'))
     cursor = conn.cursor(buffered=True)
@@ -3062,7 +3063,7 @@ def disparaMensagens(): #avisos diários (produção) ou de hora em hora (teste)
                 msg = cabecalho+msg
                 if ambiente=="TESTE":
                     msg = msg+"\n"+"Ambiente: "+ambiente                
-                updater.bot.send_message(userId, text=msg) 
+                updater.bot.send_message(userId, text=limpaMarkdown(msg), parse_mode= 'MarkdownV2')
                 msg = ""
             equipe = ""    
             cpfAnt = linha[0]    
@@ -3075,14 +3076,14 @@ def disparaMensagens(): #avisos diários (produção) ou de hora em hora (teste)
         if fiscal==None:
             nomeFiscal = "ND"
         else:
-            nomeFiscal = fiscal[0]
-        msg = msg + "\n  "+formataTDPF(linha[1])+" ("+nomeFiscal+")"
+            nomeFiscal = fiscal[0].strip()
+        msg = msg + "\n  *"+formataTDPF(linha[1])+"* ("+nomeFiscal.split()[0]+")"+"\n"
         userId = linha[2]    
     if msg!="":
         msg = cabecalho+msg
         if ambiente=="TESTE":
             msg = msg+"\n"+"Ambiente: "+ambiente        
-        updater.bot.send_message(userId, text=msg)  
+        updater.bot.send_message(userId, text=limpaMarkdown(msg), parse_mode= 'MarkdownV2')
 
     #buscamos todos os TDPFs que estão recuperando a espontaneidade em 15 dias exatos e avisamos o supervisor
     comando = """
@@ -3110,7 +3111,7 @@ def disparaMensagens(): #avisos diários (produção) ou de hora em hora (teste)
                 msg = cabecalho+msg
                 if ambiente=="TESTE":
                     msg = msg+"\n"+"Ambiente: "+ambiente                
-                updater.bot.send_message(userId, text=msg) 
+                updater.bot.send_message(userId, text=limpaMarkdown(msg), parse_mode= 'MarkdownV2')
                 msg = ""
             equipe = ""    
             cpfAnt = linha[0]    
@@ -3122,7 +3123,7 @@ def disparaMensagens(): #avisos diários (produção) ou de hora em hora (teste)
         if fiscal==None:
             nomeFiscal = "ND"
         else:
-            nomeFiscal = fiscal[0]        
+            nomeFiscal = fiscal[0].strip()
         cursor.execute(consulta, (chaveTdpf,))
         cienciaReg = cursor.fetchone() #buscamos a última data de ciência do TDPF
         if cienciaReg:
@@ -3132,15 +3133,17 @@ def disparaMensagens(): #avisos diários (produção) ou de hora em hora (teste)
                 if prazoRestante==15:
                     if msg=="":
                         msg = msg+"\nEquipe " + equipe[:7]+"."+equipe[7:11]+"."+equipe[11:] + ":"                                
-                    msg = msg + "\n  "+formataTDPF(tdpf)+" ("+nomeFiscal+")"
+                    msg = msg + "\n  *"+formataTDPF(tdpf)+"* ("+nomeFiscal.split()[0]+")"
                     if cienciaReg[1]: #documento informado
-                        msg = msg +" - "+cienciaReg[1]
+                        msg = msg +" - "+cienciaReg[1]+"\n"
+                    else:
+                        msg = msg + "\n"
         userId = linha[2]               
     if msg!="":
         msg = cabecalho+msg
         if ambiente=="TESTE":
             msg = msg+"\n"+"Ambiente: "+ambiente
-        updater.bot.send_message(userId, text=msg) 
+        updater.bot.send_message(userId, text=limpaMarkdown(msg), parse_mode= 'MarkdownV2')
 
     conn.close()              
     return
