@@ -95,10 +95,10 @@ def realizaCargaDados():
         dfAloc = pd.read_excel(dirExcel+"ALOCACOES.xlsx")
         dfFiscais = pd.read_excel(dirExcel+"Fiscais.xlsx")
         dfSupervisores = pd.read_csv(dirExcel+"Supervisores.CSV", sep=";", encoding = "ISO-8859-1")
-        dfOperacoes = pd.read_excel(dirExcel+"Operacoes.xlsx")
+        dfOperacoes = pd.read_excel(dirExcel+"OPERACOES.xlsx")
     except:
-        print("Erro no acesso aos arquivos xlsx e/ou csv")
-        logging.info("Arquivos Excel não foram encontrados (um ou mais) - TDPFs.xlsx, Alocacoes.xlsx, Fiscais.xlsx ou Supervisores.CSV; outra tentativa será feita em 24h") 
+        print("Erro no acesso aos arquivos xlsx e/ou csv ou só há arquivos já processados")
+        logging.info("Arquivos Excel não foram encontrados (um ou mais) - TDPFs.xlsx, ALOCACOES.xlsx, Fiscais.xlsx, OPERACOES.xlsx ou Supervisores.CSV; outra tentativa será feita em 24h") 
         return
     dfFiscais['CPF']=dfFiscais['CPF'].astype(str).map(acrescentaZeroCPF) 
     dfSupervisores['CPF']=dfSupervisores['R028_RH_PF_NR'].astype(str).map(calculaDVCPF)
@@ -160,7 +160,7 @@ def realizaCargaDados():
     insereFisc = "Insert Into Fiscais (CPF, Nome) Values (%s, %s)"
 
     selectTDPF = "Select Codigo, Grupo, Encerramento, Vencimento from TDPFS Where Numero=%s"
-    insereTDPF = "Insert Into TDPFS (Numero, Grupo, Emissao, Nome, NI, Vencimento, Porte, Acompanhamento) Values (%s, %s, %s, %s, %s, %s, %s, %s)"
+    insereTDPF = "Insert Into TDPFS (Numero, Grupo, Emissao, Nome, NI, Vencimento, Porte, Acompanhamento, Encerramento) Values (%s, %s, %s, %s, %s, %s, %s, %s, %s)"
     atualizaTDPFEnc = "Update TDPFS Set Encerramento=%s Where Codigo=%s"
     atualizaTDPFGrupoVencto = "Update TDPFS Set Grupo=%s, Vencimento=%s Where Codigo=%s"
 
@@ -203,6 +203,8 @@ def realizaCargaDados():
     logging.info("Iniciando loop na carga.")
     atualizou = False    
     for linha in range(dfTdpf.shape[0]): #percorre os TDPFs das planilhas Excel
+        if (linha+1)%500==0:
+            print("Processando TDPF nº "+str(linha+1)+" de "+str(dfTdpf.shape[0]))
         tdpfAux = dfTdpf.iat[linha,0]
         tdpf = getAlgarismos(tdpfAux)
         distribuicao = dfTdpf.iat[linha, 9] #na verdade, aqui é a data de assinatura/emissão do TDPF (antes tinha apenas a distribuição) 
@@ -226,14 +228,16 @@ def realizaCargaDados():
         #if "STR" in tipo or "UNICODE" in tipo: 
         #    acompanhamento = acompanhamento[:1]                       
         cursor.execute(selectTDPF, (tdpf,))
-        regTdpf = cursor.fetchone()    
-        if not regTdpf and encerramento!="SD" and encerramento!="" and paraData(encerramento)!=None:    #TDPF encerrado e não existente na base - pulamos
-            continue
+        regTdpf = cursor.fetchone()  
+        #precisamos incluir os TDPFs encerrados a partir do ano de entrada em produção (2021)
+        if not regTdpf and encerramento!="SD" and encerramento!="" and paraData(encerramento)!=None:    
+            if paraData(encerramento).year<2021: #se foi encerrado antes de 2021 (entrada em produção), desprezamos
+                continue
         if regTdpf: #TDPF consta da base
             chaveTdpf = regTdpf[0]  #chave do registro do TDPF  - para poder atualizar o registro, se for necessário          
             if regTdpf[2]!=None:
                 continue #TDPF já encerrado na base - não há interesse em atualizar
-        else: #TDPF não existe na base
+        else: #TDPF não existe na base - pedi para ajustar o relatório do gerencial para incluir os encerrados a partir de 2021 (o problema abaixo não deve ocorrer)
             if porte==None or acompanhamento==None: #porte ou acompanhamento especial não foram obtidos do gerencial Ação Fiscal no DW - significa que não há necessidade de 
                                                     #incluir o TDPF na base pois já está encerrado (por isso não consta do gerencial)
                 logging.info(f"TDPFs: {tdpfAux} não tem monitoramento e/ou porte sem constar na base - TDPF foi desprezado.")
@@ -266,7 +270,7 @@ def realizaCargaDados():
         if not regTdpf: #TDPF não consta da base
             tabTdpfs+=1
             atualizou = True
-            cursor.execute(insereTDPF, (tdpf, grupoAtu, distData, nome, ni, vencimento, porte, acompanhamento))
+            cursor.execute(insereTDPF, (tdpf, grupoAtu, distData, nome, ni, vencimento, porte, acompanhamento, paraData(encerramento)))
             cursor.execute(selectTDPF, (tdpf,))
             regTdpf = cursor.fetchone()   
             chaveTdpf = regTdpf[0]  #chave do registro do TDPF                      
@@ -274,7 +278,7 @@ def realizaCargaDados():
                 tabCiencias+=1
                 cursor.execute(insereCiencia, (chaveTdpf, paraData(inicio), "ACÃO FISCAL"))
                 bInseriuCiencia = True
-        elif regTdpf[2]==None and encerramento!="SD" and encerramento!="" and paraData(encerramento)!=None:
+        elif regTdpf[2]==None and encerramento!="SD" and encerramento!="" and paraData(encerramento)!=None: #TDPF existia na base em andamento, agora é encerrado
             tabTdpfsAtu+=1
             atualizou = True
             cursor.execute(atualizaTDPFEnc, (paraData(encerramento), chaveTdpf))
@@ -283,13 +287,13 @@ def realizaCargaDados():
             atualizou = True
             cursor.execute(atualizaTDPFGrupoVencto, (grupoAtu, vencimento, chaveTdpf))
         if regTdpf and inicio!="SD" and inicio!="" and paraData(inicio)!=None and not bInseriuCiencia:
-            cursor.execute(selectCiencias, (tdpf,))
+            cursor.execute(selectCiencias, (chaveTdpf,))
             regCiencia = cursor.fetchone()
             if not regCiencia:
                 tabCiencias+=1
                 atualizou = True
                 cursor.execute(insereCiencia, (chaveTdpf, paraData(inicio), "ACÃO FISCAL"))                
-        for linha2 in range(df.shape[0]): #percorre as alocaçõees na planilhas Excel relativas ao TDPF do loop externo
+        for linha2 in range(df.shape[0]): #percorre as alocações na planilhas Excel relativas ao TDPF do loop externo
             cpf = getAlgarismos(df.iat[linha2, 6])
             fiscal = df.iat[linha2, 7] #nome do fiscal
             alocacao = df.iat[linha2, 9]
@@ -413,6 +417,7 @@ def realizaCargaDados():
     tabGrupos = 0
     tabGruposAtu = 0
     atualizouSuperv = False
+    print("Atualizando supervisores ...")
     superv = 0 #número de supervisores que não fazem parte de nenhum grupo - são incluídos na tabela de usuários pq supervisionam ativamente alguma equipe
     for grupoRow in gruposRows:
         df = dfSupervisores.loc[dfSupervisores['Grupo Fiscal']==grupoRow[0]].sort_values(by=['R028_DT_INI_VINCULO'], ascending=False)
@@ -421,6 +426,8 @@ def realizaCargaDados():
             nomeSuperv = df.iat[0, 8]
             dataIni = df.iat[0, 9]
             dataFim = df.iat[0, 10]
+            #selectFisc = "Select Codigo, CPF, Nome from Fiscais Where CPF=%s"
+            #insereFisc = "Insert Into Fiscais (CPF, Nome) Values (%s, %s)"
             cursor.execute(selectFisc, (cpf,))     
             fiscalRow = cursor.fetchone()
             if not fiscalRow:
@@ -443,14 +450,14 @@ def realizaCargaDados():
                     comando = "Insert Into Supervisores (Equipe, Fiscal, Inicio) Values (%s, %s, %s)"
                     tabGrupos+=1
                     cursor.execute(comando, (grupoRow[0], chaveFiscal, paraData(dataIni)))
-                    #verificamos se este grupo não tem outro servidor ativo - se tiver, colocamos a data final - fazemos isso para garantir caso haja uma descontinuidade
+                    #verificamos se este grupo não tem outro supervisor ativo - se tiver, colocamos a data final - fazemos isso para garantir caso haja uma descontinuidade
                     #não obtida pelo else abaixo
-                    comando = "Select Codigo from Supervisores Where Equipe=%s and Fiscal<>%s and Fim Is Not Null"
+                    comando = "Select Codigo from Supervisores Where Equipe=%s and Fiscal<>%s and Fim Is Null"
                     cursor.execute(comando, (grupoRow[0], chaveFiscal))                    
                     supervisoresRows = cursor.fetchall()
                     if supervisoresRows!=None:
                         if len(supervisoresRows)>0:
-                            comando = "Update Supervisores Set Fim=%s Where Equipe=%s and Fiscal<>%s and Fim Is Not Null" #"matamos" os antigos supervisores
+                            comando = "Update Supervisores Set Fim=%s Where Equipe=%s and Fiscal<>%s and Fim Is Null" #"matamos" os antigos supervisores
                             cursor.execute(comando, (datetime.now().date(), grupoRow[0], chaveFiscal))
                 #verificamos se este supervisor consta da tabela de usuários
                 dfFiscal = dfFiscais.loc[dfFiscais['CPF']==cpf]
@@ -495,7 +502,7 @@ def realizaCargaDados():
             return
     cursor.close()
     conn.close()  
-
+    print("Carga finalizada")
     logging.info("Registros Incluídos:")  
     logging.info(f"TDPFs: {tabTdpfs}")
     logging.info(f"Fiscais: {tabFiscais}")

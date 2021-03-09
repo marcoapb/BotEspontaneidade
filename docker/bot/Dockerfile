@@ -1,4 +1,3 @@
-#FROM python:3.8.3-slim-buster #<- a versão começou a dar pau - tentei uma mais recente (3.9.1) e não funcionou - fui para a versão abaixo
 FROM python:3.8-slim-buster
 
 WORKDIR /bot

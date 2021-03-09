@@ -62,7 +62,8 @@ CREATE TABLE `TDPFS` (
   `Vencimento` DATETIME, 
   `DCC` CHAR(17), 
   `Porte` VARCHAR(50),
-  `Acompanhamento` VARCHAR(1)
+  `Acompanhamento` VARCHAR(1),
+  `TrimestrePrevisto` VARCHAR(6),
   PRIMARY KEY (`Codigo`), 
   UNIQUE (`Numero`), 
   UNIQUE (`Numero`, `Grupo`),
@@ -233,3 +234,14 @@ CREATE TABLE `Tributos` (
   UNIQUE (`Tributo`)
 ) ENGINE=innodb DEFAULT CHARSET=utf8; 
 
+DROP TABLE IF EXISTS `Log`;
+
+CREATE TABLE `Log` (
+  `Codigo` BIGINT NOT NULL AUTO_INCREMENT, 
+  `IP` VARCHAR(15),
+  `Requisicao` INTEGER,
+  `Mensagem` VARCHAR(250),
+  `Data` DATETIME, 
+  PRIMARY KEY (`Codigo`), 
+  Index (`IP`)
+) ENGINE=innodb DEFAULT CHARSET=utf8;

@@ -76,5 +76,23 @@ services:
     depends_on:
       - mysqlsrv  
 
+  botimportador:
+    build:
+      context: .
+      dockerfile: ./docker/importador/Dockerfile
+    container_name: botimportador
+    stdin_open: true # docker run -i
+    tty: true        # docker run -t
+    environment: 
+      TZ: "America/Sao_Paulo"    
+    env_file:
+      - config.env   
+    ports:
+      - 80:80         
+    restart: unless-stopped
+    volumes:
+      - ./log:/Log
+      - ./Excel:/Excel   
+
 volumes:
   db-data:      

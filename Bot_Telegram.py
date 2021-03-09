@@ -436,7 +436,9 @@ def acompanha(update, context): #inicia o monitoramente de um ou de TODOS os TDP
             bAlocacao, chaveTdpf, chaveFiscal, msg = verificaAlocacao(conn, cpf, tdpf)                 
             if not bAlocacao:
                 response_message = msg
-        if not tdpfs and not bAlocacao:
+            else:
+                tdpfs = ([tdpf, chaveTdpf, chaveFiscal],)
+        if tdpfs==None:
             eliminaPendencia(userId) #apaga a pendência de informação do usuário            
             bot.send_message(userId, text=response_message) 
             mostraMenuPrincipal(update, context)
@@ -1315,8 +1317,8 @@ def fim(update, context): #exclui o TDPF do monitoramento (campo Fim da tabela C
     return
 
 def verificaEMail(email): #valida o e-mail se o usuário informou um completo
-    regex1 = '^[a-zA-Z0-9]+[\._]?[a-zA-Z0-9]+[@]\w+[.]\w{2,3}$'
-    regex2 = '^[a-zA-Z0-9]+[\._]?[a-zA-Z0-9]+[@]\w+[.]\w+[.]\w{2,3}$'  
+    regex1 = '^[a-zA-Z0-9]+[\._]?[a-zA-Z0-9\.\-]+[@]\w+[.]\w{2,3}$'
+    regex2 = '^[a-zA-Z0-9]+[\._]?[a-zA-Z0-9\.\-]+[@]\w+[.]\w+[.]\w{2,3}$' 
 
     if(re.search(regex1,email)):  
         return True   
@@ -1792,8 +1794,9 @@ def opcaoEnviaCienciasAtividades(update, context): #Envia para o e-mail do usuá
         conn.close() 
         return                                            
     book = Workbook()
-    sheet1 = book.active  
-    sheet1.title = "Atividades"
+    sheet2 = book.active 
+    sheet2.title = "Ciências"    
+    sheet1 = book.create_sheet(title="Atividades") 
     sheet1.cell(row=1, column=1).value = "TDPF"
     sheet1.cell(row=1, column=2).value = "Data Emissão"
     sheet1.cell(row=1, column=3).value = "Nome Fiscalizado"
@@ -1802,12 +1805,12 @@ def opcaoEnviaCienciasAtividades(update, context): #Envia para o e-mail do usuá
     sheet1.cell(row=1, column=6).value = "Vencimento"
     sheet1.cell(row=1, column=7).value = "Término"
     sheet1.cell(row=1, column=8).value = "Horas"
-    larguras = [19, 13, 32, 27, 13, 13, 13, 8]
+    sheet1.cell(row=1, column=9).value = "Observacoes"
+    larguras = [19, 13, 32, 27, 13, 13, 13, 8, 60]
     for col in range(len(larguras)):
         sheet1.column_dimensions[get_column_letter(col+1)].width = larguras[col]   
         currentCell = sheet1.cell(row=1, column=col+1)
         currentCell.alignment = Alignment(horizontal='center', vertical='center', wrap_text=True)                 
-    sheet2 = book.create_sheet(title="Ciências")
     sheet2.cell(row=1, column=1).value = "TDPF"
     sheet2.cell(row=1, column=2).value = "Data Emissão"
     sheet2.cell(row=1, column=3).value = "Nome Fiscalizado"
@@ -1832,7 +1835,7 @@ def opcaoEnviaCienciasAtividades(update, context): #Envia para o e-mail do usuá
         fiscalizado = linha[2]
         if fiscalizado==None:
             fiscalizado = ""                
-        consulta = "Select Atividade, Inicio, Vencimento, Termino, Horas from Atividades Where TDPF=%s Order By Inicio"
+        consulta = "Select Atividade, Inicio, Vencimento, Termino, Horas, Observacoes from Atividades Where TDPF=%s Order By Inicio"
         cursor.execute(consulta,(chaveTdpf,))
         rows = cursor.fetchall()                  
         for row in rows:
@@ -1855,7 +1858,9 @@ def opcaoEnviaCienciasAtividades(update, context): #Envia para o e-mail do usuá
             if row[3]!=None:                              
                 sheet1.cell(row=i+1, column=7).value = row[3].date()
             if row[4]!=None:
-                sheet1.cell(row=i+1, column=8).value = row[4]
+                sheet1.cell(row=i+1, column=8).value = row[4]            
+            if row[5]!=None:
+                sheet1.cell(row=i+1, column=9).value = row[5]                    
             if row[2]!=None and row[3]==None:
                 cor = None
                 if row[2].date()==datetime.now().date(): #se está vencendo hoje, fica azul
@@ -1863,7 +1868,7 @@ def opcaoEnviaCienciasAtividades(update, context): #Envia para o e-mail do usuá
                 if row[2].date()<datetime.now().date(): #se atividade está vencida, fica vermelha
                     cor = Font(color="FF0000") 
                 if cor!=None:
-                    for col in range(8):
+                    for col in range(9):
                         sheet1.cell(row=i+1, column=col+1).font = cor
             i+=1  
         consulta = "Select Data, Documento from Ciencias Where TDPF=%s and Data Is Not Null Order By Data"
@@ -2185,7 +2190,7 @@ def opcaoMostraTDPFs(update, context): #Relação de TDPFs monitorados, prazos e
             response_message = "TDPFs Monitorados Por Você:\na) TDPF; b) Supervisor; c) Data da última ciência; d) Dias restantes p/ recuperação da espontaneidade; e) Documento; f) Dias restantes para o vencto. do TDPF:"
             response_message = response_message+msg
             response_message = response_message + "\n\nVencimento do TDPF pode ser inferior ao do Ação Fiscal, pois as informações do serviço se baseiam"
-            response_message = response_message + " na data de distribuição, que pode ter ocorrido antes da assinatura e emissão do TDPF."             
+            response_message = response_message + " na data de distribuição, que pode ter ocorrido antes da emissão do TDPF."             
             if ambiente=="TESTE":
                 response_message = response_message+"\n\nAmbiente: "+ambiente
             response_message = limpaMarkdown(response_message)
@@ -2381,7 +2386,7 @@ def mostraSupervisionados(update, context): #Relação de TDPFs supervisionados 
             response_message = "TDPFs Supervisionados Por Você:\na) TDPF; b) Monitorado Por Algum Fiscal; c) Data da última ciência; d) Dias restantes p/ recuperação da espontaneidade; e) Dias restantes para o vencto. do TDPF:" 
             response_message = response_message + msg  
             response_message = response_message + "\n\nVencimento do TDPF pode ser inferior ao do Ação Fiscal, pois as informações do serviço se baseiam"
-            response_message = response_message + " na data de distribuição, que pode ter ocorrido antes da assinatura e emissão do TDPF."            
+            response_message = response_message + " na data de distribuição, que pode ter ocorrido antes da emissão do TDPF."            
             if ambiente=="TESTE":
                 response_message = response_message+"\n\nAmbiente: "+ambiente
             response_message = response_message.replace(".", "\.").replace("_", "\_").replace("[", "\[").replace("]", "\]").replace(")", "\)").replace("(", "\(").replace("-","\-")#.replace("*", "\\*")        
@@ -2970,7 +2975,7 @@ def disparaMensagens(): #avisos diários (produção) ou de hora em hora (teste)
                 listaUsuario = listaUsuario+"\n\n(a) P/ recuperação da espontaneidade tributária."
                 listaUsuario = listaUsuario+"\n(b) P/ vencimento da atividade."            
                 listaUsuario = listaUsuario+"\n(c) P/ vencimento do TDPF no Ação Fiscal - pode ser inferior à data do Ação Fiscal, pois as informações do serviço se baseiam"
-                listaUsuario = listaUsuario+" na data de distribuição, que pode ter ocorrido antes da assinatura e emissão do TDPF."
+                listaUsuario = listaUsuario+" na data de distribuição, que pode ter ocorrido antes da emissão do TDPF."
             if msgCofis!="":
                 if len(listaUsuario)>0:
                     listaUsuario = listaUsuario+"\n\n"

@@ -1,6 +1,6 @@
 FROM python:3.8.3-slim-buster
 
-WORKDIR /bot
+WORKDIR /botImportador
 
 ENV PYTHONDONTWRITEBYTECODE 1
 ENV PYTHONUNBUFFERED 1
@@ -12,9 +12,9 @@ RUN apt-get update \
 #ADD . /bot
 
 RUN pip install --upgrade pip
-COPY ./reqServContagil.txt /bot
-COPY ./ServidorSQLContagil.py /bot
-RUN pip install -r /bot/reqServContagil.txt
-RUN mkdir /Log
+COPY ./reqImportador.txt /botImportador
+COPY ./ImportaArquivos.py /botImportador
+RUN pip install -r /botImportador/reqImportador.txt
+RUN mkdir /Excel
 #COPY . .
-CMD ["python", "ServidorSQLContagil.py"]
+CMD ["python", "ImportaArquivos.py"]
