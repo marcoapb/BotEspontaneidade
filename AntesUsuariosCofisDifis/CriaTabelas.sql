@@ -86,7 +86,6 @@ CREATE TABLE `Usuarios` (
   `ValidadeChave` DATETIME, 
   `Tentativas` INTEGER DEFAULT 0, 
   `DataEnvio` DATETIME,
-  `Orgao` INTEGER DEFAULT 0,
   INDEX (`CPF`), 
   INDEX (`idTelegram`), 
   PRIMARY KEY (`Codigo`), 
@@ -246,24 +245,3 @@ CREATE TABLE `Log` (
   PRIMARY KEY (`Codigo`), 
   Index (`IP`)
 ) ENGINE=innodb DEFAULT CHARSET=utf8;
-
-DROP TABLE IF EXISTS `Orgaos`;
-
-CREATE TABLE `Orgaos` (
-  `Codigo` INTEGER NOT NULL AUTO_INCREMENT, 
-  `Orgao` VARCHAR(25),
-  `Tipo` CHAR(1) DEFAULT 'L',
-  PRIMARY KEY (`Codigo`), 
-  UNIQUE (`Orgao`)
-) ENGINE=innodb DEFAULT CHARSET=utf8; 
-
-DROP TABLE IF EXISTS `Jurisdicao`;
-
-CREATE TABLE `Jurisdicao` (
-  `Codigo` INTEGER NOT NULL AUTO_INCREMENT, 
-  `Orgao` INTEGER,
-  `Equipe` VARCHAR(25),
-  PRIMARY KEY (`Codigo`), 
-  INDEX (`Orgao`),
-  INDEX (`Equipe`)
-) ENGINE=innodb DEFAULT CHARSET=utf8; 
