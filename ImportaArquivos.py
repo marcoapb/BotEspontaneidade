@@ -4,6 +4,7 @@ import socket
 from Crypto.PublicKey import RSA
 from Crypto.Cipher import PKCS1_OAEP
 import sys
+import os
 
 def geraChave(): #gera a chave (par) do usuário, coloca no dicionário de validades e retorna a chave pública para ser encaminhada a ele
     global chaveCripto
@@ -25,6 +26,7 @@ def descriptografa(msgCripto):
 def servidorArquivo(): 
     global chaveCripto
 
+    SENHAIMPORTACAO = os.getenv("SENHAIMPORTACAO", None)
     sistema = sys.platform.upper()
     if "WIN32" in sistema or "WIN64" in sistema or "WINDOWS" in sistema:
         dirExcel = 'Excel\\'
@@ -69,7 +71,7 @@ def servidorArquivo():
             if sucesso:
                 msgRecebida = msgDescripto.decode('utf-8')
                 horaSenha = str(int(int(datetime.now().strftime('%H%M'))/10)) #da hhmm, pega a hhm para complementar a senha
-                if msgRecebida!="ENVIAARQUIVOS789&0654%N"+horaSenha:
+                if msgRecebida!="ENVIAARQUIVOS"+SENHAIMPORTACAO+horaSenha and SENHAIMPORTACAO!=None:
                     print(msgRecebida)
                     print("Senha inválida ou requisição estranha")
                     c.close()
@@ -82,7 +84,6 @@ def servidorArquivo():
                 print("Recebeu requisição ...")
                 resposta = "AGUARDANDOMAIS09876MAPB".encode('utf-8') 
                 c.sendall(resposta)
-                print("0")
             except:
                 print("Erro ao enviar mensagem 1")
                 c.close()
@@ -123,10 +124,10 @@ def servidorArquivo():
                     try:
                         bCaptura = False                    
                         msgUtf =  msgDescripto.decode("utf-8")
-                        print(msgUtf)
+                        #print(msgUtf)
                         if msgUtf[:25]=="ARQUIVONOME1234509876MAPB":
-                            nomeArq = msgUtf[25:]
-                            if nomeArq in ["TDPFS", "ALOCACOES", "OPERACOES"]:
+                            nomeArq = msgUtf[25:].strip()
+                            if nomeArq in ["TDPFS", "ALOCACOES", "OPERACOES", "DCCS"]:
                                 nomeArq = nomeArq+".xlsx"
                             else:
                                 print("Nome de arquivo inválido ...")

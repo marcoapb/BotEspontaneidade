@@ -55,6 +55,10 @@ def validaCPF(cpfPar):
     calc = lambda t: int(t[1]) * (t[0] + 2)
     d1 = (sum(map(calc, enumerate(reversed(cpf[:-2])))) * 10) % 11
     d2 = (sum(map(calc, enumerate(reversed(cpf[:-1])))) * 10) % 11
+    if d1==10:
+        d1 = 0
+    if d2==10:
+        d2 = 0      
     return str(d1) == cpf[-2] and str(d2) == cpf[-1]
 
 def limpaMarkdown(texto): #deixa o texto adequado para negritar com *
@@ -139,8 +143,9 @@ def converteAMD(data):
 
 def enviaEmail(email, texto, assunto, arquivo=None):
     try:
-        server = smtplib.SMTP('INETRFOC.RFOC.SRF: 25') #servidor de email Notes
-        pass
+        #server = smtplib.SMTP('INETRFOC.RFOC.SRF: 25') #servidor de email Notes
+        server = smtplib.SMTP('exchangerfoc.rfoc.srf: 25')
+        #pass
     except:
         return 1	
     # create message object instance
@@ -2825,7 +2830,7 @@ def disparaAvisoUrgente(update, context): #avisos urgentes da Cofis disparados p
         conn.rollback()
     return
 
-def disparaMensagens(): #avisos diários (produção) ou de hora em hora (teste) contendo os alertas e mensagens da Cofis
+def disparaMensagens(): #avisos diários (produção) ou de hora em hora (teste) contendo os alertas e mensagens da Cofis (não inclui alertas de juntadas)
     global updater, termina, ambiente
 		
     try:
@@ -3153,6 +3158,81 @@ def disparaMensagens(): #avisos diários (produção) ou de hora em hora (teste)
     conn.close()              
     return
 
+def formataDCC(dcc):
+    if dcc==None:
+        return ""
+    if len(dcc)<17:
+        return dcc
+    return dcc[:5]+"."+dcc[5:11]+"/"+dcc[11:15]+"-"+dcc[15:]
+
+def disparaMsgJuntada(): #alerta de juntada (não vai para o e-mail)
+    global updater, termina, ambiente
+    conn = conecta()
+    if not conn:
+        logging.info("Conexão ao BD falhou (disparaMsgJuntada")
+        return
+    logging.info("Acionado o disparo de mensagens Solic Juntada - "+datetime.now().strftime('%d/%m/%Y %H:%M'))
+    cursor = conn.cursor(buffered=True)
+    dataAtual = datetime.today().date()
+    comando = "Select idTelegram, CPF from Usuarios Where Adesao Is Not Null and Saida Is Null and idTelegram Is Not Null and idTelegram<>0"
+    cursor.execute(comando)
+    usuarios = cursor.fetchall()
+    totalMsg = 0
+    msgDisparadas = 0
+    juntadasAvisadas = set()
+    cabecalho = "Alerta de Solicitação de Juntada Pendente de Análise (TDPF | DCC):\n\n" 
+    for usuario in usuarios: #percorremos os usuários ativos Telegram
+        if termina: #programa foi informado de que é para encerrar (quit)
+            return
+        logging.info("Verificando disparo para "+usuario[1])
+        
+        listaUsuario = "" #lista de TDPF com espontaneidade, atividade ou o próprio TDPF vencendo
+        userId = usuario[0]
+        cpf = usuario[1]
+        #selecionamos os TDPFs do usuário em andamento e monitorados (ativos) pelo serviço
+        comando = """
+                Select TDPFS.Numero, TDPFS.DCC, Juntadas.Solicitacao, Juntadas.Codigo
+                from CadastroTDPFs, TDPFS, Alocacoes, Fiscais, Juntadas
+                Where Fiscais.CPF=%s and CadastroTDPFs.Fiscal=Fiscais.Codigo and CadastroTDPFs.TDPF=TDPFS.Codigo and 
+                CadastroTDPFs.TDPF=Alocacoes.TDPF and  
+                CadastroTDPFs.Fiscal=Alocacoes.Fiscal and TDPFS.Encerramento Is Null and TDPFS.DCC Is Not Null and TDPFS.DCC<>'' and
+                CadastroTDPFs.Fim Is Null and Alocacoes.Desalocacao Is Null and TDPFS.Codigo=Juntadas.TDPF and Juntadas.Solicitacao Is Not Null and 
+                (Juntadas.Solicitacao>Juntadas.Aviso or Juntadas.Aviso Is Null)
+                Order by TDPFS.Numero
+                """
+        cursor.execute(comando, (cpf,))        
+        fiscalizacoes = cursor.fetchall()  
+        for fiscalizacao in fiscalizacoes:
+            if listaUsuario!="":
+                listaUsuario = listaUsuario + "\n"
+            listaUsuario = "*"+formataTDPF(fiscalizacao[0])+"* |\n"+formataDCC(fiscalizacao[1])+"\n"
+            juntadasAvisadas.add(fiscalizacao[3])
+        if listaUsuario!="":
+            listaUsuario = cabecalho + listaUsuario
+            updater.bot.send_message(userId, text=limpaMarkdown(listaUsuario), parse_mode= 'MarkdownV2')  
+            totalMsg+=1
+            msgDisparadas+=1
+            if msgDisparadas>=30:
+                msgDisparadas = 0
+                time.sleep(1) #a cada 30 mensagens, dormimos um segundo (limitação do Bot é 30 por seg - TESTE)             
+    lista = []
+    for codigo in juntadasAvisadas:
+        tupla = (dataAtual, codigo)
+        lista.append(tupla)                         
+    if len(lista)>0:   
+        logging.info("Atualização dos Avisos de Pendência de Solicitação de Juntada:")
+        logging.info(lista)         
+        comando = "Update Juntadas Set Aviso=%s Where Codigo=%s" 
+        try:
+            cursor.executemany(comando, lista)
+            conn.commit()
+        except:
+            logging.info("Erro ao tentar atualizar as datas de aviso na tabela Juntadas.")
+            conn.rollback()   
+    logging.info("Total de mensagens disparadas (juntadas): "+str(totalMsg)) 
+    conn.close()
+    return
+
 
 def disparador():
     global termina, dirLog, sistema, ambiente, diaAtual
@@ -3247,14 +3327,18 @@ updater = None #para ser acessível ao disparador de mensagens
 #schedule.every().day.at("07:30").do(disparaMensagens)
 if ambiente=="TESTE":
     schedule.every(60).minutes.do(disparaMensagens) #deixamos enviar msgs a cada 1 h no ambiente de testes
+    schedule.every(60).minutes.do(disparaMsgJuntada)
 else:
 	schedule.every().day.at("07:30").do(disparaMensagens) #uma vez por dia - produção
+if ambiente!="TESTE":
+    schedule.every().day.at("15:00").do(disparaMsgJuntada) #não funciona colocando no else acima (dá erro de identação)
 
 termina = False
 diaAtual = datetime.now().date() #será utilizado para criar um arquivo de Log p/ cada dia
 botTelegram()
 threadDisparador = threading.Thread(target=disparador, daemon=True) #encerra thread quando sair do programa sem esperá-la
 threadDisparador.start()
+print("Serviço iniciado - ", datetime.now())
 while not termina:
     entrada = input("Digite QUIT para terminar o serviço BOT: ")
     if entrada:

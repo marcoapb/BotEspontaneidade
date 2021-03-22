@@ -33,7 +33,7 @@ CREATE TABLE `Ciencias` (
   `Codigo` BIGINT NOT NULL AUTO_INCREMENT, 
   `TDPF` BIGINT, 
   `Data` DATETIME, 
-  `Documento` VARCHAR(50),
+  `Documento` VARCHAR(70),
   PRIMARY KEY (`Codigo`), 
   INDEX (`TDPF`)
 ) ENGINE=innodb DEFAULT CHARSET=utf8;
@@ -267,3 +267,14 @@ CREATE TABLE `Jurisdicao` (
   INDEX (`Orgao`),
   INDEX (`Equipe`)
 ) ENGINE=innodb DEFAULT CHARSET=utf8; 
+
+DROP TABLE IF EXISTS `Juntadas`;
+
+CREATE TABLE `Juntadas` (
+  `Codigo` BIGINT NOT NULL AUTO_INCREMENT,  
+  `TDPF` BIGINT, 
+  `Solicitacao` DATETIME, 
+  `Aviso` DATETIME, 
+  INDEX (`TDPF`),  
+  PRIMARY KEY (`Codigo`)
+) ENGINE=innodb DEFAULT CHARSET=utf8;

@@ -6,6 +6,7 @@ Created on Mon Aug 24 09:26:09 2020
 """
 
 from __future__ import unicode_literals
+from re import S
 import pandas as pd
 import numpy as np
 import sys
@@ -89,7 +90,7 @@ def calculaDVCPF(cpfPar):
     return cpf
 
 def realizaCargaDados():
-    global dirExcel, termina, hostSrv
+    global dirExcel, termina, hostSrv, hora1
     try:
         dfTdpf = pd.read_excel(dirExcel+"TDPFS.xlsx", dtype={'Porte':object, 'Acompanhamento':object, 'Receita Programada(Tributo) Código': int})
         dfAloc = pd.read_excel(dirExcel+"ALOCACOES.xlsx")
@@ -97,10 +98,11 @@ def realizaCargaDados():
         dfSupervisores = pd.read_csv(dirExcel+"Supervisores.CSV", sep=";", encoding = "ISO-8859-1")
         dfOperacoes = pd.read_excel(dirExcel+"OPERACOES.xlsx")
     except:
-        print("Erro no acesso aos arquivos xlsx e/ou csv ou só há arquivos já processados")
-        logging.info("Arquivos Excel não foram encontrados (um ou mais) - TDPFs.xlsx, ALOCACOES.xlsx, Fiscais.xlsx, OPERACOES.xlsx ou Supervisores.CSV; outra tentativa será feita em 24h") 
+        print("Erro no acesso aos arquivos xlsx e/ou csv ou só há arquivos já processados; outra tentativa será feita às "+hora1)
+        logging.info("Arquivos Excel não foram encontrados (um ou mais) - TDPFs.xlsx, ALOCACOES.xlsx, Fiscais.xlsx, OPERACOES.xlsx ou Supervisores.CSV; outra tentativa será feita às "+hora1) 
         return
     dfFiscais['CPF']=dfFiscais['CPF'].astype(str).map(acrescentaZeroCPF) 
+    dfAloc['Ind. RH Superv. Gr. Fiscal RPF'] = dfAloc['Ind. RH Superv. Gr. Fiscal RPF'].astype(str)
     dfSupervisores['CPF']=dfSupervisores['R028_RH_PF_NR'].astype(str).map(calculaDVCPF)
     dfSupervisores['Grupo Fiscal']=dfSupervisores.apply(montaGrupoFiscal, axis=1)
     #dfTdpf['Porte']=dfTdpf['Porte'].astype(str)
@@ -261,9 +263,13 @@ def realizaCargaDados():
         grupoAtu = None 
         for linha2 in range(df.shape[0]):
             grupo = df.iat[linha2, 4]
-            grupo = getAlgarismos(grupo)
+            tipoGrupo = str(type(grupo)).upper()
+            if "STR" in tipoGrupo or "UNICODE" in tipoGrupo:
+                grupo = getAlgarismos(grupo)
+            else:
+                grupo = None
             desalocacao = df.iat[linha2, 10]            
-            if desalocacao=="SD" or desalocacao=="" or paraData(desalocacao)==None:
+            if (desalocacao=="SD" or desalocacao=="" or paraData(desalocacao)==None) and grupo!="" and grupo!=None:
                 grupoAtu = grupo 
                 break 
         bInseriuCiencia = False                
@@ -298,7 +304,11 @@ def realizaCargaDados():
             fiscal = df.iat[linha2, 7] #nome do fiscal
             alocacao = df.iat[linha2, 9]
             desalocacao = df.iat[linha2, 10]  
-            supervisor = df.iat[linha2, 12][:1]
+            supervisor = df.iat[linha2, 12]
+            if supervisor==np.nan or pd.isna(supervisor) or supervisor=="" or supervisor==None:
+                supervisor = "N"
+            else:
+                supervisor = supervisor[:1]
             horas = df.iat[linha2, 16]
             try:    
                 horas = int(horas)    
@@ -417,6 +427,7 @@ def realizaCargaDados():
     tabGrupos = 0
     tabGruposAtu = 0
     atualizouSuperv = False
+    print("Processados "+str(dfTdpf.shape[0])+" TDPFS.")
     print("Atualizando supervisores ...")
     superv = 0 #número de supervisores que não fazem parte de nenhum grupo - são incluídos na tabela de usuários pq supervisionam ativamente alguma equipe
     for grupoRow in gruposRows:
@@ -493,46 +504,168 @@ def realizaCargaDados():
 
     if tabGrupos>0 or tabGruposAtu>0 or atualizouSuperv or atualizou:
         try:
-            conn.commit()
+            conn.commit()  
+            print("TDPFs, Alocacoes, Ciências e Supervisores/Equipes foram atualizados")          
         except:
             print("Erro ao tentar efetivar as atualizações no Banco de Dados - É necessário verificar o erro e tentar fazer novamente a carga.")
             logging.info("Erro ao tentar efetivar as atualizações no Banco de Dados - Nenhum dado foi atualizado")
             conn.rollback()
             conn.close()
-            return
-    cursor.close()
-    conn.close()  
-    print("Carga finalizada")
-    logging.info("Registros Incluídos:")  
-    logging.info(f"TDPFs: {tabTdpfs}")
-    logging.info(f"Fiscais: {tabFiscais}")
-    logging.info(f"Ciencias: {tabCiencias}")
-    logging.info(f"Alocacoes: {tabAloc}")
-    logging.info(f"Usuarios: {tabUsuarios}")  
-    logging.info(f"Equipes: {tabGrupos}")   
+            return 
+    print("Iniciando atualização do indicador de supervisor nos TDPFs")
+    select = """Select Alocacoes.Codigo From Alocacoes, TDPFS, Supervisores 
+                Where Alocacoes.TDPF=TDPFS.Codigo and TDPFS.Encerramento Is Null and 
+                Supervisores.Equipe=TDPFS.Grupo and Supervisores.Fim Is Null and Supervisores.Fiscal=Alocacoes.Fiscal and Alocacoes.Desalocacao Is Null"""
+    cursor.execute(select)
+    rows = cursor.fetchall()
+    lista = ""
+    for row in rows:
+        if lista!="":
+            lista = lista +", "
+        lista = lista + str(row[0])
+    if lista!="":
+        lista = "(" + lista +")"
+        comando = "Update Alocacoes Set Supervisor='N' Where Alocacoes.Supervisor='S' and Alocacoes.Codigo Not In " + lista
+        cursor.execute(comando) #indicador de supervisor 'N' nos TDPFS
+        comando = "Update Alocacoes Set Supervisor='S' Where Alocacoes.Supervisor='N' and Alocacoes.Codigo In " + lista
+        cursor.execute(comando) #indicador de supervisor 'S' nos TDPFS
+        #comando = "Update Alocacoes Set Supervisor='N' Where Alocacoes.Desalocacao Is Not Null and Alocacoes.Supervisor='S'" 
+        #fiscal desalocado não é supervisor
+        #cursor.execute(comando)
+        try:
+            conn.commit()
+            logging.info("Registros Incluídos:")  
+            logging.info(f"TDPFs: {tabTdpfs}")
+            logging.info(f"Fiscais: {tabFiscais}")
+            logging.info(f"Ciencias: {tabCiencias}")
+            logging.info(f"Alocacoes: {tabAloc}")
+            logging.info(f"Usuarios: {tabUsuarios}")  
+            logging.info(f"Equipes: {tabGrupos}")   
 
-    logging.info("Registros Atualizados:")
-    logging.info(f"TDPFs: {tabTdpfsAtu}")
-    logging.info(f"Grupos(TDPFs)/Vencimentos: {gruposAtu}")
-    logging.info(f"Alocacoes: {tabAlocAtu}")
-    logging.info(f"Usuarios: {tabUsuariosAtu}")
-    logging.info(f"Equipes: {tabGruposAtu}")     
-   
-    print("Supervisores não alocados a TDPFs e incluídos: "+str(superv))
-    try:
-        os.rename(dirExcel+"TDPFS.xlsx", dirExcel+"TDPFS_Processado_"+datetime.now().strftime('%Y-%m-%d')+".xlsx")
-        os.rename(dirExcel+"ALOCACOES.xlsx", dirExcel+"ALOCACOES_Processado_"+datetime.now().strftime('%Y-%m-%d')+".xlsx")
-        logging.info("Arquivos renomeados")
-    except:
-        logging.error("Erro ao tentar renomear os arquivos")
+            logging.info("Registros Atualizados:")
+            logging.info(f"TDPFs: {tabTdpfsAtu}")
+            logging.info(f"Grupos(TDPFs)/Vencimentos: {gruposAtu}")
+            logging.info(f"Alocacoes: {tabAlocAtu}")
+            logging.info(f"Usuarios: {tabUsuariosAtu}")
+            logging.info(f"Equipes: {tabGruposAtu}")     
+        
+            print("Supervisores não alocados a TDPFs e incluídos: "+str(superv))
+            try:
+                os.rename(dirExcel+"TDPFS.xlsx", dirExcel+"TDPFS_Processado_"+datetime.now().strftime('%Y-%m-%d')+".xlsx")
+                os.rename(dirExcel+"ALOCACOES.xlsx", dirExcel+"ALOCACOES_Processado_"+datetime.now().strftime('%Y-%m-%d')+".xlsx")
+                logging.info("Arquivos renomeados")
+            except:
+                logging.error("Erro ao tentar renomear os arquivos")            
+        except:
+            print("Erro ao tentar efetivar as atualização do indicador de supervisor dos TDPFs - É necessário verificar o erro e tentar fazer novamente a carga.")
+            logging.info("Erro ao tentar efetivar as atualização do indicador de supervisor dos TDPFs")
+            conn.rollback()             
+    print("Carga finalizada")
+    cursor.close()
+    conn.close() 
     return
 
+
+def realizaCargaDCCs():
+    global dirExcel, termina, hostSrv, hora2
+    try:
+        dfDCCs= pd.read_excel(dirExcel+"DCCS.xlsx", dtype={'DCC':object, 'Data':object})
+    except:
+        print("Erro no acesso ao arquivo de DCCS.xlsx ou só há arquivos já processados; outra tentativa será feita às "+hora2)
+        logging.info("Arquivo Excel de DCCs não foi encontrado; outra tentativa será feita às "+hora2) 
+        return
+    dfDCCs['DCC']=dfDCCs['DCC'].astype(str)
+    dfDCCs['Data']=dfDCCs['Data'].astype(str)
+    MYSQL_DATABASE = os.getenv("MYSQL_DATABASE", "databasenormal")
+    MYSQL_USER = os.getenv("MYSQL_USER", "my_user")
+    MYSQL_PASSWORD = os.getenv("MYSQL_PASSWORD", "mypass1234") 
+
+    try:
+        logging.info("Conectando ao servidor de banco de dados (2)...")
+        logging.info(MYSQL_DATABASE)
+        logging.info(MYSQL_USER)
+
+        conn = mysql.connector.connect(user=MYSQL_USER, password=MYSQL_PASSWORD,
+                                    host=hostSrv,
+                                    database=MYSQL_DATABASE)
+        logging.info("Conexão efetuada com sucesso ao MySql (2)!")                               
+    except mysql.connector.Error as err:
+        print("Erro na conexão com o BD (2) - veja Log: "+datetime.now().strftime('%d/%m/%Y %H:%M'))
+        if err.errno == errorcode.ER_ACCESS_DENIED_ERROR:
+            logging.info("Usuário ou senha inválido(s) (2).")
+        elif err.errno == errorcode.ER_BAD_DB_ERROR:
+            logging.error("Banco de dados não existe (2).")
+        else:
+            logging.error(err)
+            logging.error("Erro na conexão com o Banco de Dados (2)")
+        return
+    print("Realizando carga dos DCCs em "+datetime.now().strftime("%d/%m/%Y %H:%M"))
+    cursor = conn.cursor(buffered=True)   
+    atualizou = False 
+    for linha in range(dfDCCs.shape[0]):
+        dcc = dfDCCs.iat[linha,0]        
+        dataJuntada = dfDCCs.iat[linha,1]
+        if dataJuntada=="HOJE":
+            data = datetime.now()
+        elif dataJuntada=="NULO":
+            data = None
+        else:
+            data = paraData(dataJuntada)        
+        comando = "Select Codigo From TDPFS Where DCC=%s"
+        cursor.execute(comando, (dcc,))
+        row = cursor.fetchone()
+        if not row:
+            continue
+        if row[0]==None:
+            continue
+        tdpf = row[0]
+        comando = "Select Codigo, Solicitacao from Juntadas Where TDPF=%s"
+        cursor.execute(comando, (tdpf,))
+        row = cursor.fetchone()
+        if row==None:
+            comando = "Insert Into Juntadas (TDPF, Solicitacao) Values (%s, %s)"
+            cursor.execute(comando, (tdpf, data))
+            atualizou = True
+        else:
+            codigo = row[0]
+            ultJuntada = row[1]
+            comando = "Update Juntadas Set Solicitacao=%s Where Codigo=%s"
+            if ultJuntada==None and data!=None:
+                cursor.execute(comando, (data, codigo))
+                atualizou = True
+            elif ultJuntada!=None and dataJuntada=="HOJE":
+                pass
+            elif ultJuntada==None and data==None:
+                pass
+            elif ultJuntada!=None and data==None:
+                cursor.execute(comando, (data, codigo))
+                atualizou = True                
+            elif ultJuntada.date()<data.date():
+                cursor.execute(comando, (data, codigo))
+                atualizou = True
+    if atualizou:
+        try:
+            conn.commit()
+            logging.info("Tabela de Juntadas atualizada")
+            try:
+                os.rename(dirExcel+"DCCS.xlsx", dirExcel+"DCCS_Processado_"+datetime.now().strftime('%Y-%m-%d')+".xlsx")
+                logging.info("Arquivo de DCCs renomeado")
+            except:
+                logging.error("Erro ao tentar renomear o arquivo de DCCs")              
+        except:
+            conn.rollback()
+            logging.error("Erro ao tentar atualizar a tabela de Juntadas")
+    print("Carga das Juntadas dos DCCs finalizada.")
+    conn.close()
+    return
+
+        
 
 def disparador():
     global termina
     while not termina:
         schedule.run_pending() 
-        time.sleep(24*60*60) #espera 24 horas para tentar realizar outra carga        
+        time.sleep(60*60) #a cada hora, vê o que tem de tarefa pendente
     return 
    
 sistema = sys.platform.upper()
@@ -547,11 +680,15 @@ else:
     dirExcel = '/Excel/'
 
 logging.basicConfig(filename=dirLog+datetime.now().strftime('%Y-%m-%d %H_%M')+' Carga'+sistema+'.log', format='%(asctime)s - %(message)s', level=logging.INFO)
-schedule.every(24).hours.do(realizaCargaDados) #a cada 24 horas, verifica se há arquivos para fazer a carga
+hora1 = "09:30"
+schedule.every().day.at(hora1).do(realizaCargaDados) #a cada 24 horas, verifica se há arquivos para fazer a carga
+hora2 = "14:30"
+schedule.every().day.at(hora2).do(realizaCargaDCCs)
 termina = False
 threadDisparador = threading.Thread(target=disparador, daemon=True) #encerra thread quando sair do programa sem esperá-la
 threadDisparador.start()
 realizaCargaDados() #faz a primeira tentativa de carga das planilhas logo no acionamento do programa
+realizaCargaDCCs()
 while not termina:
     entrada = input("Digite QUIT para terminar o serviço Carga BOT: ")
     if entrada:

@@ -32,8 +32,9 @@ import smtplib
 #função para o envio de e-mail - copiado do Bot_Telegram.py
 def enviaEmail(email, texto, assunto, arquivo=None):
     try:
-        server = smtplib.SMTP('INETRFOC.RFOC.SRF: 25') #servidor de email Notes
-        pass
+        #server = smtplib.SMTP('INETRFOC.RFOC.SRF: 25') #servidor de email Notes
+        #pass
+        server = smtplib.SMTP('exchangerfoc.rfoc.srf: 25')
     except:
         return 1	
     # create message object instance
@@ -104,6 +105,10 @@ def validaCPF(cpfPar):
     calc = lambda t: int(t[1]) * (t[0] + 2)
     d1 = (sum(map(calc, enumerate(reversed(cpf[:-2])))) * 10) % 11
     d2 = (sum(map(calc, enumerate(reversed(cpf[:-1])))) * 10) % 11
+    if d1==10:
+        d1 = 0
+    if d2==10:
+        d2 = 0    
     return str(d1) == cpf[-2] and str(d2) == cpf[-1]
 
 #transforma uma data string de dd/mm/yyyy para yyyy/mm/dd para fins de consulta, inclusão ou atualização no BD SQL
@@ -355,7 +360,7 @@ def buscaTipoOrgao(orgao, cursor):
     comando = "Select Tipo from Orgaos Where Codigo=%s"
     cursor.execute(comando, (orgao,))
     row = cursor.fetchone()
-    if row==None:
+    if row==None or len(row)==0:
         return"L"
     else:
         orgaoResp = row[0]
@@ -364,7 +369,7 @@ def buscaTipoOrgao(orgao, cursor):
         return orgaoResp          
 
 def trataMsgRecebida(msgRecebida, c, addr): #c é o socket estabelecido com o cliente que será utilizado para a resposta
-    global chavesCripto, ambiente
+    global chavesCripto, ambiente, CPF1, CPF2, CPF3, SENHADCCS
     tamChave = 6 #tamanho da chave do ContÁgil (chave de registro) 
     tamMsg = 100
     tamNome = 100
@@ -404,7 +409,7 @@ def trataMsgRecebida(msgRecebida, c, addr): #c é o socket estabelecido com o cl
                 comando = "Select Codigo, email, DataEnvio from Usuarios Where CPF=%s"
                 cursor.execute(comando, (cpf,))
                 row = cursor.fetchone()
-                if not row:
+                if not row or len(row)==0:
                     resposta = "97CPF NÃO CONSTA DA BASE DE DADOS DO SERVIÇO"
                     enviaResposta(resposta, c) 
                     return  
@@ -486,7 +491,7 @@ def trataMsgRecebida(msgRecebida, c, addr): #c é o socket estabelecido com o cl
         return  
 
         
-    if codigo<1 or codigo>30:
+    if codigo<1 or (codigo>31 and codigo!=60):
         resposta = "99CÓD DA REQUISIÇÃO É INVÁLIDO (C)" 
         enviaResposta(resposta, c)          
         return     
@@ -520,7 +525,7 @@ def trataMsgRecebida(msgRecebida, c, addr): #c é o socket estabelecido com o cl
         comando = "Select Codigo, CPF, Adesao, Saida, d1, d2, d3, email, Chave, ValidadeChave, Tentativas, Orgao from Usuarios Where CPF=%s"
         cursor.execute(comando, (cpf,))
         row = cursor.fetchone() 
-        if row==None:
+        if row==None or len(row)==0:
             resposta = "0104" #01 - status; 04 - não consta na base (não foram carregados)
             enviaResposta(resposta, c) 
             conn.close()
@@ -567,7 +572,7 @@ def trataMsgRecebida(msgRecebida, c, addr): #c é o socket estabelecido com o cl
     comando = "Select Codigo, Chave, ValidadeChave, Tentativas, email, d1, d2, d3, Orgao, Adesao, Saida from Usuarios Where CPF=%s"            
     cursor.execute(comando, (cpf,))
     row = cursor.fetchone()   
-    if not row: #o usuário está inativo
+    if not row or len(row)==0: #o usuário está inativo
         resposta = "90USUÁRIO NÃO ENCONTRADO NA BASE DE DADOS"
         enviaResposta(resposta, c)  
         conn.close()
@@ -689,7 +694,7 @@ def trataMsgRecebida(msgRecebida, c, addr): #c é o socket estabelecido com o cl
     comando = "Select Fiscais.Codigo From Fiscais Where Fiscais.CPF=%s"          
     cursor.execute(comando, (cpf,))
     rowFiscal = cursor.fetchone()
-    if not rowFiscal and not codigo in [13, 24, 25, 28, 29]: #estes códigos podem ser utilizados por usuários Cofis ou Difis
+    if (not rowFiscal or len(rowFiscal)==0) and not codigo in [13, 24, 25, 28, 29]: #estes códigos podem ser utilizados por usuários Cofis ou Difis
         resposta = "97CPF NÃO FOI LOCALIZADO NA TABELA DE FISCAIS/SUPERVISORES"
         enviaResposta(resposta, c)  
         conn.close()
@@ -699,7 +704,7 @@ def trataMsgRecebida(msgRecebida, c, addr): #c é o socket estabelecido com o cl
     else:
         chaveFiscal = 0
 
-    if codigo in [2, 3, 4, 5, 14, 15, 16, 17, 18, 19, 20, 21, 23, 24, 27, 28, 30]: #verificações COMUNS relativas ao TDPF - TDPF existe, em andamento (p/ alguns), cpf está alocado nele
+    if codigo in [2, 3, 4, 5, 14, 15, 16, 17, 18, 19, 20, 21, 23, 24, 27, 28, 30, 31]: #verificações COMUNS relativas ao TDPF - TDPF existe, em andamento (p/ alguns), cpf está alocado nele
         if len(msgRecebida)<(29+tamChave):
             resposta = "99REQUISIÇÃO INVÁLIDA (D)"
             enviaResposta(resposta, c)  
@@ -711,7 +716,7 @@ def trataMsgRecebida(msgRecebida, c, addr): #c é o socket estabelecido com o cl
             enviaResposta(resposta, c)  
             conn.close()
             return            
-        comando = "Select Codigo, Encerramento, Nome, Emissao from TDPFS Where Numero=%s"        
+        comando = "Select Codigo, Encerramento, Nome, Emissao, Vencimento, Grupo, NI, DCC, Porte, Acompanhamento, TrimestrePrevisto from TDPFS Where Numero=%s"        
         cursor.execute(comando, (tdpf,))
         row = cursor.fetchone()
         if row:
@@ -722,9 +727,9 @@ def trataMsgRecebida(msgRecebida, c, addr): #c é o socket estabelecido com o cl
             if nome==None or nome=="":
                 nome = "NOME INDISPONÍVEL"
             nome = nome[:tamNome].ljust(tamNome)
-            if encerramento!=None and not codigo in [4, 15, 19, 21, 23, 24, 27, 28, 30]: #nestes códigos podemos listar ciências, atividades, entradas do diário, informar DCC,
+            if encerramento!=None and not codigo in [4, 15, 19, 21, 23, 24, 27, 28, 30, 31]: #nestes códigos podemos listar ciências, atividades, entradas do diário, informar DCC,
                                                                                  #incluir/listar pontuação de TDPFs encerrados, incluir trimestre de encerramento previsto,
-                                                                                 # mostrar fiscais alocados ou informar se é supervisor do tdpf (mesmo encerrado)
+                                                                                 # mostrar fiscais alocados ou informar se é supervisor do tdpf (mesmo encerrado), dados do TDPF tb
                 msg = "TDPF encerrado"
                 msg = msg.ljust(tamMsg)
                 resposta = codigoStr+(("N"+msg+nome) if (2<=codigo<=5) else msg) #o código 27 estava aqui antes de colocar na lista acima
@@ -734,26 +739,27 @@ def trataMsgRecebida(msgRecebida, c, addr): #c é o socket estabelecido com o cl
         else: 
             msg = "TDPF NÃO foi localizado ou foi encerrado há muito tempo e não colocado na base deste serviço"
             msg = msg.ljust(tamMsg)          
-            if codigo==30:
-                resposta = "30I"
+            if codigo in [30, 31]:
+                resposta = str(codigo)+"I"
             else:
                 resposta = codigoStr+(("I"+msg) if (2<=codigo<=5 or codigo in [23, 24, 27, 28]) else msg)
             enviaResposta(resposta, c) 
             conn.close()
-            return              
+            return  
+        rowTdpf = row #para utilizarmos na requisição 31            
         comando = "Select Alocacoes.Desalocacao from Alocacoes Where Alocacoes.Fiscal=%s and Alocacoes.TDPF=%s"
         cursor.execute(comando, (chaveFiscal, chaveTdpf))
         row = cursor.fetchone()    
         bSupervisor = False 
-        if codigo in [4, 15, 21, 23, 24, 27, 28]: #supervisor pode relacionar ciências (4), atividades (15) de TDPF, incluir ou lista pontuação (23, 24),
-                                                  #incluir DCC (21), informar trimestre da meta (27) ou listar fiscais alocados (28) 
-            if tipoOrgaoUsuario=="N" and codigo in [24, 28]: #nestes códigos, usuário Cofis pode fazer consulta (#para os fins destas requisições, é supervisor)
+        if codigo in [4, 15, 21, 23, 24, 27, 28, 31]: #supervisor pode relacionar ciências (4), atividades (15) de TDPF, incluir ou lista pontuação (23, 24),
+                                                  #incluir DCC (21), informar trimestre da meta (27) ou listar fiscais alocados (28) ou dados do TDPF (31)
+            if tipoOrgaoUsuario=="N" and codigo in [24, 28, 31]: #nestes códigos, usuário Cofis pode fazer consulta (#para os fins destas requisições, é supervisor)
                 bSupervisor = True
-            elif tipoOrgaoUsuario=="R" and codigo in [24, 28]: #nestes códigos, usuário Difis pode fazer consulta (#para os fins destas requisições, é supervisor)
+            elif tipoOrgaoUsuario=="R" and codigo in [24, 28, 31]: #nestes códigos, usuário Difis pode fazer consulta (#para os fins destas requisições, é supervisor)
                 comando = "Select TDPFS.Numero from TDPFS Where TDPFS.Codigo=%s and TDPFS.Grupo in (Select Equipe from Jurisdicao Where Orgao=%s)"
                 cursor.execute(comando, (chaveTdpf, orgaoUsuario))
-                row = cursor.fetchone()
-                if row:
+                rowSuperv = cursor.fetchone()
+                if rowSuperv:
                     bSupervisor = True
             if not bSupervisor:
                 bSupervisor, _ = verificaSupervisao(conn, cpf, tdpf)   
@@ -783,7 +789,7 @@ def trataMsgRecebida(msgRecebida, c, addr): #c é o socket estabelecido com o cl
         achou = False
         if row and not bSupervisor:
             achou = True
-            if row[0]!=None and codigo!=28: #fiscal desalocado pode consultar TDPFs em que participou (28 - lista fiscais alocados no TDPF; no script não terá como num primeiro momento)
+            if row[0]!=None and not codigo in [28, 31]: #fiscal desalocado pode consultar TDPFs em que participou (28 - lista fiscais alocados no TDPF; 31 - dados do TDPF; no script não terá como num primeiro momento)
                 msg = "CPF NÃO está mais alocado ao TDPF ou não é supervisor, em requisições em que isso seria relevante"
                 msg = msg.ljust(tamMsg)                
                 resposta = codigoStr+(("N"+msg+nome) if (2<=codigo<=5 or codigo==23) else msg)
@@ -792,12 +798,62 @@ def trataMsgRecebida(msgRecebida, c, addr): #c é o socket estabelecido com o cl
                 return                         
         if not achou and not bSupervisor:
             msg = "CPF NÃO está alocado ao TDPF ou não é supervisor, em requisições em que isso seria relevante"
-            msg = msg.ljust(tamMsg)            
-            resposta = codigoStr+(("N"+msg+nome) if (2<=codigo<=5 or codigo in [23, 24]) else msg)     
+            msg = msg.ljust(tamMsg)   
+            if codigo==31:
+                resposta = "31N"
+            else:
+                resposta = codigoStr+(("N"+msg+nome) if (2<=codigo<=5 or codigo in [23, 24]) else msg)     
             enviaResposta(resposta, c)   
             conn.close()
-            return            
-    
+            return    
+
+    if codigo==31: #pediu as informações do registro do tdpf na tabela TDPFS - todas as verificações foram feitas acima e o resultado está em rowTdpf
+        grupo = rowTdpf[5]
+        if grupo==None:
+            grupo = ""
+        grupo = grupo.ljust(25)
+        emissao = rowTdpf[3]
+        if emissao==None:
+            emissao="00/00/0000"
+        else:
+            emissao = emissao.strftime("%d/%m/%Y")
+        encerramento = rowTdpf[1]
+        if encerramento==None:
+            encerramento = "00/00/0000"
+        else:
+            encerramento = encerramento.strftime("%d/%m/%Y") 
+        nome = rowTdpf[2]
+        if nome==None:
+            nome = ""
+        nome = nome.ljust(150)
+        niFiscalizado = rowTdpf[6]
+        if niFiscalizado==None:
+            niFiscalizado = ""
+        niFiscalizado = niFiscalizado.ljust(18)  
+        vencimento = rowTdpf[4]
+        if vencimento==None:
+            vencimento = "00/00/0000"
+        else:
+            vencimento = vencimento.strftime("%d/%m/%Y")
+        dcc = rowTdpf[7]
+        if dcc==None:
+            dcc = ""
+        dcc = dcc.ljust(17)
+        porte = rowTdpf[8]
+        if porte==None:
+            porte = ""
+        porte = porte.ljust(3)
+        acompanhamento = rowTdpf[9]
+        if acompanhamento==None:
+            acompanhamento = " "
+        trimestrePrevisto = rowTdpf[10]
+        if trimestrePrevisto==None:
+            trimestrePrevisto = "      "
+        resposta = "31S"+ grupo+emissao+encerramento+nome+niFiscalizado+vencimento+dcc+vencimento+porte+acompanhamento+trimestrePrevisto
+        enviaResposta(resposta, c)   
+        conn.close()
+        return
+           
     if codigo==2: #informa data de ciência relativa a TDPF 
         try:   #deve enviar imediatamente a descrição do documento que efetivou a ciência (sem criptografia)
             mensagemRec = c.recv(1024) #.decode('utf-8') #chegou a requisicao
@@ -858,7 +914,7 @@ def trataMsgRecebida(msgRecebida, c, addr): #c é o socket estabelecido com o cl
         codReq = ""
         if len(requisicao)>=2:
             codReq = requisicao[:2]
-        if len(requisicao)!=52 or codReq!="31":
+        if len(requisicao)!=72 or codReq!="31":
             msg = "Documento não foi informado ou requisição inválida."
             msg = msg.ljust(tamMsg)             
             resposta = "02N"+msg+nome
@@ -873,8 +929,8 @@ def trataMsgRecebida(msgRecebida, c, addr): #c é o socket estabelecido com o cl
             enviaResposta(resposta, c)  
             conn.close()
             return   
-        if len(documento)>50:
-            msg = "Documento tem mais de 50 caracteres."
+        if len(documento)>70:
+            msg = "Documento tem mais de 70 caracteres."
             msg = msg.ljust(tamMsg)             
             resposta = "02N"+msg+nome
             enviaResposta(resposta, c)  
@@ -908,13 +964,14 @@ def trataMsgRecebida(msgRecebida, c, addr): #c é o socket estabelecido com o cl
         comando = "Select Codigo, TDPF, Data from Ciencias Where TDPF=%s Order by Data DESC"
         cursor.execute(comando, (chaveTdpf,))
         rows = cursor.fetchall()
-        if rows==None:
+        if rows==None or len(rows)==0:
             msg  = "Não há data de ciência informada para o TDPF" #Não havia data de ciência para o TDPF
             msg = msg.ljust(tamMsg)             
             resposta = "03N"+msg+nome
             enviaResposta(resposta, c)     
             conn.close()
-            return            
+            return   
+        print(rows)         
         if len(rows)==1:
             dataAnt = "Nenhuma Data Vigente" #não haverá data anterior
         else: #2 ou mais linhas
@@ -962,7 +1019,7 @@ def trataMsgRecebida(msgRecebida, c, addr): #c é o socket estabelecido com o cl
             documento = row[1]
             if not documento:
                 documento = ""
-            documento = documento.ljust(50)
+            documento = documento.ljust(70)
             datas = datas + row[0].strftime('%d/%m/%Y')+documento
             i+=1
             if i>=30: #limite de 30 datas/documentos
@@ -1003,7 +1060,7 @@ def trataMsgRecebida(msgRecebida, c, addr): #c é o socket estabelecido com o cl
                      and TDPFS.Encerramento Is Null"""       
         cursor.execute(comando, (chaveFiscal,))
         rows = cursor.fetchall()
-        if rows==None:
+        if rows==None or len(rows)==0:
             tam = 0
         else:    
             tam = len(rows)
@@ -1042,10 +1099,10 @@ def trataMsgRecebida(msgRecebida, c, addr): #c é o socket estabelecido com o cl
             cursor.execute(comando, (chaveTdpf,))
             cienciaReg = cursor.fetchone() #busca a data de ciência mais recente (DESC acima)
             documento = ""
-            documento = documento.ljust(50)             
+            documento = documento.ljust(70)             
             if cienciaReg: 
                 if cienciaReg[1]!=None:
-                    documento = cienciaReg[1].ljust(50)               
+                    documento = cienciaReg[1].ljust(70)               
                 ciencia = cienciaReg[0] #obtem a data de ciência mais recente
                 if ciencia!=None:
                     cienciaStr = ciencia.strftime('%d/%m/%Y')                    
@@ -1534,10 +1591,10 @@ def trataMsgRecebida(msgRecebida, c, addr): #c é o socket estabelecido com o cl
                 documento = cienciaRegs[len(cienciaRegs)-1][1] #documento da última data de ciência
                 if documento==None:
                     documento = ""
-                documento = documento.ljust(50)                                   
+                documento = documento.ljust(70)                                   
                 registro = registro + tdpf + nome + emissao + vencimento + dcc + primCiencia + ultCiencia + documento 
             else:
-                registro = registro + tdpf + nome + emissao + vencimento + dcc + "00/00/0000" + "00/00/0000" + " ".ljust(50) #provavelmente nenhum fiscal iniciou monitoramento
+                registro = registro + tdpf + nome + emissao + vencimento + dcc + "00/00/0000" + "00/00/0000" + " ".ljust(70) #provavelmente nenhum fiscal iniciou monitoramento
             #verifica se o TDPF está sendo monitorado 
             if encerrados=="N":
                 comando = "Select * from CadastroTDPFs Where TDPF=%s and Fim Is Null"   
@@ -1692,7 +1749,9 @@ def trataMsgRecebida(msgRecebida, c, addr): #c é o socket estabelecido com o cl
             elif not tdpfMonitorado: #tdpf não estava sendo monitorado - inclui ele
                 comando = "Insert into CadastroTDPFs (Fiscal, TDPF, Inicio) Values (%s, %s, %s)"
                 cursor.execute(comando, (chaveFiscal, chaveTdpf, datetime.today().date())) #chaveFiscal vem para todas as funções; chaveTdpf vem da rotina comum às requisições 2-5 e 14-17
-                resposta = resposta + " - MONITORAMENTO INICIADO"                    
+                resposta = resposta + " - MONITORAMENTO INICIADO"  
+            else:
+                resposta = resposta + " - TDPF MONITORADO"                  
             conn.commit()
         except:
             conn.rollback()
@@ -2236,12 +2295,23 @@ def trataMsgRecebida(msgRecebida, c, addr): #c é o socket estabelecido com o cl
                 conn.close()
                 return         
         #chaveTdpf vêm da rotina comum às requisições 2-5 e 14-21, onde tb foi verifica se o usuário está alocado ou é supervisor
+        tdpfMonitorado, monitoramentoAtivo, chave = tdpfMonitoradoCPF(conn, tdpf, cpf)
         try:
             if dcc=="":
                 dcc = None
             comando = "Update TDPFS Set DCC=%s Where TDPFS.Codigo=%s"           
             cursor.execute(comando, (dcc, chaveTdpf)) 
-            resposta = "21INFORMAÇÃO REGISTRADA"                               
+            if tdpfMonitorado and monitoramentoAtivo==False: #monitoramento do tdpf estava desativado - ativa
+                comando = "Update CadastroTDPFs Set Fim=Null Where Codigo=%s"
+                cursor.execute(comando, (chave,)) 
+                msgMonitoramento = "MONITORAMENTO DO TDPF REATIVADO"                        
+            elif not tdpfMonitorado: #tdpf não estava sendo monitorado - inclui ele
+                comando = "Insert into CadastroTDPFs (Fiscal, TDPF, Inicio) Values (%s, %s, %s)"
+                cursor.execute(comando, (chaveFiscal, chaveTdpf, datetime.today().date()))  
+                msgMonitoramento = "MONITORAMENTO DO TDPF INICIADO" 
+            else:
+                msgMonitoramento = "TDPF MONITORADO"                       
+            resposta = "21INFORMAÇÃO REGISTRADA - "+msgMonitoramento                               
             conn.commit()
         except:
             conn.rollback()
@@ -2545,7 +2615,7 @@ def trataMsgRecebida(msgRecebida, c, addr): #c é o socket estabelecido com o cl
         comando = "Select Porte, Encerramento, NI, Acompanhamento from TDPFS Where TDPFS.Codigo=%s"
         cursor.execute(comando, (chaveTdpf,))
         row = cursor.fetchone()
-        if not row: #o TDPF não existe (??)
+        if not row or len(row)==0: #o TDPF não existe (??)
             resposta = "99REQUISIÇÃO INVÁLIDA - TDPF NÃO FOI LOCALIZADO (24B)"
             enviaResposta(resposta, c) 
             conn.close()
@@ -2567,7 +2637,7 @@ def trataMsgRecebida(msgRecebida, c, addr): #c é o socket estabelecido com o cl
         comando = "Select Count(Distinct Operacao) from Operacoes Where TDPF=%s"
         cursor.execute(comando, (chaveTdpf,))
         row = cursor.fetchone()
-        if not row:
+        if not row or len(row)==0:
             qtdeOperacoes = 0
         else:
             qtdeOperacoes = row[0]   
@@ -2589,7 +2659,7 @@ def trataMsgRecebida(msgRecebida, c, addr): #c é o socket estabelecido com o cl
         comando = "Select Min(PeriodoInicial), Max(PeriodoFinal) from Operacoes Where TDPF=%s"
         cursor.execute(comando, (chaveTdpf,))
         row = cursor.fetchone()
-        if not row:
+        if not row or len(row)==0:
             qtdeAnos = 0
         else:
             qtdeAnos = int(row[1].strftime("%Y"))-int(row[0].strftime("%Y"))+1    
@@ -2934,38 +3004,49 @@ def trataMsgRecebida(msgRecebida, c, addr): #c é o socket estabelecido com o cl
             enviaResposta(resposta, c) 
             conn.close()
             return  
-        if tipoOrgaoUsuario=="L": 
+        if tipoOrgaoUsuario=="L": #considera TDPFs supervisionados e nos quais o fiscal está alocado
             comando = """
-                    Select Distinctrow TDPFS.Numero, TDPFS.Nome, TDPFS.Emissao, TDPFS.Vencimento, TDPFS.Codigo
-                    From TDPFS, Supervisores
-                    Where (Supervisores.Fim Is Null and Supervisores.Equipe=TDPFS.Grupo and Supervisores.Fiscal=%s) 
-                    and TDPFS.Emissao<=cast((now() - interval %s day) as date) and TDPFS.Emissao>=cast((now() - interval %s day) as date) 
-                    and TDPFS.Encerramento Is Null and TDPFS.Codigo not in (Select TDPF from Ciencias Where Data Is Not Null)
-                    Union
-                    Select Distinctrow TDPFS.Numero, TDPFS.Nome, TDPFS.Emissao, TDPFS.Vencimento, TDPFS.Codigo
-                    From TDPFS, Alocacoes              
-                    Where (Alocacoes.Fiscal=%s and Alocacoes.Desalocacao Is Null and Alocacoes.TDPF=TDPFS.Codigo)
-                    and TDPFS.Emissao<=cast((now() - interval %s day) as date) and TDPFS.Emissao>=cast((now() - interval %s day) as date) 
-                    and TDPFS.Encerramento Is Null and TDPFS.Codigo not in (Select TDPF from Ciencias Where Data Is Not Null)                
-                    Order By Numero
-                    """                                                       
+                      Select Distinctrow TDPFS.Numero, TDPFS.Nome, TDPFS.Emissao, TDPFS.Vencimento, TDPFS.Codigo
+                      From TDPFS, Supervisores
+                      Where (Supervisores.Fim Is Null and Supervisores.Equipe=TDPFS.Grupo and Supervisores.Fiscal=%s) 
+                      and TDPFS.Emissao<=cast((now() - interval %s day) as date) and TDPFS.Emissao>=cast((now() - interval %s day) as date) 
+                      and TDPFS.Encerramento Is Null and TDPFS.Codigo not in (Select TDPF from Ciencias Where Data Is Not Null)
+                      Union
+                      Select Distinctrow TDPFS.Numero, TDPFS.Nome, TDPFS.Emissao, TDPFS.Vencimento, TDPFS.Codigo
+                      From TDPFS, Alocacoes              
+                      Where (Alocacoes.Fiscal=%s and Alocacoes.Desalocacao Is Null and Alocacoes.TDPF=TDPFS.Codigo)
+                      and TDPFS.Emissao<=cast((now() - interval %s day) as date) and TDPFS.Emissao>=cast((now() - interval %s day) as date) 
+                      and TDPFS.Encerramento Is Null and TDPFS.Codigo not in (Select TDPF from Ciencias Where Data Is Not Null)                
+                      Order By Numero
+                      """                                                       
             cursor.execute(comando, (chaveFiscal, inicial, final, chaveFiscal, inicial, final))
-        elif tipoOrgaoUsuario=="R":
+        elif tipoOrgaoUsuario=="R": #considera TDPFs do órgão e nos quais o fiscal está alocado, se ele estiver na base de fiscais
             comando = """
-                    Select Distinctrow TDPFS.Numero, TDPFS.Nome, TDPFS.Emissao, TDPFS.Vencimento, TDPFS.Codigo
-                    From TDPFS
-                    Where TDPFS.Emissao<=cast((now() - interval %s day) as date) and TDPFS.Emissao>=cast((now() - interval %s day) as date) 
-                    and TDPFS.Encerramento Is Null and TDPFS.Codigo not in (Select TDPF from Ciencias Where Data Is Not Null)
-                    and TDPFS.Grupo in (Select Equipe from Jurisdicao Where Orgao=%s)
-                    """ 
-            cursor.execute(comando, (inicial, final, orgaoUsuario))   
-        else: #órgão nacional
+                      Select Distinctrow TDPFS.Numero, TDPFS.Nome, TDPFS.Emissao, TDPFS.Vencimento, TDPFS.Codigo
+                      From TDPFS
+                      Where TDPFS.Emissao<=cast((now() - interval %s day) as date) and TDPFS.Emissao>=cast((now() - interval %s day) as date) 
+                      and TDPFS.Encerramento Is Null and TDPFS.Codigo not in (Select TDPF from Ciencias Where Data Is Not Null)
+                      and TDPFS.Grupo in (Select Equipe from Jurisdicao Where Orgao=%s) """
+
+            if chaveFiscal==0 or chaveFiscal==None:
+                cursor.execute(comando, (inicial, final, orgaoUsuario))  
+            else:
+                comando = comando + """Union
+                                       Select Distinctrow TDPFS.Numero, TDPFS.Nome, TDPFS.Emissao, TDPFS.Vencimento, TDPFS.Codigo
+                                       From TDPFS, Alocacoes              
+                                       Where (Alocacoes.Fiscal=%s and Alocacoes.Desalocacao Is Null and Alocacoes.TDPF=TDPFS.Codigo)
+                                       and TDPFS.Emissao<=cast((now() - interval %s day) as date) and TDPFS.Emissao>=cast((now() - interval %s day) as date) 
+                                       and TDPFS.Encerramento Is Null and TDPFS.Codigo not in (Select TDPF from Ciencias Where Data Is Not Null)                
+                                       Order By Numero                    
+                                    """ 
+                cursor.execute(comando, (inicial, final, orgaoUsuario, chaveFiscal, inicial, final))
+        else: #órgão nacional - seleciona todos os TDPFs
             comando = """
-                    Select Distinctrow TDPFS.Numero, TDPFS.Nome, TDPFS.Emissao, TDPFS.Vencimento, TDPFS.Codigo
-                    From TDPFS
-                    Where TDPFS.Emissao<=cast((now() - interval %s day) as date) and TDPFS.Emissao>=cast((now() - interval %s day) as date) 
-                    and TDPFS.Encerramento Is Null and TDPFS.Codigo not in (Select TDPF from Ciencias Where Data Is Not Null)
-                    """ 
+                      Select Distinctrow TDPFS.Numero, TDPFS.Nome, TDPFS.Emissao, TDPFS.Vencimento, TDPFS.Codigo
+                      From TDPFS
+                      Where TDPFS.Emissao<=cast((now() - interval %s day) as date) and TDPFS.Emissao>=cast((now() - interval %s day) as date) 
+                      and TDPFS.Encerramento Is Null and TDPFS.Codigo not in (Select TDPF from Ciencias Where Data Is Not Null)                   
+                      """ 
             cursor.execute(comando, (inicial, final))                       
         rows = cursor.fetchall()
         tam = len(rows)
@@ -3088,7 +3169,7 @@ def trataMsgRecebida(msgRecebida, c, addr): #c é o socket estabelecido com o cl
                      Where Alocacoes.TDPF=TDPFS.Codigo and TDPFS.Codigo=%s and Alocacoes.Fiscal=Fiscais.Codigo"""
         cursor.execute(comando, (chaveTdpf,))
         rows = cursor.fetchall()
-        if not rows:
+        if not rows or len(rows)==0:
             comando = "Select TDPFS.Nome, TDPFS.Encerramento from TDPFS Where TDPFS.Codigo=%s"
             cursor.execute(comando, (chaveTdpf,))
             row = cursor.fetchone()
@@ -3223,7 +3304,7 @@ def trataMsgRecebida(msgRecebida, c, addr): #c é o socket estabelecido com o cl
                         #Order by TDPFS.Grupo, TDPFS.Numero"""
             cursor.execute(comando, (trimInicial, trimFinal, dataInicial, dataFinal))                               
         rows = cursor.fetchall()
-        if not rows:
+        if not rows or len(rows)==0:
             resposta = "29"+"000"
             enviaResposta(resposta, c) 
             conn.close()
@@ -3270,7 +3351,66 @@ def trataMsgRecebida(msgRecebida, c, addr): #c é o socket estabelecido com o cl
                     conn.close()
                     logging.info("Erro de time out 29 - provavelmente cliente não respondeu no prazo. Abandonando operação.")
                     return
-                    
+
+    if codigo==60:
+        if len(msgRecebida)!=(23+tamChave):
+            resposta = "99REQUISIÇÃO INVÁLIDA (60A)"
+            enviaResposta(resposta, c) 
+            conn.close()
+            return 
+        hora = datetime.now().hour
+        if 8<hora<10:
+            resposta = "60H"
+            enviaResposta(resposta, c) 
+            conn.close()
+            return         
+        if not cpf in [CPF1, CPF2, CPF3]:
+            resposta = "60N"
+            enviaResposta(resposta, c) 
+            conn.close()
+            return
+        senha = msgRecebida[-10:]
+        horaSenha = str(int(int(datetime.now().strftime('%H%M'))/10))
+        if senha[-10:-3]!=SENHADCCS or senha[-3:]!=horaSenha or SENHADCCS==None: #senha é DIS@V71 seguida da hora e a dezena dos minutos (ex.: são 11:35, a senha é DIS@V71113)
+            resposta = "60N"
+            enviaResposta(resposta, c) 
+            conn.close()
+            return
+        comando = "Select DCC from TDPFS Where DCC Is Not Null and DCC<>''"
+        cursor.execute(comando)
+        rows = cursor.fetchall()
+        tam = len(rows)
+        tamStr = str(tam).rjust(5,"0")
+        resposta = "60S"+tamStr
+        if tam==0:
+            enviaResposta(resposta, c) 
+            conn.close()
+            return            
+        i = 0
+        for row in rows:
+            resposta = resposta + row[0]
+            i+=1
+            if i%50==0 or i==tam:
+                if i==tam:
+                    enviaResposta(resposta, c) 
+                    conn.close()
+                    return 
+                enviaRespostaSemFechar(resposta, c) 
+                resposta = "60"  
+                try:
+                    mensagemRec = c.recv(256)
+                    requisicao = descriptografa(mensagemRec, addr, c)
+                    if requisicao!="60"+cpf:
+                        resposta = "99REQUISIÇÃO INVÁLIDA (60B)"
+                        enviaResposta(resposta, c) 
+                        conn.close()
+                        return
+                except:
+                    c.close()
+                    conn.close()
+                    logging.info("Erro de time out 60 - provavelmente cliente não respondeu no prazo. Abandonando operação.")
+                    return                            
+                   
     return #não chega aqui, mas ...
       
 
@@ -3347,6 +3487,10 @@ MYSQL_ROOT_PASSWORD = os.getenv("MYSQL_ROOT_PASSWORD", "EXAMPLE")
 MYSQL_DATABASE = os.getenv("MYSQL_DATABASE", "databasenormal")
 MYSQL_USER = os.getenv("MYSQL_USER", "my_user")
 MYSQL_PASSWORD = os.getenv("MYSQL_PASSWORD", "mypass1234")
+CPF1 = os.getenv("CPF1", None)
+SENHADCCS = os.getenv("SENHADCCS", None)
+CPF2 = os.getenv("CPF2", None)
+CPF3 = os.getenv("CPF3", None)
 token = os.getenv("TOKEN", "ERRO")
 ambiente = os.getenv("AMBIENTE", "TESTE")
 
