@@ -2680,9 +2680,9 @@ def mostraSupervisorEspontaneidade(update, context): #exibe os TDPFs da equipe q
                     i+=1
     if msg!="":
         response_message = "Relação de TDPFs cuja recuperação da espontaneidade tributária ocorrerá em "+str(prazo[0])+" a "+str(prazo[1])+" dias:"+msg
-        response_message = limpaMarkdown(response_message)
     else:
-        response_message = "Não haverá recuperação da espontaneidade tributária para nenhum TDPF neste intervalo."        
+        response_message = "Não haverá recuperação da espontaneidade tributária para nenhum TDPF neste intervalo ou usuário não é supervisor."    
+    response_message = limpaMarkdown(response_message)            
     bot.send_message(userId, text=response_message, parse_mode= 'MarkdownV2')                          
     conn.close()
     mostraMenuPrincipal(update, context)  

@@ -175,12 +175,12 @@ def realizaCargaDados():
     selectCiencias = "Select * from Ciencias Where TDPF=%s" 
     insereCiencia = "Insert Into Ciencias (TDPF, Data, Documento) Values (%s, %s, %s)"
 
-    selectOperacoes = "Select Operacoes.Codigo, OperacoesFiscais.Operacao, PeriodoInicial, PeriodoFinal from Operacoes, OperacoesFiscais Where Operacoes.TDPF=%s and Operacoes.Operacao=OperacoesFiscais.Codigo"
-    insereOperacao = "Insert Into Operacoes (TDPF, Operacao, PeriodoInicial, PeriodoFinal) Values (%s, %s, %s, %s)"
+    selectOperacoes = "Select Operacoes.Codigo, OperacoesFiscais.Operacao, PeriodoInicial, PeriodoFinal, Tributos.Tributo from Operacoes, OperacoesFiscais, Tributos Where Operacoes.TDPF=%s and Operacoes.Operacao=OperacoesFiscais.Codigo and Operacoes.Tributo=Tributos.Codigo"
+    insereOperacao = "Insert Into Operacoes (TDPF, Operacao, PeriodoInicial, PeriodoFinal, Tributo) Values (%s, %s, %s, %s, %s)"
     apagaOperacao = "Delete from Operacoes Where Codigo=%s"
 
     selectOpFiscal = "Select Codigo from OperacoesFiscais Where Operacao=%s"
-    insertOpFiscal = "Insert Into OperacoesFiscais (Operacao, Descricao, Tributo, Valor) Values (%s, %s, %s, %s)"
+    insertOpFiscal = "Insert Into OperacoesFiscais (Operacao, Descricao, Valor) Values (%s, %s, %s)"
 
     selectTributo = "Select Codigo from Tributos Where Tributo=%s"
     insertTributo = "Insert Into Tributos (Tributo, Descricao) Values (%s, %s)"
@@ -376,9 +376,11 @@ def realizaCargaDados():
             codigoOperacao = regOperacao[0]
             perInicial = regOperacao[2]
             perFinal = regOperacao[3]
+            tributo = regOperacao[4]
+            operTrib = str(operacao).rjust(6, "0")+str(tributo).rjust(5, "0")
             dfOpAux = dfOp.loc[dfOp['Operação Fiscal Atual Código']==operacao]
             if dfOpAux.shape[0]>0: #operação existe no TDPF - temos que ver se há alguma divergência no período (aumentou ou diminuiu)
-                opExistentes.append(operacao)
+                opExistentes.append(operTrib)
                 menorMes = paraData(dfOpAux.loc[dfOpAux['Mês Início'].idxmin()]["Mês Início"])
                 maiorMes = paraData(dfOpAux.loc[dfOpAux['Mês Fim'].idxmax()]["Mês Fim"])
                 if maiorMes!=perFinal or menorMes!=perInicial:
@@ -390,12 +392,13 @@ def realizaCargaDados():
         for linha2 in range(dfOp.shape[0]):
             operacao = int(dfOp.iat[linha2, 8])
             valor = dfOp.iat[linha2, 11] #peso/valor da operação
-            if operacao in opExistentes: #operação já está na base
-                continue
-            opExistentes.append(operacao)
-            #não está na base - temos que incluí-la
-            #consultamos o tributo e o incluímos, se não existir
             tributo = int(dfOp.iat[linha2, 1])
+            operTrib = str(operacao).rjust(6, "0")+str(tributo).rjust(5, "0")
+            if operTrib in opExistentes: #operação/tributo já está na base
+                continue
+            opExistentes.append(operTrib)
+            #não está na base - temos que incluí-la
+            #consultamos o tributo e o incluímos, se não existir           
             cursor.execute(selectTributo, (tributo,))
             rowTributo = cursor.fetchone()
             if not rowTributo:
@@ -407,7 +410,7 @@ def realizaCargaDados():
             cursor.execute(selectOpFiscal, (operacao,))
             rowOperacao = cursor.fetchone()
             if not rowOperacao:
-                cursor.execute(insertOpFiscal, (operacao, dfOp.iat[linha2, 9].upper(), codTributo, float(valor)))
+                cursor.execute(insertOpFiscal, (operacao, dfOp.iat[linha2, 9].upper(), float(valor))) #tirei o tributo
                 cursor.execute(selectOpFiscal, (operacao,))
                 rowOperacao = cursor.fetchone()
             codOperacao = rowOperacao[0]
@@ -417,7 +420,7 @@ def realizaCargaDados():
             if dfOpAux.shape[0]>0:
                 perInicial = paraData(dfOpAux.loc[dfOpAux['Mês Início'].idxmin()]["Mês Início"])
                 perFinal = paraData(dfOpAux.loc[dfOpAux['Mês Fim'].idxmax()]["Mês Fim"])            
-            cursor.execute(insereOperacao, (chaveTdpf, codOperacao, perInicial, perFinal))
+            cursor.execute(insereOperacao, (chaveTdpf, codOperacao, perInicial, perFinal, codTributo)) #incluí o tributo
     if termina:
         return
     #atualizamos a tabela de supervisões de grupos/equipes fiscais (Supervisores)
