@@ -6078,3 +6078,5187 @@ Valor da Operação (Anexo Único): 1.00
 Multiplicador (art. 12): 0.4
 Parâmetros do Multiplicador: ['RFFPs/Improbidade: 0.0', 'Inaptidões: 0', 'Baixas: 0', 'Exclusão Simples: 0', 'Acompanhamento: 0.4']
 TOTAL DE PONTOS: 0324
+
+
+TDPF: 0120100202000612
+Qtde Operacoes: 2
+Qtde Anos: 1
+Porte: DEM
+Acompanhamento Comac: N
+Pontos do Tributo Principal (art. 10, I): 132
+Base Multiplicador (art. 10, II): 118
+Tributo Principal (código): 221
+Acréscimo (art. 10, § 2º): 0.0
+Operação Principal: 22121
+Valor da Operação (Anexo Único): 1.00
+Multiplicador (art. 12): 0.05
+Parâmetros do Multiplicador: ['RFFPs/Improbidade: 0.0', 'Inaptidões: 0', 'Baixas: 0', 'Exclusão Simples: 0', 'Qtde Operações: 0.05']
+TOTAL DE PONTOS: 0137
+
+
+TDPF: 0150100202000057
+Qtde Operacoes: 1
+Qtde Anos: 1
+Porte: DIF
+Acompanhamento Comac: S
+Pontos do Tributo Principal (art. 10, I): 247
+Base Multiplicador (art. 10, II): 194
+Tributo Principal (código): 221
+Acréscimo (art. 10, § 2º): 0.0
+Operação Principal: 20101
+Valor da Operação (Anexo Único): 1.00
+Multiplicador (art. 12): 0.4
+Parâmetros do Multiplicador: ['RFFPs/Improbidade: 0.0', 'Inaptidões: 0', 'Baixas: 0', 'Exclusão Simples: 0', 'Acompanhamento: 0.4']
+TOTAL DE PONTOS: 0324
+
+
+TDPF: 0120100202000546
+Qtde Operacoes: 4
+Qtde Anos: 1
+Porte: MED
+Acompanhamento Comac: N
+Pontos do Tributo Principal (art. 10, I): 177
+Base Multiplicador (art. 10, II): 158
+Tributo Principal (código): 3880
+Acréscimo (art. 10, § 2º): 0.4
+Operação Principal: 30120
+Valor da Operação (Anexo Único): 1.25
+Multiplicador (art. 12): 0.30000000000000004
+Parâmetros do Multiplicador: ['RFFPs/Improbidade: 0.0', 'Inaptidões: 0', 'Baixas: 0', 'Exclusão Simples: 0', 'Dilig Vinculadas: 0.2', 'Qtde Operações: 0.1', 'Qtde PER: 0']
+TOTAL DE PONTOS: 0357
+
+
+TDPF: 0120100202000546
+Qtde Operacoes: 4
+Qtde Anos: 1
+Porte: MED
+Acompanhamento Comac: N
+Pontos do Tributo Principal (art. 10, I): 177
+Base Multiplicador (art. 10, II): 158
+Tributo Principal (código): 3880
+Acréscimo (art. 10, § 2º): 0.4
+Operação Principal: 30120
+Valor da Operação (Anexo Único): 1.25
+Multiplicador (art. 12): 0.30000000000000004
+Parâmetros do Multiplicador: ['RFFPs/Improbidade: 0.0', 'Inaptidões: 0', 'Baixas: 0', 'Exclusão Simples: 0', 'Dilig Vinculadas: 0.2', 'Qtde Operações: 0.1', 'Qtde PER: 0']
+TOTAL DE PONTOS: 0357
+
+
+TDPF: 0120100202000612
+Qtde Operacoes: 2
+Qtde Anos: 1
+Porte: DEM
+Acompanhamento Comac: N
+Pontos do Tributo Principal (art. 10, I): 132
+Base Multiplicador (art. 10, II): 118
+Tributo Principal (código): 221
+Acréscimo (art. 10, § 2º): 0.0
+Operação Principal: 22121
+Valor da Operação (Anexo Único): 1.00
+Multiplicador (art. 12): 0.05
+Parâmetros do Multiplicador: ['RFFPs/Improbidade: 0.0', 'Inaptidões: 0', 'Baixas: 0', 'Exclusão Simples: 0', 'Qtde Operações: 0.05']
+TOTAL DE PONTOS: 0137
+
+
+TDPF: 0120100201900714
+Qtde Operacoes: 4
+Qtde Anos: 2
+Porte: MED
+Acompanhamento Comac: N
+Pontos do Tributo Principal (art. 10, I): 177
+Base Multiplicador (art. 10, II): 158
+Tributo Principal (código): 3880
+Acréscimo (art. 10, § 2º): 0.4
+Operação Principal: 20399
+Valor da Operação (Anexo Único): 1.00
+Multiplicador (art. 12): 0.2
+Parâmetros do Multiplicador: ['RFFPs/Improbidade: 0.0', 'Inaptidões: 0', 'Baixas: 0', 'Exclusão Simples: 0', 'Qtde Operações: 0.1', 'Qtde Anos: 0.1', 'Qtde PER: 0']
+TOTAL DE PONTOS: 0279
+
+
+TDPF: 0120100201900714
+Qtde Operacoes: 4
+Qtde Anos: 2
+Porte: MED
+Acompanhamento Comac: N
+Pontos do Tributo Principal (art. 10, I): 177
+Base Multiplicador (art. 10, II): 158
+Tributo Principal (código): 3880
+Acréscimo (art. 10, § 2º): 0.4
+Operação Principal: 20399
+Valor da Operação (Anexo Único): 1.00
+Multiplicador (art. 12): 0.2
+Parâmetros do Multiplicador: ['RFFPs/Improbidade: 0.0', 'Inaptidões: 0', 'Baixas: 0', 'Exclusão Simples: 0', 'Qtde Operações: 0.1', 'Qtde Anos: 0.1', 'Qtde PER: 0']
+TOTAL DE PONTOS: 0279
+
+
+TDPF: 0120100202000546
+Qtde Operacoes: 4
+Qtde Anos: 1
+Porte: MED
+Acompanhamento Comac: N
+Pontos do Tributo Principal (art. 10, I): 177
+Base Multiplicador (art. 10, II): 158
+Tributo Principal (código): 3880
+Acréscimo (art. 10, § 2º): 0.4
+Operação Principal: 30120
+Valor da Operação (Anexo Único): 1.25
+Multiplicador (art. 12): 0.30000000000000004
+Parâmetros do Multiplicador: ['RFFPs/Improbidade: 0.0', 'Inaptidões: 0', 'Baixas: 0', 'Exclusão Simples: 0', 'Dilig Vinculadas: 0.2', 'Qtde Operações: 0.1', 'Qtde PER: 0']
+TOTAL DE PONTOS: 0357
+
+
+TDPF: 0100100202000004
+Qtde Operacoes: 2
+Qtde Anos: 1
+Porte: DIF
+Acompanhamento Comac: N
+Pontos do Tributo Principal (art. 10, I): 247
+Base Multiplicador (art. 10, II): 194
+Tributo Principal (código): 221
+Acréscimo (art. 10, § 2º): 0.0
+Operação Principal: 20501
+Valor da Operação (Anexo Único): 1.00
+Multiplicador (art. 12): 0.05
+Parâmetros do Multiplicador: ['RFFPs/Improbidade: 0.0', 'Inaptidões: 0', 'Baixas: 0', 'Exclusão Simples: 0', 'Qtde Operações: 0.05']
+TOTAL DE PONTOS: 0256
+
+
+TDPF: 0100100202000064
+Qtde Operacoes: 2
+Qtde Anos: 3
+Porte: DIF
+Acompanhamento Comac: S
+Pontos do Tributo Principal (art. 10, I): 247
+Base Multiplicador (art. 10, II): 194
+Tributo Principal (código): 221
+Acréscimo (art. 10, § 2º): 0.0
+Operação Principal: 20652
+Valor da Operação (Anexo Único): 1.00
+Multiplicador (art. 12): 0.65
+Parâmetros do Multiplicador: ['RFFPs/Improbidade: 0.0', 'Inaptidões: 0', 'Baixas: 0', 'Exclusão Simples: 0', 'Acompanhamento: 0.4', 'Qtde Operações: 0.05', 'Qtde Anos: 0.2']
+TOTAL DE PONTOS: 0373
+
+
+TDPF: 0100100202000070
+Qtde Operacoes: 3
+Qtde Anos: 1
+Porte: DIF
+Acompanhamento Comac: S
+Pontos do Tributo Principal (art. 10, I): 247
+Base Multiplicador (art. 10, II): 194
+Tributo Principal (código): 221
+Acréscimo (art. 10, § 2º): 0.0
+Operação Principal: 20652
+Valor da Operação (Anexo Único): 1.00
+Multiplicador (art. 12): 0.5
+Parâmetros do Multiplicador: ['RFFPs/Improbidade: 0.0', 'Inaptidões: 0', 'Baixas: 0', 'Exclusão Simples: 0', 'Acompanhamento: 0.4', 'Qtde Operações: 0.1']
+TOTAL DE PONTOS: 0344
+
+
+TDPF: 0100100202000078
+Qtde Operacoes: 2
+Qtde Anos: 2
+Porte: DEM
+Acompanhamento Comac: N
+Pontos do Tributo Principal (art. 10, I): 132
+Base Multiplicador (art. 10, II): 118
+Tributo Principal (código): 694
+Acréscimo (art. 10, § 2º): 0.0
+Operação Principal: 30307
+Valor da Operação (Anexo Único): 0.75
+Multiplicador (art. 12): 0.15000000000000002
+Parâmetros do Multiplicador: ['RFFPs/Improbidade: 0.0', 'Inaptidões: 0', 'Baixas: 0', 'Exclusão Simples: 0', 'Qtde Operações: 0.05', 'Qtde Anos: 0.1']
+TOTAL DE PONTOS: 0116
+
+
+TDPF: 0100100202000110
+Qtde Operacoes: 3
+Qtde Anos: 3
+Porte: DIF
+Acompanhamento Comac: N
+Pontos do Tributo Principal (art. 10, I): 247
+Base Multiplicador (art. 10, II): 194
+Tributo Principal (código): 221
+Acréscimo (art. 10, § 2º): 0.4
+Operação Principal: 20209
+Valor da Operação (Anexo Único): 1.00
+Multiplicador (art. 12): 0.30000000000000004
+Parâmetros do Multiplicador: ['RFFPs/Improbidade: 0.0', 'Inaptidões: 0', 'Baixas: 0', 'Exclusão Simples: 0', 'Qtde Operações: 0.1', 'Qtde Anos: 0.2', 'Qtde PER: 0']
+TOTAL DE PONTOS: 0403
+
+
+TDPF: 0100100202000111
+Qtde Operacoes: 2
+Qtde Anos: 1
+Porte: DIF
+Acompanhamento Comac: S
+Pontos do Tributo Principal (art. 10, I): 247
+Base Multiplicador (art. 10, II): 194
+Tributo Principal (código): 221
+Acréscimo (art. 10, § 2º): 0.0
+Operação Principal: 20601
+Valor da Operação (Anexo Único): 1.00
+Multiplicador (art. 12): 0.45
+Parâmetros do Multiplicador: ['RFFPs/Improbidade: 0.0', 'Inaptidões: 0', 'Baixas: 0', 'Exclusão Simples: 0', 'Acompanhamento: 0.4', 'Qtde Operações: 0.05']
+TOTAL DE PONTOS: 0334
+
+
+TDPF: 0100100202000228
+Qtde Operacoes: 2
+Qtde Anos: 1
+Porte: MED
+Acompanhamento Comac: N
+Pontos do Tributo Principal (art. 10, I): 174
+Base Multiplicador (art. 10, II): 158
+Tributo Principal (código): 221
+Acréscimo (art. 10, § 2º): 0.4
+Operação Principal: 20224
+Valor da Operação (Anexo Único): 1.00
+Multiplicador (art. 12): 0.05
+Parâmetros do Multiplicador: ['RFFPs/Improbidade: 0.0', 'Inaptidões: 0', 'Baixas: 0', 'Exclusão Simples: 0', 'Qtde Operações: 0.05', 'Estabelec Previd: 0', 'CEI/CAEPF/Obra: 0', 'Prestadores: 0', 'Tomadores: 0']
+TOTAL DE PONTOS: 0251
+
+
+TDPF: 0100100202000229
+Qtde Operacoes: 4
+Qtde Anos: 2
+Porte: DIF
+Acompanhamento Comac: S
+Pontos do Tributo Principal (art. 10, I): 247
+Base Multiplicador (art. 10, II): 194
+Tributo Principal (código): 221
+Acréscimo (art. 10, § 2º): 0.0
+Operação Principal: 27211
+Valor da Operação (Anexo Único): 1.60
+Multiplicador (art. 12): 0.6
+Parâmetros do Multiplicador: ['RFFPs/Improbidade: 0.0', 'Inaptidões: 0', 'Baixas: 0', 'Exclusão Simples: 0', 'Acompanhamento: 0.4', 'Qtde Operações: 0.1', 'Qtde Anos: 0.1']
+TOTAL DE PONTOS: 0511
+
+
+TDPF: 0100100202000330
+Qtde Operacoes: 1
+Qtde Anos: 3
+Porte: DIF
+Acompanhamento Comac: S
+Pontos do Tributo Principal (art. 10, I): 210
+Base Multiplicador (art. 10, II): 194
+Tributo Principal (código): 3880
+Acréscimo (art. 10, § 2º): 0.0
+Operação Principal: 30167
+Valor da Operação (Anexo Único): 1.00
+Multiplicador (art. 12): 0.6000000000000001
+Parâmetros do Multiplicador: ['RFFPs/Improbidade: 0.0', 'Inaptidões: 0', 'Baixas: 0', 'Exclusão Simples: 0', 'Acompanhamento: 0.4', 'Qtde Anos: 0.2', 'Qtde PER: 0']
+TOTAL DE PONTOS: 0326
+
+
+TDPF: 0100100202000331
+Qtde Operacoes: 2
+Qtde Anos: 3
+Porte: MED
+Acompanhamento Comac: N
+Pontos do Tributo Principal (art. 10, I): 177
+Base Multiplicador (art. 10, II): 158
+Tributo Principal (código): 3880
+Acréscimo (art. 10, § 2º): 0.4
+Operação Principal: 10201
+Valor da Operação (Anexo Único): 1.00
+Multiplicador (art. 12): 0.25
+Parâmetros do Multiplicador: ['RFFPs/Improbidade: 0.0', 'Inaptidões: 0', 'Baixas: 0', 'Exclusão Simples: 0', 'Qtde Operações: 0.05', 'Qtde Anos: 0.2', 'Qtde PER: 0']
+TOTAL DE PONTOS: 0287
+
+
+TDPF: 0120100202000546
+Qtde Operacoes: 4
+Qtde Anos: 1
+Porte: MED
+Acompanhamento Comac: N
+Pontos do Tributo Principal (art. 10, I): 177
+Base Multiplicador (art. 10, II): 158
+Tributo Principal (código): 3880
+Acréscimo (art. 10, § 2º): 0.4
+Operação Principal: 30120
+Valor da Operação (Anexo Único): 1.25
+Multiplicador (art. 12): 0.30000000000000004
+Parâmetros do Multiplicador: ['RFFPs/Improbidade: 0.0', 'Inaptidões: 0', 'Baixas: 0', 'Exclusão Simples: 0', 'Dilig Vinculadas: 0.2', 'Qtde Operações: 0.1', 'Qtde PER: 0']
+TOTAL DE PONTOS: 0357
+
+
+TDPF: 0120100202000546
+Qtde Operacoes: 4
+Qtde Anos: 1
+Porte: MED
+Acompanhamento Comac: N
+Pontos do Tributo Principal (art. 10, I): 177
+Base Multiplicador (art. 10, II): 158
+Tributo Principal (código): 3880
+Acréscimo (art. 10, § 2º): 0.4
+Operação Principal: 30120
+Valor da Operação (Anexo Único): 1.25
+Multiplicador (art. 12): 0.30000000000000004
+Parâmetros do Multiplicador: ['RFFPs/Improbidade: 0.0', 'Inaptidões: 0', 'Baixas: 0', 'Exclusão Simples: 0', 'Dilig Vinculadas: 0.2', 'Qtde Operações: 0.1', 'Qtde PER: 0']
+TOTAL DE PONTOS: 0357
+
+
+TDPF: 0120100202000612
+Qtde Operacoes: 2
+Qtde Anos: 1
+Porte: DEM
+Acompanhamento Comac: N
+Pontos do Tributo Principal (art. 10, I): 132
+Base Multiplicador (art. 10, II): 118
+Tributo Principal (código): 221
+Acréscimo (art. 10, § 2º): 0.0
+Operação Principal: 22121
+Valor da Operação (Anexo Único): 1.00
+Multiplicador (art. 12): 0.05
+Parâmetros do Multiplicador: ['RFFPs/Improbidade: 0.0', 'Inaptidões: 0', 'Baixas: 0', 'Exclusão Simples: 0', 'Qtde Operações: 0.05']
+TOTAL DE PONTOS: 0137
+
+
+TDPF: 0120100202000613
+Qtde Operacoes: 2
+Qtde Anos: 1
+Porte: MED
+Acompanhamento Comac: N
+Pontos do Tributo Principal (art. 10, I): 174
+Base Multiplicador (art. 10, II): 158
+Tributo Principal (código): 221
+Acréscimo (art. 10, § 2º): 0.0
+Operação Principal: 22121
+Valor da Operação (Anexo Único): 1.00
+Multiplicador (art. 12): 0.05
+Parâmetros do Multiplicador: ['RFFPs/Improbidade: 0.0', 'Inaptidões: 0', 'Baixas: 0', 'Exclusão Simples: 0', 'Qtde Operações: 0.05']
+TOTAL DE PONTOS: 0181
+
+
+TDPF: 0150100202000057
+Qtde Operacoes: 1
+Qtde Anos: 1
+Porte: DIF
+Acompanhamento Comac: S
+Pontos do Tributo Principal (art. 10, I): 247
+Base Multiplicador (art. 10, II): 194
+Tributo Principal (código): 221
+Acréscimo (art. 10, § 2º): 0.0
+Operação Principal: 20101
+Valor da Operação (Anexo Único): 1.00
+Multiplicador (art. 12): 0.4
+Parâmetros do Multiplicador: ['RFFPs/Improbidade: 0.0', 'Inaptidões: 0', 'Baixas: 0', 'Exclusão Simples: 0', 'Acompanhamento: 0.4']
+TOTAL DE PONTOS: 0324
+
+
+TDPF: 1010200201900255
+Qtde Operacoes: 5
+Qtde Anos: 8
+Porte: DIF
+Acompanhamento Comac: N
+Pontos do Tributo Principal (art. 10, I): 247
+Base Multiplicador (art. 10, II): 194
+Tributo Principal (código): 694
+Acréscimo (art. 10, § 2º): 0.4
+Operação Principal: 20303
+Valor da Operação (Anexo Único): 1.60
+Multiplicador (art. 12): 0.30000000000000004
+Parâmetros do Multiplicador: ['RFFPs/Improbidade: 0.0', 'Inaptidões: 0', 'Baixas: 0', 'Exclusão Simples: 0', 'Qtde Operações: 0.1', 'Qtde Anos: 0.2', 'Qtde PER: 0']
+TOTAL DE PONTOS: 0611
+
+
+TDPF: 1010200201900303
+Qtde Operacoes: 1
+Qtde Anos: 2
+Porte: DEM
+Acompanhamento Comac: N
+Pontos do Tributo Principal (art. 10, I): 75
+Base Multiplicador (art. 10, II): 68
+Tributo Principal (código): 210
+Acréscimo (art. 10, § 2º): 0.0
+Operação Principal: 40102
+Valor da Operação (Anexo Único): 1.00
+Multiplicador (art. 12): 0.1
+Parâmetros do Multiplicador: ['RFFPs/Improbidade: 0.0', 'Inaptidões: 0', 'Baixas: 0', 'Exclusão Simples: 0', 'Qtde Anos: 0.1']
+TOTAL DE PONTOS: 0081
+
+
+TDPF: 1010200202000020
+Qtde Operacoes: 4
+Qtde Anos: 3
+Porte: DEM
+Acompanhamento Comac: N
+Pontos do Tributo Principal (art. 10, I): 137
+Base Multiplicador (art. 10, II): 118
+Tributo Principal (código): 3880
+Acréscimo (art. 10, § 2º): 0.4
+Operação Principal: 30101
+Valor da Operação (Anexo Único): 1.00
+Multiplicador (art. 12): 0.30000000000000004
+Parâmetros do Multiplicador: ['RFFPs/Improbidade: 0.0', 'Inaptidões: 0', 'Baixas: 0', 'Exclusão Simples: 0', 'Qtde Operações: 0.1', 'Qtde Anos: 0.2', 'Qtde PER: 0']
+TOTAL DE PONTOS: 0227
+
+
+TDPF: 1000100201902372
+Qtde Operacoes: 1
+Qtde Anos: 2
+Porte: MED
+Acompanhamento Comac: N
+Pontos do Tributo Principal (art. 10, I): 148
+Base Multiplicador (art. 10, II): 158
+Tributo Principal (código): 1011
+Acréscimo (art. 10, § 2º): 0.0
+Operação Principal: 10201
+Valor da Operação (Anexo Único): 1.00
+Multiplicador (art. 12): 0.1
+Parâmetros do Multiplicador: ['RFFPs/Improbidade: 0.0', 'Inaptidões: 0', 'Baixas: 0', 'Exclusão Simples: 0', 'Qtde Anos: 0.1', 'Qtde PER: 0']
+TOTAL DE PONTOS: 0163
+
+
+TDPF: 1000100202002334
+Qtde Operacoes: 3
+Qtde Anos: 2
+Porte: DIF
+Acompanhamento Comac: N
+Pontos do Tributo Principal (art. 10, I): 247
+Base Multiplicador (art. 10, II): 194
+Tributo Principal (código): 221
+Acréscimo (art. 10, § 2º): 0.0
+Operação Principal: 20551
+Valor da Operação (Anexo Único): 1.25
+Multiplicador (art. 12): 0.2
+Parâmetros do Multiplicador: ['RFFPs/Improbidade: 0.0', 'Inaptidões: 0', 'Baixas: 0', 'Exclusão Simples: 0', 'Qtde Operações: 0.1', 'Qtde Anos: 0.1']
+TOTAL DE PONTOS: 0347
+
+
+TDPF: 1000100202100002
+Qtde Operacoes: 1
+Qtde Anos: 2
+Porte: DEM
+Acompanhamento Comac: N
+Pontos do Tributo Principal (art. 10, I): 75
+Base Multiplicador (art. 10, II): 68
+Tributo Principal (código): 210
+Acréscimo (art. 10, § 2º): 0.0
+Operação Principal: 40121
+Valor da Operação (Anexo Único): 1.25
+Multiplicador (art. 12): 0.1
+Parâmetros do Multiplicador: ['RFFPs/Improbidade: 0.0', 'Inaptidões: 0', 'Baixas: 0', 'Exclusão Simples: 0', 'Qtde Anos: 0.1']
+TOTAL DE PONTOS: 0100
+
+
+TDPF: 1010100202000173
+Qtde Operacoes: 4
+Qtde Anos: 2
+Porte: DIF
+Acompanhamento Comac: N
+Pontos do Tributo Principal (art. 10, I): 247
+Base Multiplicador (art. 10, II): 194
+Tributo Principal (código): 221
+Acréscimo (art. 10, § 2º): 0.0
+Operação Principal: 20501
+Valor da Operação (Anexo Único): 1.00
+Multiplicador (art. 12): 0.2
+Parâmetros do Multiplicador: ['RFFPs/Improbidade: 0.0', 'Inaptidões: 0', 'Baixas: 0', 'Exclusão Simples: 0', 'Qtde Operações: 0.1', 'Qtde Anos: 0.1']
+TOTAL DE PONTOS: 0285
+
+
+TDPF: 1010100202000182
+Qtde Operacoes: 1
+Qtde Anos: 1
+Porte: DEM
+Acompanhamento Comac: N
+Pontos do Tributo Principal (art. 10, I): 75
+Base Multiplicador (art. 10, II): 68
+Tributo Principal (código): 210
+Acréscimo (art. 10, § 2º): 0.0
+Operação Principal: 40111
+Valor da Operação (Anexo Único): 1.25
+Multiplicador (art. 12): 0.0
+Parâmetros do Multiplicador: ['RFFPs/Improbidade: 0.0', 'Inaptidões: 0', 'Baixas: 0', 'Exclusão Simples: 0']
+TOTAL DE PONTOS: 0093
+
+
+TDPF: 1010100202000186
+Qtde Operacoes: 1
+Qtde Anos: 2
+Porte: DEM
+Acompanhamento Comac: N
+Pontos do Tributo Principal (art. 10, I): 75
+Base Multiplicador (art. 10, II): 68
+Tributo Principal (código): 210
+Acréscimo (art. 10, § 2º): 0.0
+Operação Principal: 40121
+Valor da Operação (Anexo Único): 1.25
+Multiplicador (art. 12): 0.1
+Parâmetros do Multiplicador: ['RFFPs/Improbidade: 0.0', 'Inaptidões: 0', 'Baixas: 0', 'Exclusão Simples: 0', 'Qtde Anos: 0.1']
+TOTAL DE PONTOS: 0100
+
+
+TDPF: 1010100202000237
+Qtde Operacoes: 1
+Qtde Anos: 1
+Porte: DEM
+Acompanhamento Comac: N
+Pontos do Tributo Principal (art. 10, I): 75
+Base Multiplicador (art. 10, II): 68
+Tributo Principal (código): 210
+Acréscimo (art. 10, § 2º): 0.0
+Operação Principal: 40111
+Valor da Operação (Anexo Único): 1.25
+Multiplicador (art. 12): 0.0
+Parâmetros do Multiplicador: ['RFFPs/Improbidade: 0.0', 'Inaptidões: 0', 'Baixas: 0', 'Exclusão Simples: 0']
+TOTAL DE PONTOS: 0093
+
+
+TDPF: 1010100202000238
+Qtde Operacoes: 2
+Qtde Anos: 1
+Porte: DIF
+Acompanhamento Comac: N
+Pontos do Tributo Principal (art. 10, I): 105
+Base Multiplicador (art. 10, II): 85
+Tributo Principal (código): 210
+Acréscimo (art. 10, § 2º): 0.0
+Operação Principal: 91232
+Valor da Operação (Anexo Único): 1.00
+Multiplicador (art. 12): 0.05
+Parâmetros do Multiplicador: ['RFFPs/Improbidade: 0.0', 'Inaptidões: 0', 'Baixas: 0', 'Exclusão Simples: 0', 'Qtde Operações: 0.05']
+TOTAL DE PONTOS: 0109
+
+
+TDPF: 1010100202000258
+Qtde Operacoes: 1
+Qtde Anos: 3
+Porte: DEM
+Acompanhamento Comac: N
+Pontos do Tributo Principal (art. 10, I): 132
+Base Multiplicador (art. 10, II): 118
+Tributo Principal (código): 221
+Acréscimo (art. 10, § 2º): 0.0
+Operação Principal: 21106
+Valor da Operação (Anexo Único): 1.00
+Multiplicador (art. 12): 0.2
+Parâmetros do Multiplicador: ['RFFPs/Improbidade: 0.0', 'Inaptidões: 0', 'Baixas: 0', 'Exclusão Simples: 0', 'Qtde Anos: 0.2']
+TOTAL DE PONTOS: 0155
+
+
+TDPF: 1010100202000267
+Qtde Operacoes: 1
+Qtde Anos: 2
+Porte: DIF
+Acompanhamento Comac: N
+Pontos do Tributo Principal (art. 10, I): 105
+Base Multiplicador (art. 10, II): 85
+Tributo Principal (código): 210
+Acréscimo (art. 10, § 2º): 0.0
+Operação Principal: 40302
+Valor da Operação (Anexo Único): 1.25
+Multiplicador (art. 12): 0.1
+Parâmetros do Multiplicador: ['RFFPs/Improbidade: 0.0', 'Inaptidões: 0', 'Baixas: 0', 'Exclusão Simples: 0', 'Qtde Anos: 0.1']
+TOTAL DE PONTOS: 0139
+
+
+TDPF: 1010100202000271
+Qtde Operacoes: 3
+Qtde Anos: 2
+Porte: DEM
+Acompanhamento Comac: N
+Pontos do Tributo Principal (art. 10, I): 75
+Base Multiplicador (art. 10, II): 68
+Tributo Principal (código): 210
+Acréscimo (art. 10, § 2º): 0.0
+Operação Principal: 40302
+Valor da Operação (Anexo Único): 1.25
+Multiplicador (art. 12): 0.2
+Parâmetros do Multiplicador: ['RFFPs/Improbidade: 0.0', 'Inaptidões: 0', 'Baixas: 0', 'Exclusão Simples: 0', 'Qtde Operações: 0.1', 'Qtde Anos: 0.1']
+TOTAL DE PONTOS: 0107
+
+
+TDPF: 1010100202000273
+Qtde Operacoes: 1
+Qtde Anos: 1
+Porte: DEM
+Acompanhamento Comac: N
+Pontos do Tributo Principal (art. 10, I): 75
+Base Multiplicador (art. 10, II): 68
+Tributo Principal (código): 210
+Acréscimo (art. 10, § 2º): 0.0
+Operação Principal: 40111
+Valor da Operação (Anexo Único): 1.25
+Multiplicador (art. 12): 0.0
+Parâmetros do Multiplicador: ['RFFPs/Improbidade: 0.0', 'Inaptidões: 0', 'Baixas: 0', 'Exclusão Simples: 0']
+TOTAL DE PONTOS: 0093
+
+
+TDPF: 1010100202000275
+Qtde Operacoes: 3
+Qtde Anos: 3
+Porte: DEM
+Acompanhamento Comac: N
+Pontos do Tributo Principal (art. 10, I): 75
+Base Multiplicador (art. 10, II): 68
+Tributo Principal (código): 210
+Acréscimo (art. 10, § 2º): 0.0
+Operação Principal: 40302
+Valor da Operação (Anexo Único): 1.25
+Multiplicador (art. 12): 0.30000000000000004
+Parâmetros do Multiplicador: ['RFFPs/Improbidade: 0.0', 'Inaptidões: 0', 'Baixas: 0', 'Exclusão Simples: 0', 'Qtde Operações: 0.1', 'Qtde Anos: 0.2']
+TOTAL DE PONTOS: 0114
+
+
+TDPF: 1010100202000294
+Qtde Operacoes: 1
+Qtde Anos: 2
+Porte: DIF
+Acompanhamento Comac: S
+Pontos do Tributo Principal (art. 10, I): 105
+Base Multiplicador (art. 10, II): 85
+Tributo Principal (código): 210
+Acréscimo (art. 10, § 2º): 0.0
+Operação Principal: 40101
+Valor da Operação (Anexo Único): 1.00
+Multiplicador (art. 12): 1.5
+Parâmetros do Multiplicador: ['RFFPs/Improbidade: 0.0', 'Inaptidões: 0', 'Baixas: 0', 'Exclusão Simples: 0', 'Acompanhamento: 1.4', 'Qtde Anos: 0.1']
+TOTAL DE PONTOS: 0232
+
+
+TDPF: 1010100202000423
+Qtde Operacoes: 1
+Qtde Anos: 1
+Porte: DEM
+Acompanhamento Comac: N
+Pontos do Tributo Principal (art. 10, I): 111
+Base Multiplicador (art. 10, II): 118
+Tributo Principal (código): 2141
+Acréscimo (art. 10, § 2º): 0.0
+Operação Principal: 87602
+Valor da Operação (Anexo Único): 1.00
+Multiplicador (art. 12): 0.0
+Parâmetros do Multiplicador: ['RFFPs/Improbidade: 0.0', 'Inaptidões: 0', 'Baixas: 0', 'Exclusão Simples: 0', 'Estabelec Previd: 0', 'CEI/CAEPF/Obra: 0', 'Prestadores: 0', 'Tomadores: 0']
+TOTAL DE PONTOS: 0111
+
+
+TDPF: 1010100202100004
+Qtde Operacoes: 1
+Qtde Anos: 1
+Porte: DEM
+Acompanhamento Comac: N
+Pontos do Tributo Principal (art. 10, I): 75
+Base Multiplicador (art. 10, II): 68
+Tributo Principal (código): 210
+Acréscimo (art. 10, § 2º): 0.0
+Operação Principal: 40102
+Valor da Operação (Anexo Único): 1.00
+Multiplicador (art. 12): 0.0
+Parâmetros do Multiplicador: ['RFFPs/Improbidade: 0.0', 'Inaptidões: 0', 'Baixas: 0', 'Exclusão Simples: 0']
+TOTAL DE PONTOS: 0075
+
+
+TDPF: 1010100202100010
+Qtde Operacoes: 1
+Qtde Anos: 1
+Porte: DEM
+Acompanhamento Comac: N
+Pontos do Tributo Principal (art. 10, I): 75
+Base Multiplicador (art. 10, II): 68
+Tributo Principal (código): 210
+Acréscimo (art. 10, § 2º): 0.0
+Operação Principal: 40301
+Valor da Operação (Anexo Único): 1.00
+Multiplicador (art. 12): 0.0
+Parâmetros do Multiplicador: ['RFFPs/Improbidade: 0.0', 'Inaptidões: 0', 'Baixas: 0', 'Exclusão Simples: 0']
+TOTAL DE PONTOS: 0075
+
+
+TDPF: 1010100202100038
+Qtde Operacoes: 1
+Qtde Anos: 1
+Porte: DEM
+Acompanhamento Comac: N
+Pontos do Tributo Principal (art. 10, I): 75
+Base Multiplicador (art. 10, II): 68
+Tributo Principal (código): 210
+Acréscimo (art. 10, § 2º): 0.0
+Operação Principal: 40121
+Valor da Operação (Anexo Único): 1.25
+Multiplicador (art. 12): 0.0
+Parâmetros do Multiplicador: ['RFFPs/Improbidade: 0.0', 'Inaptidões: 0', 'Baixas: 0', 'Exclusão Simples: 0']
+TOTAL DE PONTOS: 0093
+
+
+TDPF: 1010200202000044
+Qtde Operacoes: 2
+Qtde Anos: 1
+Porte: DEM
+Acompanhamento Comac: N
+Pontos do Tributo Principal (art. 10, I): 132
+Base Multiplicador (art. 10, II): 118
+Tributo Principal (código): 694
+Acréscimo (art. 10, § 2º): 0.0
+Operação Principal: 21106
+Valor da Operação (Anexo Único): 1.00
+Multiplicador (art. 12): 0.05
+Parâmetros do Multiplicador: ['RFFPs/Improbidade: 0.0', 'Inaptidões: 0', 'Baixas: 0', 'Exclusão Simples: 0', 'Qtde Operações: 0.05']
+TOTAL DE PONTOS: 0137
+
+
+TDPF: 1010200202000071
+Qtde Operacoes: 3
+Qtde Anos: 2
+Porte: MED
+Acompanhamento Comac: N
+Pontos do Tributo Principal (art. 10, I): 174
+Base Multiplicador (art. 10, II): 158
+Tributo Principal (código): 221
+Acréscimo (art. 10, § 2º): 0.0
+Operação Principal: 20501
+Valor da Operação (Anexo Único): 1.00
+Multiplicador (art. 12): 0.2
+Parâmetros do Multiplicador: ['RFFPs/Improbidade: 0.0', 'Inaptidões: 0', 'Baixas: 0', 'Exclusão Simples: 0', 'Qtde Operações: 0.1', 'Qtde Anos: 0.1']
+TOTAL DE PONTOS: 0205
+
+
+TDPF: 1010200202000075
+Qtde Operacoes: 2
+Qtde Anos: 1
+Porte: DEM
+Acompanhamento Comac: N
+Pontos do Tributo Principal (art. 10, I): 132
+Base Multiplicador (art. 10, II): 118
+Tributo Principal (código): 694
+Acréscimo (art. 10, § 2º): 0.0
+Operação Principal: 21106
+Valor da Operação (Anexo Único): 1.00
+Multiplicador (art. 12): 0.05
+Parâmetros do Multiplicador: ['RFFPs/Improbidade: 0.0', 'Inaptidões: 0', 'Baixas: 0', 'Exclusão Simples: 0', 'Qtde Operações: 0.05']
+TOTAL DE PONTOS: 0137
+
+
+TDPF: 1010200202000078
+Qtde Operacoes: 2
+Qtde Anos: 1
+Porte: DEM
+Acompanhamento Comac: N
+Pontos do Tributo Principal (art. 10, I): 132
+Base Multiplicador (art. 10, II): 118
+Tributo Principal (código): 694
+Acréscimo (art. 10, § 2º): 0.0
+Operação Principal: 21106
+Valor da Operação (Anexo Único): 1.00
+Multiplicador (art. 12): 0.05
+Parâmetros do Multiplicador: ['RFFPs/Improbidade: 0.0', 'Inaptidões: 0', 'Baixas: 0', 'Exclusão Simples: 0', 'Qtde Operações: 0.05']
+TOTAL DE PONTOS: 0137
+
+
+TDPF: 1010200202000079
+Qtde Operacoes: 2
+Qtde Anos: 1
+Porte: DEM
+Acompanhamento Comac: N
+Pontos do Tributo Principal (art. 10, I): 132
+Base Multiplicador (art. 10, II): 118
+Tributo Principal (código): 694
+Acréscimo (art. 10, § 2º): 0.0
+Operação Principal: 21106
+Valor da Operação (Anexo Único): 1.00
+Multiplicador (art. 12): 0.05
+Parâmetros do Multiplicador: ['RFFPs/Improbidade: 0.0', 'Inaptidões: 0', 'Baixas: 0', 'Exclusão Simples: 0', 'Qtde Operações: 0.05']
+TOTAL DE PONTOS: 0137
+
+
+TDPF: 1010200202000118
+Qtde Operacoes: 1
+Qtde Anos: 2
+Porte: DEM
+Acompanhamento Comac: N
+Pontos do Tributo Principal (art. 10, I): 87
+Base Multiplicador (art. 10, II): 118
+Tributo Principal (código): 238
+Acréscimo (art. 10, § 2º): 0.0
+Operação Principal: 50151
+Valor da Operação (Anexo Único): 1.00
+Multiplicador (art. 12): 0.1
+Parâmetros do Multiplicador: ['RFFPs/Improbidade: 0.0', 'Inaptidões: 0', 'Baixas: 0', 'Exclusão Simples: 0', 'Qtde Anos: 0.1']
+TOTAL DE PONTOS: 0098
+
+
+TDPF: 1010200202000121
+Qtde Operacoes: 3
+Qtde Anos: 2
+Porte: DEM
+Acompanhamento Comac: N
+Pontos do Tributo Principal (art. 10, I): 137
+Base Multiplicador (art. 10, II): 118
+Tributo Principal (código): 3880
+Acréscimo (art. 10, § 2º): 0.4
+Operação Principal: 30307
+Valor da Operação (Anexo Único): 0.75
+Multiplicador (art. 12): 0.2
+Parâmetros do Multiplicador: ['RFFPs/Improbidade: 0.0', 'Inaptidões: 0', 'Baixas: 0', 'Exclusão Simples: 0', 'Qtde Operações: 0.1', 'Qtde Anos: 0.1', 'Qtde PER: 0']
+TOTAL DE PONTOS: 0167
+
+
+TDPF: 1010300201900980
+Qtde Operacoes: 2
+Qtde Anos: 3
+Porte: DEM
+Acompanhamento Comac: N
+Pontos do Tributo Principal (art. 10, I): 111
+Base Multiplicador (art. 10, II): 118
+Tributo Principal (código): 2141
+Acréscimo (art. 10, § 2º): 0.0
+Operação Principal: 86701
+Valor da Operação (Anexo Único): 1.00
+Multiplicador (art. 12): 0.25
+Parâmetros do Multiplicador: ['RFFPs/Improbidade: 0.0', 'Inaptidões: 0', 'Baixas: 0', 'Exclusão Simples: 0', 'Qtde Operações: 0.05', 'Qtde Anos: 0.2', 'Estabelec Previd: 0', 'CEI/CAEPF/Obra: 0', 'Prestadores: 0', 'Tomadores: 0']
+TOTAL DE PONTOS: 0140
+
+
+TDPF: 1010300202000141
+Qtde Operacoes: 1
+Qtde Anos: 4
+Porte: DEM
+Acompanhamento Comac: N
+Pontos do Tributo Principal (art. 10, I): 132
+Base Multiplicador (art. 10, II): 118
+Tributo Principal (código): 221
+Acréscimo (art. 10, § 2º): 0.0
+Operação Principal: 20449
+Valor da Operação (Anexo Único): 1.00
+Multiplicador (art. 12): 0.2
+Parâmetros do Multiplicador: ['RFFPs/Improbidade: 0.0', 'Inaptidões: 0', 'Baixas: 0', 'Exclusão Simples: 0', 'Qtde Anos: 0.2']
+TOTAL DE PONTOS: 0155
+
+
+TDPF: 1010300202000142
+Qtde Operacoes: 1
+Qtde Anos: 4
+Porte: MED
+Acompanhamento Comac: N
+Pontos do Tributo Principal (art. 10, I): 174
+Base Multiplicador (art. 10, II): 158
+Tributo Principal (código): 221
+Acréscimo (art. 10, § 2º): 0.0
+Operação Principal: 20449
+Valor da Operação (Anexo Único): 1.00
+Multiplicador (art. 12): 0.2
+Parâmetros do Multiplicador: ['RFFPs/Improbidade: 0.0', 'Inaptidões: 0', 'Baixas: 0', 'Exclusão Simples: 0', 'Qtde Anos: 0.2']
+TOTAL DE PONTOS: 0205
+
+
+TDPF: 1010300202000178
+Qtde Operacoes: 2
+Qtde Anos: 2
+Porte: DEM
+Acompanhamento Comac: N
+Pontos do Tributo Principal (art. 10, I): 132
+Base Multiplicador (art. 10, II): 118
+Tributo Principal (código): 694
+Acréscimo (art. 10, § 2º): 0.0
+Operação Principal: 21106
+Valor da Operação (Anexo Único): 1.00
+Multiplicador (art. 12): 0.15000000000000002
+Parâmetros do Multiplicador: ['RFFPs/Improbidade: 0.0', 'Inaptidões: 0', 'Baixas: 0', 'Exclusão Simples: 0', 'Qtde Operações: 0.05', 'Qtde Anos: 0.1']
+TOTAL DE PONTOS: 0149
+
+
+TDPF: 1010300202000192
+Qtde Operacoes: 3
+Qtde Anos: 4
+Porte: DEM
+Acompanhamento Comac: N
+Pontos do Tributo Principal (art. 10, I): 137
+Base Multiplicador (art. 10, II): 118
+Tributo Principal (código): 3880
+Acréscimo (art. 10, § 2º): 0.4
+Operação Principal: 30101
+Valor da Operação (Anexo Único): 1.00
+Multiplicador (art. 12): 0.30000000000000004
+Parâmetros do Multiplicador: ['RFFPs/Improbidade: 0.0', 'Inaptidões: 0', 'Baixas: 0', 'Exclusão Simples: 0', 'Qtde Operações: 0.1', 'Qtde Anos: 0.2', 'Qtde PER: 0']
+TOTAL DE PONTOS: 0227
+
+
+TDPF: 1010300202000219
+Qtde Operacoes: 1
+Qtde Anos: 3
+Porte: DIF
+Acompanhamento Comac: S
+Pontos do Tributo Principal (art. 10, I): 247
+Base Multiplicador (art. 10, II): 194
+Tributo Principal (código): 221
+Acréscimo (art. 10, § 2º): 0.0
+Operação Principal: 20303
+Valor da Operação (Anexo Único): 1.60
+Multiplicador (art. 12): 0.6000000000000001
+Parâmetros do Multiplicador: ['RFFPs/Improbidade: 0.0', 'Inaptidões: 0', 'Baixas: 0', 'Exclusão Simples: 0', 'Acompanhamento: 0.4', 'Qtde Anos: 0.2']
+TOTAL DE PONTOS: 0511
+
+
+TDPF: 1010600202000215
+Qtde Operacoes: 1
+Qtde Anos: 3
+Porte: DEM
+Acompanhamento Comac: N
+Pontos do Tributo Principal (art. 10, I): 111
+Base Multiplicador (art. 10, II): 118
+Tributo Principal (código): 2141
+Acréscimo (art. 10, § 2º): 0.0
+Operação Principal: 86301
+Valor da Operação (Anexo Único): 1.00
+Multiplicador (art. 12): 0.2
+Parâmetros do Multiplicador: ['RFFPs/Improbidade: 0.0', 'Inaptidões: 0', 'Baixas: 0', 'Exclusão Simples: 0', 'Qtde Anos: 0.2', 'Estabelec Previd: 0', 'CEI/CAEPF/Obra: 0', 'Prestadores: 0', 'Tomadores: 0']
+TOTAL DE PONTOS: 0134
+
+
+TDPF: 1010600202000279
+Qtde Operacoes: 2
+Qtde Anos: 3
+Porte: MED
+Acompanhamento Comac: N
+Pontos do Tributo Principal (art. 10, I): 131
+Base Multiplicador (art. 10, II): 158
+Tributo Principal (código): 2141
+Acréscimo (art. 10, § 2º): 0.0
+Operação Principal: 86701
+Valor da Operação (Anexo Único): 1.00
+Multiplicador (art. 12): 0.25
+Parâmetros do Multiplicador: ['RFFPs/Improbidade: 0.0', 'Inaptidões: 0', 'Baixas: 0', 'Exclusão Simples: 0', 'Qtde Operações: 0.05', 'Qtde Anos: 0.2', 'Estabelec Previd: 0', 'CEI/CAEPF/Obra: 0', 'Prestadores: 0', 'Tomadores: 0']
+TOTAL DE PONTOS: 0170
+
+
+TDPF: 1010600202000319
+Qtde Operacoes: 2
+Qtde Anos: 2
+Porte: DEM
+Acompanhamento Comac: N
+Pontos do Tributo Principal (art. 10, I): 111
+Base Multiplicador (art. 10, II): 118
+Tributo Principal (código): 2141
+Acréscimo (art. 10, § 2º): 0.0
+Operação Principal: 86201
+Valor da Operação (Anexo Único): 1.00
+Multiplicador (art. 12): 0.15000000000000002
+Parâmetros do Multiplicador: ['RFFPs/Improbidade: 0.0', 'Inaptidões: 0', 'Baixas: 0', 'Exclusão Simples: 0', 'Qtde Operações: 0.05', 'Qtde Anos: 0.1', 'Estabelec Previd: 0', 'CEI/CAEPF/Obra: 0', 'Prestadores: 0', 'Tomadores: 0']
+TOTAL DE PONTOS: 0128
+
+
+TDPF: 1010600202000336
+Qtde Operacoes: 2
+Qtde Anos: 2
+Porte: DEM
+Acompanhamento Comac: N
+Pontos do Tributo Principal (art. 10, I): 111
+Base Multiplicador (art. 10, II): 118
+Tributo Principal (código): 2141
+Acréscimo (art. 10, § 2º): 0.0
+Operação Principal: 86201
+Valor da Operação (Anexo Único): 1.00
+Multiplicador (art. 12): 0.15000000000000002
+Parâmetros do Multiplicador: ['RFFPs/Improbidade: 0.0', 'Inaptidões: 0', 'Baixas: 0', 'Exclusão Simples: 0', 'Qtde Operações: 0.05', 'Qtde Anos: 0.1', 'Estabelec Previd: 0', 'CEI/CAEPF/Obra: 0', 'Prestadores: 0', 'Tomadores: 0']
+TOTAL DE PONTOS: 0128
+
+
+TDPF: 1010600202000426
+Qtde Operacoes: 3
+Qtde Anos: 2
+Porte: MED
+Acompanhamento Comac: N
+Pontos do Tributo Principal (art. 10, I): 131
+Base Multiplicador (art. 10, II): 158
+Tributo Principal (código): 2141
+Acréscimo (art. 10, § 2º): 0.0
+Operação Principal: 86201
+Valor da Operação (Anexo Único): 1.00
+Multiplicador (art. 12): 0.2
+Parâmetros do Multiplicador: ['RFFPs/Improbidade: 0.0', 'Inaptidões: 0', 'Baixas: 0', 'Exclusão Simples: 0', 'Qtde Operações: 0.1', 'Qtde Anos: 0.1', 'Estabelec Previd: 0', 'CEI/CAEPF/Obra: 0', 'Prestadores: 0', 'Tomadores: 0']
+TOTAL DE PONTOS: 0162
+
+
+TDPF: 1010600202000432
+Qtde Operacoes: 1
+Qtde Anos: 1
+Porte: DIF
+Acompanhamento Comac: S
+Pontos do Tributo Principal (art. 10, I): 159
+Base Multiplicador (art. 10, II): 194
+Tributo Principal (código): 1011
+Acréscimo (art. 10, § 2º): 0.0
+Operação Principal: 10201
+Valor da Operação (Anexo Único): 1.00
+Multiplicador (art. 12): 0.4
+Parâmetros do Multiplicador: ['RFFPs/Improbidade: 0.0', 'Inaptidões: 0', 'Baixas: 0', 'Exclusão Simples: 0', 'Acompanhamento: 0.4', 'Qtde PER: 0']
+TOTAL DE PONTOS: 0236
+
+
+TDPF: 1010600202100031
+Qtde Operacoes: 1
+Qtde Anos: 2
+Porte: MED
+Acompanhamento Comac: N
+Pontos do Tributo Principal (art. 10, I): 148
+Base Multiplicador (art. 10, II): 158
+Tributo Principal (código): 1011
+Acréscimo (art. 10, § 2º): 0.0
+Operação Principal: 10201
+Valor da Operação (Anexo Único): 1.00
+Multiplicador (art. 12): 0.1
+Parâmetros do Multiplicador: ['RFFPs/Improbidade: 0.0', 'Inaptidões: 0', 'Baixas: 0', 'Exclusão Simples: 0', 'Qtde Anos: 0.1', 'Qtde PER: 0']
+TOTAL DE PONTOS: 0163
+
+
+TDPF: 1010600202100032
+Qtde Operacoes: 1
+Qtde Anos: 2
+Porte: MED
+Acompanhamento Comac: N
+Pontos do Tributo Principal (art. 10, I): 148
+Base Multiplicador (art. 10, II): 158
+Tributo Principal (código): 1011
+Acréscimo (art. 10, § 2º): 0.0
+Operação Principal: 10201
+Valor da Operação (Anexo Único): 1.00
+Multiplicador (art. 12): 0.1
+Parâmetros do Multiplicador: ['RFFPs/Improbidade: 0.0', 'Inaptidões: 0', 'Baixas: 0', 'Exclusão Simples: 0', 'Qtde Anos: 0.1', 'Qtde PER: 0']
+TOTAL DE PONTOS: 0163
+
+
+TDPF: 1010700201900109
+Qtde Operacoes: 3
+Qtde Anos: 5
+Porte: MED
+Acompanhamento Comac: N
+Pontos do Tributo Principal (art. 10, I): 131
+Base Multiplicador (art. 10, II): 158
+Tributo Principal (código): 2141
+Acréscimo (art. 10, § 2º): 0.0
+Operação Principal: 86201
+Valor da Operação (Anexo Único): 1.00
+Multiplicador (art. 12): 0.30000000000000004
+Parâmetros do Multiplicador: ['RFFPs/Improbidade: 0.0', 'Inaptidões: 0', 'Baixas: 0', 'Exclusão Simples: 0', 'Qtde Operações: 0.1', 'Qtde Anos: 0.2', 'Estabelec Previd: 0', 'CEI/CAEPF/Obra: 0', 'Prestadores: 0', 'Tomadores: 0']
+TOTAL DE PONTOS: 0178
+
+
+TDPF: 1010700202000100
+Qtde Operacoes: 1
+Qtde Anos: 1
+Porte: DEM
+Acompanhamento Comac: N
+Pontos do Tributo Principal (art. 10, I): 130
+Base Multiplicador (art. 10, II): 118
+Tributo Principal (código): 1011
+Acréscimo (art. 10, § 2º): 0.0
+Operação Principal: 10201
+Valor da Operação (Anexo Único): 1.00
+Multiplicador (art. 12): 0.0
+Parâmetros do Multiplicador: ['RFFPs/Improbidade: 0.0', 'Inaptidões: 0', 'Baixas: 0', 'Exclusão Simples: 0', 'Qtde PER: 0']
+TOTAL DE PONTOS: 0130
+
+
+TDPF: 1010700202000211
+Qtde Operacoes: 1
+Qtde Anos: 2
+Porte: DIF
+Acompanhamento Comac: S
+Pontos do Tributo Principal (art. 10, I): 210
+Base Multiplicador (art. 10, II): 194
+Tributo Principal (código): 3880
+Acréscimo (art. 10, § 2º): 0.0
+Operação Principal: 30101
+Valor da Operação (Anexo Único): 1.00
+Multiplicador (art. 12): 0.5
+Parâmetros do Multiplicador: ['RFFPs/Improbidade: 0.0', 'Inaptidões: 0', 'Baixas: 0', 'Exclusão Simples: 0', 'Acompanhamento: 0.4', 'Qtde Anos: 0.1', 'Qtde PER: 0']
+TOTAL DE PONTOS: 0307
+
+
+TDPF: 1010700202000240
+Qtde Operacoes: 1
+Qtde Anos: 2
+Porte: MED
+Acompanhamento Comac: N
+Pontos do Tributo Principal (art. 10, I): 177
+Base Multiplicador (art. 10, II): 158
+Tributo Principal (código): 3880
+Acréscimo (art. 10, § 2º): 0.0
+Operação Principal: 30120
+Valor da Operação (Anexo Único): 1.25
+Multiplicador (art. 12): 0.1
+Parâmetros do Multiplicador: ['RFFPs/Improbidade: 0.0', 'Inaptidões: 0', 'Baixas: 0', 'Exclusão Simples: 0', 'Qtde Anos: 0.1', 'Qtde PER: 0']
+TOTAL DE PONTOS: 0237
+
+
+TDPF: 1010700202000252
+Qtde Operacoes: 1
+Qtde Anos: 2
+Porte: MED
+Acompanhamento Comac: N
+Pontos do Tributo Principal (art. 10, I): 148
+Base Multiplicador (art. 10, II): 158
+Tributo Principal (código): 1011
+Acréscimo (art. 10, § 2º): 0.0
+Operação Principal: 10201
+Valor da Operação (Anexo Único): 1.00
+Multiplicador (art. 12): 0.1
+Parâmetros do Multiplicador: ['RFFPs/Improbidade: 0.0', 'Inaptidões: 0', 'Baixas: 0', 'Exclusão Simples: 0', 'Qtde Anos: 0.1', 'Qtde PER: 0']
+TOTAL DE PONTOS: 0163
+
+
+TDPF: 1010700202000254
+Qtde Operacoes: 1
+Qtde Anos: 2
+Porte: MED
+Acompanhamento Comac: N
+Pontos do Tributo Principal (art. 10, I): 148
+Base Multiplicador (art. 10, II): 158
+Tributo Principal (código): 1011
+Acréscimo (art. 10, § 2º): 0.0
+Operação Principal: 10201
+Valor da Operação (Anexo Único): 1.00
+Multiplicador (art. 12): 0.1
+Parâmetros do Multiplicador: ['RFFPs/Improbidade: 0.0', 'Inaptidões: 0', 'Baixas: 0', 'Exclusão Simples: 0', 'Qtde Anos: 0.1', 'Qtde PER: 0']
+TOTAL DE PONTOS: 0163
+
+
+TDPF: 1010700202000259
+Qtde Operacoes: 1
+Qtde Anos: 4
+Porte: MED
+Acompanhamento Comac: N
+Pontos do Tributo Principal (art. 10, I): 177
+Base Multiplicador (art. 10, II): 158
+Tributo Principal (código): 3880
+Acréscimo (art. 10, § 2º): 0.0
+Operação Principal: 30120
+Valor da Operação (Anexo Único): 1.25
+Multiplicador (art. 12): 0.2
+Parâmetros do Multiplicador: ['RFFPs/Improbidade: 0.0', 'Inaptidões: 0', 'Baixas: 0', 'Exclusão Simples: 0', 'Qtde Anos: 0.2', 'Qtde PER: 0']
+TOTAL DE PONTOS: 0252
+
+
+TDPF: 1010700202000298
+Qtde Operacoes: 2
+Qtde Anos: 1
+Porte: DEM
+Acompanhamento Comac: N
+Pontos do Tributo Principal (art. 10, I): 137
+Base Multiplicador (art. 10, II): 118
+Tributo Principal (código): 3880
+Acréscimo (art. 10, § 2º): 0.4
+Operação Principal: 20652
+Valor da Operação (Anexo Único): 1.00
+Multiplicador (art. 12): 0.05
+Parâmetros do Multiplicador: ['RFFPs/Improbidade: 0.0', 'Inaptidões: 0', 'Baixas: 0', 'Exclusão Simples: 0', 'Qtde Operações: 0.05', 'Qtde PER: 0']
+TOTAL DE PONTOS: 0197
+
+
+TDPF: 1010700202000303
+Qtde Operacoes: 1
+Qtde Anos: 3
+Porte: MED
+Acompanhamento Comac: N
+Pontos do Tributo Principal (art. 10, I): 177
+Base Multiplicador (art. 10, II): 158
+Tributo Principal (código): 3880
+Acréscimo (art. 10, § 2º): 0.0
+Operação Principal: 30101
+Valor da Operação (Anexo Único): 1.00
+Multiplicador (art. 12): 0.2
+Parâmetros do Multiplicador: ['RFFPs/Improbidade: 0.0', 'Inaptidões: 0', 'Baixas: 0', 'Exclusão Simples: 0', 'Qtde Anos: 0.2', 'Qtde PER: 0']
+TOTAL DE PONTOS: 0208
+
+
+TDPF: 1010700202000308
+Qtde Operacoes: 2
+Qtde Anos: 1
+Porte: DIF
+Acompanhamento Comac: S
+Pontos do Tributo Principal (art. 10, I): 247
+Base Multiplicador (art. 10, II): 194
+Tributo Principal (código): 221
+Acréscimo (art. 10, § 2º): 0.4
+Operação Principal: 20652
+Valor da Operação (Anexo Único): 1.00
+Multiplicador (art. 12): 0.45
+Parâmetros do Multiplicador: ['RFFPs/Improbidade: 0.0', 'Inaptidões: 0', 'Baixas: 0', 'Exclusão Simples: 0', 'Acompanhamento: 0.4', 'Qtde Operações: 0.05', 'Qtde PER: 0']
+TOTAL DE PONTOS: 0433
+
+
+TDPF: 1010700202000318
+Qtde Operacoes: 0
+Qtde Anos: 4
+Porte: DIF
+Acompanhamento Comac: N
+Pontos do Tributo Principal (art. 10, I): 210
+Base Multiplicador (art. 10, II): 194
+Tributo Principal (código): 3880
+Acréscimo (art. 10, § 2º): 0.0
+Operação Principal: 30901
+Valor da Operação (Anexo Único): 1.00
+Multiplicador (art. 12): 0.2
+Parâmetros do Multiplicador: ['RFFPs/Improbidade: 0.0', 'Inaptidões: 0', 'Baixas: 0', 'Exclusão Simples: 0', 'Qtde Anos: 0.2', 'Qtde PER: 0']
+TOTAL DE PONTOS: 0248
+
+
+TDPF: 1010700202000360
+Qtde Operacoes: 2
+Qtde Anos: 2
+Porte: DEM
+Acompanhamento Comac: N
+Pontos do Tributo Principal (art. 10, I): 137
+Base Multiplicador (art. 10, II): 118
+Tributo Principal (código): 3880
+Acréscimo (art. 10, § 2º): 0.0
+Operação Principal: 30120
+Valor da Operação (Anexo Único): 1.25
+Multiplicador (art. 12): 0.15000000000000002
+Parâmetros do Multiplicador: ['RFFPs/Improbidade: 0.0', 'Inaptidões: 0', 'Baixas: 0', 'Exclusão Simples: 0', 'Qtde Operações: 0.05', 'Qtde Anos: 0.1', 'Qtde PER: 0']
+TOTAL DE PONTOS: 0188
+
+
+TDPF: 1010700202000362
+Qtde Operacoes: 1
+Qtde Anos: 2
+Porte: DEM
+Acompanhamento Comac: N
+Pontos do Tributo Principal (art. 10, I): 132
+Base Multiplicador (art. 10, II): 118
+Tributo Principal (código): 221
+Acréscimo (art. 10, § 2º): 0.0
+Operação Principal: 20303
+Valor da Operação (Anexo Único): 1.60
+Multiplicador (art. 12): 0.1
+Parâmetros do Multiplicador: ['RFFPs/Improbidade: 0.0', 'Inaptidões: 0', 'Baixas: 0', 'Exclusão Simples: 0', 'Qtde Anos: 0.1']
+TOTAL DE PONTOS: 0223
+
+
+TDPF: 1010700202000363
+Qtde Operacoes: 4
+Qtde Anos: 3
+Porte: DEM
+Acompanhamento Comac: N
+Pontos do Tributo Principal (art. 10, I): 132
+Base Multiplicador (art. 10, II): 118
+Tributo Principal (código): 221
+Acréscimo (art. 10, § 2º): 0.0
+Operação Principal: 20501
+Valor da Operação (Anexo Único): 1.00
+Multiplicador (art. 12): 0.30000000000000004
+Parâmetros do Multiplicador: ['RFFPs/Improbidade: 0.0', 'Inaptidões: 0', 'Baixas: 0', 'Exclusão Simples: 0', 'Qtde Operações: 0.1', 'Qtde Anos: 0.2']
+TOTAL DE PONTOS: 0167
+
+
+TDPF: 1010700202000364
+Qtde Operacoes: 2
+Qtde Anos: 2
+Porte: DIF
+Acompanhamento Comac: N
+Pontos do Tributo Principal (art. 10, I): 210
+Base Multiplicador (art. 10, II): 194
+Tributo Principal (código): 3880
+Acréscimo (art. 10, § 2º): 0.0
+Operação Principal: 30120
+Valor da Operação (Anexo Único): 1.25
+Multiplicador (art. 12): 0.15000000000000002
+Parâmetros do Multiplicador: ['RFFPs/Improbidade: 0.0', 'Inaptidões: 0', 'Baixas: 0', 'Exclusão Simples: 0', 'Qtde Operações: 0.05', 'Qtde Anos: 0.1', 'Qtde PER: 0']
+TOTAL DE PONTOS: 0291
+
+
+TDPF: 1010700202000365
+Qtde Operacoes: 2
+Qtde Anos: 2
+Porte: DEM
+Acompanhamento Comac: N
+Pontos do Tributo Principal (art. 10, I): 137
+Base Multiplicador (art. 10, II): 118
+Tributo Principal (código): 3880
+Acréscimo (art. 10, § 2º): 0.0
+Operação Principal: 30120
+Valor da Operação (Anexo Único): 1.25
+Multiplicador (art. 12): 0.15000000000000002
+Parâmetros do Multiplicador: ['RFFPs/Improbidade: 0.0', 'Inaptidões: 0', 'Baixas: 0', 'Exclusão Simples: 0', 'Qtde Operações: 0.05', 'Qtde Anos: 0.1', 'Qtde PER: 0']
+TOTAL DE PONTOS: 0188
+
+
+TDPF: 1010700202000367
+Qtde Operacoes: 2
+Qtde Anos: 2
+Porte: MED
+Acompanhamento Comac: N
+Pontos do Tributo Principal (art. 10, I): 177
+Base Multiplicador (art. 10, II): 158
+Tributo Principal (código): 3880
+Acréscimo (art. 10, § 2º): 0.0
+Operação Principal: 30120
+Valor da Operação (Anexo Único): 1.25
+Multiplicador (art. 12): 0.15000000000000002
+Parâmetros do Multiplicador: ['RFFPs/Improbidade: 0.0', 'Inaptidões: 0', 'Baixas: 0', 'Exclusão Simples: 0', 'Qtde Operações: 0.05', 'Qtde Anos: 0.1', 'Qtde PER: 0']
+TOTAL DE PONTOS: 0244
+
+
+TDPF: 1010700202000391
+Qtde Operacoes: 2
+Qtde Anos: 3
+Porte: MED
+Acompanhamento Comac: N
+Pontos do Tributo Principal (art. 10, I): 174
+Base Multiplicador (art. 10, II): 158
+Tributo Principal (código): 221
+Acréscimo (art. 10, § 2º): 0.0
+Operação Principal: 20303
+Valor da Operação (Anexo Único): 1.60
+Multiplicador (art. 12): 0.25
+Parâmetros do Multiplicador: ['RFFPs/Improbidade: 0.0', 'Inaptidões: 0', 'Baixas: 0', 'Exclusão Simples: 0', 'Qtde Operações: 0.05', 'Qtde Anos: 0.2']
+TOTAL DE PONTOS: 0317
+
+
+TDPF: 1010700202000455
+Qtde Operacoes: 2
+Qtde Anos: 1
+Porte: DEM
+Acompanhamento Comac: N
+Pontos do Tributo Principal (art. 10, I): 137
+Base Multiplicador (art. 10, II): 118
+Tributo Principal (código): 3880
+Acréscimo (art. 10, § 2º): 0.0
+Operação Principal: 30120
+Valor da Operação (Anexo Único): 1.25
+Multiplicador (art. 12): 0.05
+Parâmetros do Multiplicador: ['RFFPs/Improbidade: 0.0', 'Inaptidões: 0', 'Baixas: 0', 'Exclusão Simples: 0', 'Qtde Operações: 0.05', 'Qtde PER: 0']
+TOTAL DE PONTOS: 0177
+
+
+TDPF: 1010700202100033
+Qtde Operacoes: 1
+Qtde Anos: 4
+Porte: MED
+Acompanhamento Comac: N
+Pontos do Tributo Principal (art. 10, I): 148
+Base Multiplicador (art. 10, II): 158
+Tributo Principal (código): 1011
+Acréscimo (art. 10, § 2º): 0.0
+Operação Principal: 91131
+Valor da Operação (Anexo Único): 0.75
+Multiplicador (art. 12): 0.2
+Parâmetros do Multiplicador: ['RFFPs/Improbidade: 0.0', 'Inaptidões: 0', 'Baixas: 0', 'Exclusão Simples: 0', 'Qtde Anos: 0.2', 'Qtde PER: 0']
+TOTAL DE PONTOS: 0142
+
+
+TDPF: 1010800202000008
+Qtde Operacoes: 1
+Qtde Anos: 2
+Porte: DEM
+Acompanhamento Comac: N
+Pontos do Tributo Principal (art. 10, I): 132
+Base Multiplicador (art. 10, II): 118
+Tributo Principal (código): 221
+Acréscimo (art. 10, § 2º): 0.0
+Operação Principal: 91231
+Valor da Operação (Anexo Único): 1.00
+Multiplicador (art. 12): 0.1
+Parâmetros do Multiplicador: ['RFFPs/Improbidade: 0.0', 'Inaptidões: 0', 'Baixas: 0', 'Exclusão Simples: 0', 'Qtde Anos: 0.1']
+TOTAL DE PONTOS: 0143
+
+
+TDPF: 1010800202000033
+Qtde Operacoes: 1
+Qtde Anos: 3
+Porte: DIF
+Acompanhamento Comac: S
+Pontos do Tributo Principal (art. 10, I): 159
+Base Multiplicador (art. 10, II): 194
+Tributo Principal (código): 1011
+Acréscimo (art. 10, § 2º): 0.0
+Operação Principal: 91131
+Valor da Operação (Anexo Único): 0.75
+Multiplicador (art. 12): 0.6000000000000001
+Parâmetros do Multiplicador: ['RFFPs/Improbidade: 0.0', 'Inaptidões: 0', 'Baixas: 0', 'Exclusão Simples: 0', 'Acompanhamento: 0.4', 'Qtde Anos: 0.2', 'Qtde PER: 0']
+TOTAL DE PONTOS: 0235
+
+
+TDPF: 1010800202000043
+Qtde Operacoes: 1
+Qtde Anos: 4
+Porte: DEM
+Acompanhamento Comac: N
+Pontos do Tributo Principal (art. 10, I): 75
+Base Multiplicador (art. 10, II): 68
+Tributo Principal (código): 210
+Acréscimo (art. 10, § 2º): 0.0
+Operação Principal: 40121
+Valor da Operação (Anexo Único): 1.25
+Multiplicador (art. 12): 0.2
+Parâmetros do Multiplicador: ['RFFPs/Improbidade: 0.0', 'Inaptidões: 0', 'Baixas: 0', 'Exclusão Simples: 0', 'Qtde Anos: 0.2']
+TOTAL DE PONTOS: 0107
+
+
+TDPF: 1010800202000048
+Qtde Operacoes: 1
+Qtde Anos: 2
+Porte: DEM
+Acompanhamento Comac: N
+Pontos do Tributo Principal (art. 10, I): 75
+Base Multiplicador (art. 10, II): 68
+Tributo Principal (código): 210
+Acréscimo (art. 10, § 2º): 0.0
+Operação Principal: 40121
+Valor da Operação (Anexo Único): 1.25
+Multiplicador (art. 12): 0.1
+Parâmetros do Multiplicador: ['RFFPs/Improbidade: 0.0', 'Inaptidões: 0', 'Baixas: 0', 'Exclusão Simples: 0', 'Qtde Anos: 0.1']
+TOTAL DE PONTOS: 0100
+
+
+TDPF: 1010600202000401
+Qtde Operacoes: 1
+Qtde Anos: 2
+Porte: DIF
+Acompanhamento Comac: N
+Pontos do Tributo Principal (art. 10, I): 159
+Base Multiplicador (art. 10, II): 194
+Tributo Principal (código): 1011
+Acréscimo (art. 10, § 2º): 0.0
+Operação Principal: 10201
+Valor da Operação (Anexo Único): 1.00
+Multiplicador (art. 12): 0.1
+Parâmetros do Multiplicador: ['RFFPs/Improbidade: 0.0', 'Inaptidões: 0', 'Baixas: 0', 'Exclusão Simples: 0', 'Qtde Anos: 0.1', 'Qtde PER: 0']
+TOTAL DE PONTOS: 0178
+
+
+TDPF: 1010600202000402
+Qtde Operacoes: 1
+Qtde Anos: 2
+Porte: DIF
+Acompanhamento Comac: S
+Pontos do Tributo Principal (art. 10, I): 159
+Base Multiplicador (art. 10, II): 194
+Tributo Principal (código): 1011
+Acréscimo (art. 10, § 2º): 0.0
+Operação Principal: 10201
+Valor da Operação (Anexo Único): 1.00
+Multiplicador (art. 12): 0.5
+Parâmetros do Multiplicador: ['RFFPs/Improbidade: 0.0', 'Inaptidões: 0', 'Baixas: 0', 'Exclusão Simples: 0', 'Acompanhamento: 0.4', 'Qtde Anos: 0.1', 'Qtde PER: 0']
+TOTAL DE PONTOS: 0256
+
+
+TDPF: 1000100202000089
+Qtde Operacoes: 3
+Qtde Anos: 2
+Porte: DEM
+Acompanhamento Comac: N
+Pontos do Tributo Principal (art. 10, I): 132
+Base Multiplicador (art. 10, II): 118
+Tributo Principal (código): 694
+Acréscimo (art. 10, § 2º): 0.4
+Operação Principal: 20101
+Valor da Operação (Anexo Único): 1.00
+Multiplicador (art. 12): 0.2
+Parâmetros do Multiplicador: ['RFFPs/Improbidade: 0.0', 'Inaptidões: 0', 'Baixas: 0', 'Exclusão Simples: 0', 'Qtde Operações: 0.1', 'Qtde Anos: 0.1', 'Qtde PER: 0']
+TOTAL DE PONTOS: 0208
+
+
+TDPF: 1010100201900059
+Qtde Operacoes: 2
+Qtde Anos: 3
+Porte: DEM
+Acompanhamento Comac: N
+Pontos do Tributo Principal (art. 10, I): 132
+Base Multiplicador (art. 10, II): 118
+Tributo Principal (código): 221
+Acréscimo (art. 10, § 2º): 0.0
+Operação Principal: 91241
+Valor da Operação (Anexo Único): 0.75
+Multiplicador (art. 12): 0.25
+Parâmetros do Multiplicador: ['RFFPs/Improbidade: 0.0', 'Inaptidões: 0', 'Baixas: 0', 'Exclusão Simples: 0', 'Qtde Operações: 0.05', 'Qtde Anos: 0.2']
+TOTAL DE PONTOS: 0128
+
+
+TDPF: 1010100201900476
+Qtde Operacoes: 5
+Qtde Anos: 2
+Porte: DEM
+Acompanhamento Comac: N
+Pontos do Tributo Principal (art. 10, I): 132
+Base Multiplicador (art. 10, II): 118
+Tributo Principal (código): 694
+Acréscimo (art. 10, § 2º): 0.1
+Operação Principal: 20601
+Valor da Operação (Anexo Único): 1.00
+Multiplicador (art. 12): 0.2
+Parâmetros do Multiplicador: ['RFFPs/Improbidade: 0.0', 'Inaptidões: 0', 'Baixas: 0', 'Exclusão Simples: 0', 'Qtde Operações: 0.1', 'Qtde Anos: 0.1']
+TOTAL DE PONTOS: 0168
+
+
+TDPF: 1010100202000008
+Qtde Operacoes: 1
+Qtde Anos: 2
+Porte: DEM
+Acompanhamento Comac: N
+Pontos do Tributo Principal (art. 10, I): 111
+Base Multiplicador (art. 10, II): 118
+Tributo Principal (código): 2141
+Acréscimo (art. 10, § 2º): 0.0
+Operação Principal: 87602
+Valor da Operação (Anexo Único): 1.00
+Multiplicador (art. 12): 0.1
+Parâmetros do Multiplicador: ['RFFPs/Improbidade: 0.0', 'Inaptidões: 0', 'Baixas: 0', 'Exclusão Simples: 0', 'Qtde Anos: 0.1', 'Estabelec Previd: 0', 'CEI/CAEPF/Obra: 0', 'Prestadores: 0', 'Tomadores: 0']
+TOTAL DE PONTOS: 0122
+
+
+TDPF: 1010100202000014
+Qtde Operacoes: 2
+Qtde Anos: 2
+Porte: DEM
+Acompanhamento Comac: N
+Pontos do Tributo Principal (art. 10, I): 132
+Base Multiplicador (art. 10, II): 118
+Tributo Principal (código): 694
+Acréscimo (art. 10, § 2º): 0.0
+Operação Principal: 30307
+Valor da Operação (Anexo Único): 0.75
+Multiplicador (art. 12): 0.15000000000000002
+Parâmetros do Multiplicador: ['RFFPs/Improbidade: 0.0', 'Inaptidões: 0', 'Baixas: 0', 'Exclusão Simples: 0', 'Qtde Operações: 0.05', 'Qtde Anos: 0.1']
+TOTAL DE PONTOS: 0116
+
+
+TDPF: 1010100202000017
+Qtde Operacoes: 2
+Qtde Anos: 1
+Porte: DIF
+Acompanhamento Comac: S
+Pontos do Tributo Principal (art. 10, I): 247
+Base Multiplicador (art. 10, II): 194
+Tributo Principal (código): 221
+Acréscimo (art. 10, § 2º): 0.0
+Operação Principal: 20652
+Valor da Operação (Anexo Único): 1.00
+Multiplicador (art. 12): 0.45
+Parâmetros do Multiplicador: ['RFFPs/Improbidade: 0.0', 'Inaptidões: 0', 'Baixas: 0', 'Exclusão Simples: 0', 'Acompanhamento: 0.4', 'Qtde Operações: 0.05']
+TOTAL DE PONTOS: 0334
+
+
+TDPF: 1010100202000107
+Qtde Operacoes: 6
+Qtde Anos: 2
+Porte: MED
+Acompanhamento Comac: N
+Pontos do Tributo Principal (art. 10, I): 174
+Base Multiplicador (art. 10, II): 158
+Tributo Principal (código): 221
+Acréscimo (art. 10, § 2º): 0.1
+Operação Principal: 20461
+Valor da Operação (Anexo Único): 1.00
+Multiplicador (art. 12): 0.2
+Parâmetros do Multiplicador: ['RFFPs/Improbidade: 0.0', 'Inaptidões: 0', 'Baixas: 0', 'Exclusão Simples: 0', 'Qtde Operações: 0.1', 'Qtde Anos: 0.1']
+TOTAL DE PONTOS: 0223
+
+
+TDPF: 1010100202000171
+Qtde Operacoes: 3
+Qtde Anos: 2
+Porte: DEM
+Acompanhamento Comac: N
+Pontos do Tributo Principal (art. 10, I): 132
+Base Multiplicador (art. 10, II): 118
+Tributo Principal (código): 694
+Acréscimo (art. 10, § 2º): 0.0
+Operação Principal: 21106
+Valor da Operação (Anexo Único): 1.00
+Multiplicador (art. 12): 0.2
+Parâmetros do Multiplicador: ['RFFPs/Improbidade: 0.0', 'Inaptidões: 0', 'Baixas: 0', 'Exclusão Simples: 0', 'Qtde Operações: 0.1', 'Qtde Anos: 0.1']
+TOTAL DE PONTOS: 0155
+
+
+TDPF: 1010100202000176
+Qtde Operacoes: 5
+Qtde Anos: 1
+Porte: DIF
+Acompanhamento Comac: N
+Pontos do Tributo Principal (art. 10, I): 247
+Base Multiplicador (art. 10, II): 194
+Tributo Principal (código): 221
+Acréscimo (art. 10, § 2º): 0.4
+Operação Principal: 30101
+Valor da Operação (Anexo Único): 1.00
+Multiplicador (art. 12): 0.1
+Parâmetros do Multiplicador: ['RFFPs/Improbidade: 0.0', 'Inaptidões: 0', 'Baixas: 0', 'Exclusão Simples: 0', 'Qtde Operações: 0.1', 'Qtde PER: 0']
+TOTAL DE PONTOS: 0365
+
+
+TDPF: 1010100202000181
+Qtde Operacoes: 1
+Qtde Anos: 3
+Porte: DEM
+Acompanhamento Comac: N
+Pontos do Tributo Principal (art. 10, I): 75
+Base Multiplicador (art. 10, II): 68
+Tributo Principal (código): 210
+Acréscimo (art. 10, § 2º): 0.0
+Operação Principal: 40111
+Valor da Operação (Anexo Único): 1.25
+Multiplicador (art. 12): 0.2
+Parâmetros do Multiplicador: ['RFFPs/Improbidade: 0.0', 'Inaptidões: 0', 'Baixas: 0', 'Exclusão Simples: 0', 'Qtde Anos: 0.2']
+TOTAL DE PONTOS: 0107
+
+
+TDPF: 1010100202000183
+Qtde Operacoes: 1
+Qtde Anos: 3
+Porte: DEM
+Acompanhamento Comac: N
+Pontos do Tributo Principal (art. 10, I): 75
+Base Multiplicador (art. 10, II): 68
+Tributo Principal (código): 210
+Acréscimo (art. 10, § 2º): 0.0
+Operação Principal: 40301
+Valor da Operação (Anexo Único): 1.00
+Multiplicador (art. 12): 0.2
+Parâmetros do Multiplicador: ['RFFPs/Improbidade: 0.0', 'Inaptidões: 0', 'Baixas: 0', 'Exclusão Simples: 0', 'Qtde Anos: 0.2']
+TOTAL DE PONTOS: 0088
+
+
+TDPF: 1010100202000266
+Qtde Operacoes: 1
+Qtde Anos: 2
+Porte: DIF
+Acompanhamento Comac: N
+Pontos do Tributo Principal (art. 10, I): 105
+Base Multiplicador (art. 10, II): 85
+Tributo Principal (código): 210
+Acréscimo (art. 10, § 2º): 0.0
+Operação Principal: 40302
+Valor da Operação (Anexo Único): 1.25
+Multiplicador (art. 12): 0.1
+Parâmetros do Multiplicador: ['RFFPs/Improbidade: 0.0', 'Inaptidões: 0', 'Baixas: 0', 'Exclusão Simples: 0', 'Qtde Anos: 0.1']
+TOTAL DE PONTOS: 0139
+
+
+TDPF: 1010100202000396
+Qtde Operacoes: 1
+Qtde Anos: 1
+Porte: DIF
+Acompanhamento Comac: N
+Pontos do Tributo Principal (art. 10, I): 105
+Base Multiplicador (art. 10, II): 85
+Tributo Principal (código): 210
+Acréscimo (art. 10, § 2º): 0.0
+Operação Principal: 40301
+Valor da Operação (Anexo Único): 1.00
+Multiplicador (art. 12): 0.0
+Parâmetros do Multiplicador: ['RFFPs/Improbidade: 0.0', 'Inaptidões: 0', 'Baixas: 0', 'Exclusão Simples: 0']
+TOTAL DE PONTOS: 0105
+
+
+TDPF: 1010100202000402
+Qtde Operacoes: 1
+Qtde Anos: 2
+Porte: DIF
+Acompanhamento Comac: S
+Pontos do Tributo Principal (art. 10, I): 247
+Base Multiplicador (art. 10, II): 194
+Tributo Principal (código): 221
+Acréscimo (art. 10, § 2º): 0.0
+Operação Principal: 20551
+Valor da Operação (Anexo Único): 1.25
+Multiplicador (art. 12): 0.5
+Parâmetros do Multiplicador: ['RFFPs/Improbidade: 0.0', 'Inaptidões: 0', 'Baixas: 0', 'Exclusão Simples: 0', 'Acompanhamento: 0.4', 'Qtde Anos: 0.1']
+TOTAL DE PONTOS: 0405
+
+
+TDPF: 1010100202000429
+Qtde Operacoes: 1
+Qtde Anos: 3
+Porte: DEM
+Acompanhamento Comac: N
+Pontos do Tributo Principal (art. 10, I): 111
+Base Multiplicador (art. 10, II): 118
+Tributo Principal (código): 2141
+Acréscimo (art. 10, § 2º): 0.0
+Operação Principal: 86201
+Valor da Operação (Anexo Único): 1.00
+Multiplicador (art. 12): 0.2
+Parâmetros do Multiplicador: ['RFFPs/Improbidade: 0.0', 'Inaptidões: 0', 'Baixas: 0', 'Exclusão Simples: 0', 'Qtde Anos: 0.2', 'Estabelec Previd: 0', 'CEI/CAEPF/Obra: 0', 'Prestadores: 0', 'Tomadores: 0']
+TOTAL DE PONTOS: 0134
+
+
+TDPF: 1010100202000488
+Qtde Operacoes: 1
+Qtde Anos: 3
+Porte: DEM
+Acompanhamento Comac: N
+Pontos do Tributo Principal (art. 10, I): 132
+Base Multiplicador (art. 10, II): 118
+Tributo Principal (código): 221
+Acréscimo (art. 10, § 2º): 0.0
+Operação Principal: 20449
+Valor da Operação (Anexo Único): 1.00
+Multiplicador (art. 12): 0.2
+Parâmetros do Multiplicador: ['RFFPs/Improbidade: 0.0', 'Inaptidões: 0', 'Baixas: 0', 'Exclusão Simples: 0', 'Qtde Anos: 0.2']
+TOTAL DE PONTOS: 0155
+
+
+TDPF: 1010100202000572
+Qtde Operacoes: 1
+Qtde Anos: 2
+Porte: DIF
+Acompanhamento Comac: N
+Pontos do Tributo Principal (art. 10, I): 105
+Base Multiplicador (art. 10, II): 85
+Tributo Principal (código): 210
+Acréscimo (art. 10, § 2º): 0.0
+Operação Principal: 93202
+Valor da Operação (Anexo Único): 0.75
+Multiplicador (art. 12): 0.1
+Parâmetros do Multiplicador: ['RFFPs/Improbidade: 0.0', 'Inaptidões: 0', 'Baixas: 0', 'Exclusão Simples: 0', 'Qtde Anos: 0.1']
+TOTAL DE PONTOS: 0087
+
+
+TDPF: 1010200201900117
+Qtde Operacoes: 1
+Qtde Anos: 1
+Porte: DEM
+Acompanhamento Comac: N
+Pontos do Tributo Principal (art. 10, I): 132
+Base Multiplicador (art. 10, II): 118
+Tributo Principal (código): 221
+Acréscimo (art. 10, § 2º): 0.0
+Operação Principal: 21103
+Valor da Operação (Anexo Único): 1.00
+Multiplicador (art. 12): 0.0
+Parâmetros do Multiplicador: ['RFFPs/Improbidade: 0.0', 'Inaptidões: 0', 'Baixas: 0', 'Exclusão Simples: 0']
+TOTAL DE PONTOS: 0132
+
+
+TDPF: 1010200202100001
+Qtde Operacoes: 3
+Qtde Anos: 3
+Porte: DEM
+Acompanhamento Comac: N
+Pontos do Tributo Principal (art. 10, I): 137
+Base Multiplicador (art. 10, II): 118
+Tributo Principal (código): 3880
+Acréscimo (art. 10, § 2º): 0.4
+Operação Principal: 30307
+Valor da Operação (Anexo Único): 0.75
+Multiplicador (art. 12): 0.30000000000000004
+Parâmetros do Multiplicador: ['RFFPs/Improbidade: 0.0', 'Inaptidões: 0', 'Baixas: 0', 'Exclusão Simples: 0', 'Qtde Operações: 0.1', 'Qtde Anos: 0.2', 'Qtde PER: 0']
+TOTAL DE PONTOS: 0179
+
+
+TDPF: 1010300201900163
+Qtde Operacoes: 2
+Qtde Anos: 4
+Porte: MED
+Acompanhamento Comac: N
+Pontos do Tributo Principal (art. 10, I): 131
+Base Multiplicador (art. 10, II): 158
+Tributo Principal (código): 2141
+Acréscimo (art. 10, § 2º): 0.0
+Operação Principal: 86701
+Valor da Operação (Anexo Único): 1.00
+Multiplicador (art. 12): 0.25
+Parâmetros do Multiplicador: ['RFFPs/Improbidade: 0.0', 'Inaptidões: 0', 'Baixas: 0', 'Exclusão Simples: 0', 'Qtde Operações: 0.05', 'Qtde Anos: 0.2', 'Estabelec Previd: 0', 'CEI/CAEPF/Obra: 0', 'Prestadores: 0', 'Tomadores: 0']
+TOTAL DE PONTOS: 0170
+
+
+TDPF: 1010300201900164
+Qtde Operacoes: 2
+Qtde Anos: 4
+Porte: MED
+Acompanhamento Comac: N
+Pontos do Tributo Principal (art. 10, I): 131
+Base Multiplicador (art. 10, II): 158
+Tributo Principal (código): 2141
+Acréscimo (art. 10, § 2º): 0.0
+Operação Principal: 86701
+Valor da Operação (Anexo Único): 1.00
+Multiplicador (art. 12): 0.25
+Parâmetros do Multiplicador: ['RFFPs/Improbidade: 0.0', 'Inaptidões: 0', 'Baixas: 0', 'Exclusão Simples: 0', 'Qtde Operações: 0.05', 'Qtde Anos: 0.2', 'Estabelec Previd: 0', 'CEI/CAEPF/Obra: 0', 'Prestadores: 0', 'Tomadores: 0']
+TOTAL DE PONTOS: 0170
+
+
+TDPF: 1010300201900244
+Qtde Operacoes: 1
+Qtde Anos: 2
+Porte: DEM
+Acompanhamento Comac: N
+Pontos do Tributo Principal (art. 10, I): 132
+Base Multiplicador (art. 10, II): 118
+Tributo Principal (código): 221
+Acréscimo (art. 10, § 2º): 0.0
+Operação Principal: 20104
+Valor da Operação (Anexo Único): 1.00
+Multiplicador (art. 12): 0.1
+Parâmetros do Multiplicador: ['RFFPs/Improbidade: 0.0', 'Inaptidões: 0', 'Baixas: 0', 'Exclusão Simples: 0', 'Qtde Anos: 0.1']
+TOTAL DE PONTOS: 0143
+
+
+TDPF: 1010300202000018
+Qtde Operacoes: 3
+Qtde Anos: 4
+Porte: MED
+Acompanhamento Comac: N
+Pontos do Tributo Principal (art. 10, I): 131
+Base Multiplicador (art. 10, II): 158
+Tributo Principal (código): 2141
+Acréscimo (art. 10, § 2º): 0.0
+Operação Principal: 86201
+Valor da Operação (Anexo Único): 1.00
+Multiplicador (art. 12): 0.30000000000000004
+Parâmetros do Multiplicador: ['RFFPs/Improbidade: 0.0', 'Inaptidões: 0', 'Baixas: 0', 'Exclusão Simples: 0', 'Qtde Operações: 0.1', 'Qtde Anos: 0.2', 'Estabelec Previd: 0', 'CEI/CAEPF/Obra: 0', 'Prestadores: 0', 'Tomadores: 0']
+TOTAL DE PONTOS: 0178
+
+
+TDPF: 1010300202000084
+Qtde Operacoes: 1
+Qtde Anos: 3
+Porte: DEM
+Acompanhamento Comac: N
+Pontos do Tributo Principal (art. 10, I): 132
+Base Multiplicador (art. 10, II): 118
+Tributo Principal (código): 221
+Acréscimo (art. 10, § 2º): 0.0
+Operação Principal: 21106
+Valor da Operação (Anexo Único): 1.00
+Multiplicador (art. 12): 0.2
+Parâmetros do Multiplicador: ['RFFPs/Improbidade: 0.0', 'Inaptidões: 0', 'Baixas: 0', 'Exclusão Simples: 0', 'Qtde Anos: 0.2']
+TOTAL DE PONTOS: 0155
+
+
+TDPF: 1010300202000113
+Qtde Operacoes: 3
+Qtde Anos: 2
+Porte: DEM
+Acompanhamento Comac: N
+Pontos do Tributo Principal (art. 10, I): 132
+Base Multiplicador (art. 10, II): 118
+Tributo Principal (código): 694
+Acréscimo (art. 10, § 2º): 0.0
+Operação Principal: 91231
+Valor da Operação (Anexo Único): 1.00
+Multiplicador (art. 12): 0.2
+Parâmetros do Multiplicador: ['RFFPs/Improbidade: 0.0', 'Inaptidões: 0', 'Baixas: 0', 'Exclusão Simples: 0', 'Qtde Operações: 0.1', 'Qtde Anos: 0.1']
+TOTAL DE PONTOS: 0155
+
+
+TDPF: 1010300202000145
+Qtde Operacoes: 1
+Qtde Anos: 3
+Porte: DEM
+Acompanhamento Comac: N
+Pontos do Tributo Principal (art. 10, I): 132
+Base Multiplicador (art. 10, II): 118
+Tributo Principal (código): 221
+Acréscimo (art. 10, § 2º): 0.0
+Operação Principal: 21106
+Valor da Operação (Anexo Único): 1.00
+Multiplicador (art. 12): 0.2
+Parâmetros do Multiplicador: ['RFFPs/Improbidade: 0.0', 'Inaptidões: 0', 'Baixas: 0', 'Exclusão Simples: 0', 'Qtde Anos: 0.2']
+TOTAL DE PONTOS: 0155
+
+
+TDPF: 1010300202000193
+Qtde Operacoes: 4
+Qtde Anos: 3
+Porte: DEM
+Acompanhamento Comac: N
+Pontos do Tributo Principal (art. 10, I): 132
+Base Multiplicador (art. 10, II): 118
+Tributo Principal (código): 221
+Acréscimo (art. 10, § 2º): 0.4
+Operação Principal: 27106
+Valor da Operação (Anexo Único): 1.25
+Multiplicador (art. 12): 0.30000000000000004
+Parâmetros do Multiplicador: ['RFFPs/Improbidade: 0.0', 'Inaptidões: 0', 'Baixas: 0', 'Exclusão Simples: 0', 'Qtde Operações: 0.1', 'Qtde Anos: 0.2', 'Estabelec Previd: 0', 'CEI/CAEPF/Obra: 0', 'Prestadores: 0', 'Tomadores: 0']
+TOTAL DE PONTOS: 0266
+
+
+TDPF: 1010400201900242
+Qtde Operacoes: 1
+Qtde Anos: 3
+Porte: DEM
+Acompanhamento Comac: N
+Pontos do Tributo Principal (art. 10, I): 75
+Base Multiplicador (art. 10, II): 68
+Tributo Principal (código): 210
+Acréscimo (art. 10, § 2º): 0.0
+Operação Principal: 40121
+Valor da Operação (Anexo Único): 1.25
+Multiplicador (art. 12): 0.2
+Parâmetros do Multiplicador: ['RFFPs/Improbidade: 0.0', 'Inaptidões: 0', 'Baixas: 0', 'Exclusão Simples: 0', 'Qtde Anos: 0.2']
+TOTAL DE PONTOS: 0107
+
+
+TDPF: 1010400202000019
+Qtde Operacoes: 1
+Qtde Anos: 1
+Porte: DEM
+Acompanhamento Comac: N
+Pontos do Tributo Principal (art. 10, I): 137
+Base Multiplicador (art. 10, II): 118
+Tributo Principal (código): 3880
+Acréscimo (art. 10, § 2º): 0.0
+Operação Principal: 30901
+Valor da Operação (Anexo Único): 1.00
+Multiplicador (art. 12): 0.0
+Parâmetros do Multiplicador: ['RFFPs/Improbidade: 0.0', 'Inaptidões: 0', 'Baixas: 0', 'Exclusão Simples: 0', 'Qtde PER: 0']
+TOTAL DE PONTOS: 0137
+
+
+TDPF: 1010400202000044
+Qtde Operacoes: 1
+Qtde Anos: 3
+Porte: DIF
+Acompanhamento Comac: N
+Pontos do Tributo Principal (art. 10, I): 105
+Base Multiplicador (art. 10, II): 85
+Tributo Principal (código): 210
+Acréscimo (art. 10, § 2º): 0.0
+Operação Principal: 40101
+Valor da Operação (Anexo Único): 1.00
+Multiplicador (art. 12): 0.2
+Parâmetros do Multiplicador: ['RFFPs/Improbidade: 0.0', 'Inaptidões: 0', 'Baixas: 0', 'Exclusão Simples: 0', 'Qtde Anos: 0.2']
+TOTAL DE PONTOS: 0122
+
+
+TDPF: 1010400202000045
+Qtde Operacoes: 1
+Qtde Anos: 3
+Porte: DIF
+Acompanhamento Comac: N
+Pontos do Tributo Principal (art. 10, I): 105
+Base Multiplicador (art. 10, II): 85
+Tributo Principal (código): 210
+Acréscimo (art. 10, § 2º): 0.0
+Operação Principal: 40101
+Valor da Operação (Anexo Único): 1.00
+Multiplicador (art. 12): 0.2
+Parâmetros do Multiplicador: ['RFFPs/Improbidade: 0.0', 'Inaptidões: 0', 'Baixas: 0', 'Exclusão Simples: 0', 'Qtde Anos: 0.2']
+TOTAL DE PONTOS: 0122
+
+
+TDPF: 1010400202000046
+Qtde Operacoes: 2
+Qtde Anos: 3
+Porte: DIF
+Acompanhamento Comac: N
+Pontos do Tributo Principal (art. 10, I): 105
+Base Multiplicador (art. 10, II): 85
+Tributo Principal (código): 210
+Acréscimo (art. 10, § 2º): 0.0
+Operação Principal: 40301
+Valor da Operação (Anexo Único): 1.00
+Multiplicador (art. 12): 0.25
+Parâmetros do Multiplicador: ['RFFPs/Improbidade: 0.0', 'Inaptidões: 0', 'Baixas: 0', 'Exclusão Simples: 0', 'Qtde Operações: 0.05', 'Qtde Anos: 0.2']
+TOTAL DE PONTOS: 0126
+
+
+TDPF: 1010400202000047
+Qtde Operacoes: 1
+Qtde Anos: 3
+Porte: DIF
+Acompanhamento Comac: N
+Pontos do Tributo Principal (art. 10, I): 105
+Base Multiplicador (art. 10, II): 85
+Tributo Principal (código): 210
+Acréscimo (art. 10, § 2º): 0.0
+Operação Principal: 40101
+Valor da Operação (Anexo Único): 1.00
+Multiplicador (art. 12): 0.2
+Parâmetros do Multiplicador: ['RFFPs/Improbidade: 0.0', 'Inaptidões: 0', 'Baixas: 0', 'Exclusão Simples: 0', 'Qtde Anos: 0.2']
+TOTAL DE PONTOS: 0122
+
+
+TDPF: 1010400202000048
+Qtde Operacoes: 1
+Qtde Anos: 3
+Porte: DIF
+Acompanhamento Comac: N
+Pontos do Tributo Principal (art. 10, I): 105
+Base Multiplicador (art. 10, II): 85
+Tributo Principal (código): 210
+Acréscimo (art. 10, § 2º): 0.0
+Operação Principal: 40101
+Valor da Operação (Anexo Único): 1.00
+Multiplicador (art. 12): 0.2
+Parâmetros do Multiplicador: ['RFFPs/Improbidade: 0.0', 'Inaptidões: 0', 'Baixas: 0', 'Exclusão Simples: 0', 'Qtde Anos: 0.2']
+TOTAL DE PONTOS: 0122
+
+
+TDPF: 1010400202000049
+Qtde Operacoes: 1
+Qtde Anos: 3
+Porte: DIF
+Acompanhamento Comac: N
+Pontos do Tributo Principal (art. 10, I): 105
+Base Multiplicador (art. 10, II): 85
+Tributo Principal (código): 210
+Acréscimo (art. 10, § 2º): 0.0
+Operação Principal: 40101
+Valor da Operação (Anexo Único): 1.00
+Multiplicador (art. 12): 0.2
+Parâmetros do Multiplicador: ['RFFPs/Improbidade: 0.0', 'Inaptidões: 0', 'Baixas: 0', 'Exclusão Simples: 0', 'Qtde Anos: 0.2']
+TOTAL DE PONTOS: 0122
+
+
+TDPF: 1010400202000050
+Qtde Operacoes: 1
+Qtde Anos: 3
+Porte: DEM
+Acompanhamento Comac: N
+Pontos do Tributo Principal (art. 10, I): 75
+Base Multiplicador (art. 10, II): 68
+Tributo Principal (código): 210
+Acréscimo (art. 10, § 2º): 0.0
+Operação Principal: 40101
+Valor da Operação (Anexo Único): 1.00
+Multiplicador (art. 12): 0.2
+Parâmetros do Multiplicador: ['RFFPs/Improbidade: 0.0', 'Inaptidões: 0', 'Baixas: 0', 'Exclusão Simples: 0', 'Qtde Anos: 0.2']
+TOTAL DE PONTOS: 0088
+
+
+TDPF: 1010400202000051
+Qtde Operacoes: 1
+Qtde Anos: 3
+Porte: DIF
+Acompanhamento Comac: N
+Pontos do Tributo Principal (art. 10, I): 105
+Base Multiplicador (art. 10, II): 85
+Tributo Principal (código): 210
+Acréscimo (art. 10, § 2º): 0.0
+Operação Principal: 40101
+Valor da Operação (Anexo Único): 1.00
+Multiplicador (art. 12): 0.2
+Parâmetros do Multiplicador: ['RFFPs/Improbidade: 0.0', 'Inaptidões: 0', 'Baixas: 0', 'Exclusão Simples: 0', 'Qtde Anos: 0.2']
+TOTAL DE PONTOS: 0122
+
+
+TDPF: 1010400202000073
+Qtde Operacoes: 1
+Qtde Anos: 1
+Porte: DEM
+Acompanhamento Comac: N
+Pontos do Tributo Principal (art. 10, I): 75
+Base Multiplicador (art. 10, II): 68
+Tributo Principal (código): 210
+Acréscimo (art. 10, § 2º): 0.0
+Operação Principal: 40111
+Valor da Operação (Anexo Único): 1.25
+Multiplicador (art. 12): 0.0
+Parâmetros do Multiplicador: ['RFFPs/Improbidade: 0.0', 'Inaptidões: 0', 'Baixas: 0', 'Exclusão Simples: 0']
+TOTAL DE PONTOS: 0093
+
+
+TDPF: 1010400202000112
+Qtde Operacoes: 1
+Qtde Anos: 2
+Porte: DEM
+Acompanhamento Comac: N
+Pontos do Tributo Principal (art. 10, I): 75
+Base Multiplicador (art. 10, II): 68
+Tributo Principal (código): 210
+Acréscimo (art. 10, § 2º): 0.0
+Operação Principal: 40121
+Valor da Operação (Anexo Único): 1.25
+Multiplicador (art. 12): 0.1
+Parâmetros do Multiplicador: ['RFFPs/Improbidade: 0.0', 'Inaptidões: 0', 'Baixas: 0', 'Exclusão Simples: 0', 'Qtde Anos: 0.1']
+TOTAL DE PONTOS: 0100
+
+
+TDPF: 1010600202000181
+Qtde Operacoes: 1
+Qtde Anos: 3
+Porte: MED
+Acompanhamento Comac: N
+Pontos do Tributo Principal (art. 10, I): 148
+Base Multiplicador (art. 10, II): 158
+Tributo Principal (código): 1011
+Acréscimo (art. 10, § 2º): 0.0
+Operação Principal: 10201
+Valor da Operação (Anexo Único): 1.00
+Multiplicador (art. 12): 0.2
+Parâmetros do Multiplicador: ['RFFPs/Improbidade: 0.0', 'Inaptidões: 0', 'Baixas: 0', 'Exclusão Simples: 0', 'Qtde Anos: 0.2', 'Qtde PER: 0']
+TOTAL DE PONTOS: 0179
+
+
+TDPF: 1010600202000220
+Qtde Operacoes: 2
+Qtde Anos: 3
+Porte: DEM
+Acompanhamento Comac: N
+Pontos do Tributo Principal (art. 10, I): 111
+Base Multiplicador (art. 10, II): 118
+Tributo Principal (código): 2141
+Acréscimo (art. 10, § 2º): 0.0
+Operação Principal: 86201
+Valor da Operação (Anexo Único): 1.00
+Multiplicador (art. 12): 0.25
+Parâmetros do Multiplicador: ['RFFPs/Improbidade: 0.0', 'Inaptidões: 0', 'Baixas: 0', 'Exclusão Simples: 0', 'Qtde Operações: 0.05', 'Qtde Anos: 0.2', 'Estabelec Previd: 0', 'CEI/CAEPF/Obra: 0', 'Prestadores: 0', 'Tomadores: 0']
+TOTAL DE PONTOS: 0140
+
+
+TDPF: 1010600202000382
+Qtde Operacoes: 1
+Qtde Anos: 1
+Porte: DEM
+Acompanhamento Comac: N
+Pontos do Tributo Principal (art. 10, I): 130
+Base Multiplicador (art. 10, II): 118
+Tributo Principal (código): 1011
+Acréscimo (art. 10, § 2º): 0.0
+Operação Principal: 10201
+Valor da Operação (Anexo Único): 1.00
+Multiplicador (art. 12): 0.0
+Parâmetros do Multiplicador: ['RFFPs/Improbidade: 0.0', 'Inaptidões: 0', 'Baixas: 0', 'Exclusão Simples: 0', 'Qtde PER: 0']
+TOTAL DE PONTOS: 0130
+
+
+TDPF: 1010600202000391
+Qtde Operacoes: 1
+Qtde Anos: 1
+Porte: DEM
+Acompanhamento Comac: N
+Pontos do Tributo Principal (art. 10, I): 130
+Base Multiplicador (art. 10, II): 118
+Tributo Principal (código): 1011
+Acréscimo (art. 10, § 2º): 0.0
+Operação Principal: 10201
+Valor da Operação (Anexo Único): 1.00
+Multiplicador (art. 12): 0.0
+Parâmetros do Multiplicador: ['RFFPs/Improbidade: 0.0', 'Inaptidões: 0', 'Baixas: 0', 'Exclusão Simples: 0', 'Qtde PER: 0']
+TOTAL DE PONTOS: 0130
+
+
+TDPF: 1010600202100050
+Qtde Operacoes: 1
+Qtde Anos: 1
+Porte: DIF
+Acompanhamento Comac: S
+Pontos do Tributo Principal (art. 10, I): 194
+Base Multiplicador (art. 10, II): 194
+Tributo Principal (código): 0
+Acréscimo (art. 10, § 2º): 0.0
+Operação Principal: 91141
+Valor da Operação (Anexo Único): 0.20
+Multiplicador (art. 12): 0.4
+Parâmetros do Multiplicador: ['RFFPs/Improbidade: 0.0', 'Inaptidões: 0', 'Baixas: 0', 'Exclusão Simples: 0', 'Acompanhamento: 0.4']
+TOTAL DE PONTOS: 0116
+
+
+TDPF: 1010700202000042
+Qtde Operacoes: 4
+Qtde Anos: 3
+Porte: DEM
+Acompanhamento Comac: N
+Pontos do Tributo Principal (art. 10, I): 132
+Base Multiplicador (art. 10, II): 118
+Tributo Principal (código): 221
+Acréscimo (art. 10, § 2º): 0.0
+Operação Principal: 20449
+Valor da Operação (Anexo Único): 1.00
+Multiplicador (art. 12): 0.30000000000000004
+Parâmetros do Multiplicador: ['RFFPs/Improbidade: 0.0', 'Inaptidões: 0', 'Baixas: 0', 'Exclusão Simples: 0', 'Qtde Operações: 0.1', 'Qtde Anos: 0.2']
+TOTAL DE PONTOS: 0167
+
+
+TDPF: 1010700202000107
+Qtde Operacoes: 2
+Qtde Anos: 1
+Porte: DEM
+Acompanhamento Comac: N
+Pontos do Tributo Principal (art. 10, I): 137
+Base Multiplicador (art. 10, II): 118
+Tributo Principal (código): 3880
+Acréscimo (art. 10, § 2º): 0.0
+Operação Principal: 30120
+Valor da Operação (Anexo Único): 1.25
+Multiplicador (art. 12): 0.05
+Parâmetros do Multiplicador: ['RFFPs/Improbidade: 0.0', 'Inaptidões: 0', 'Baixas: 0', 'Exclusão Simples: 0', 'Qtde Operações: 0.05', 'Qtde PER: 0']
+TOTAL DE PONTOS: 0177
+
+
+TDPF: 1010700202000126
+Qtde Operacoes: 1
+Qtde Anos: 3
+Porte: MED
+Acompanhamento Comac: N
+Pontos do Tributo Principal (art. 10, I): 174
+Base Multiplicador (art. 10, II): 158
+Tributo Principal (código): 221
+Acréscimo (art. 10, § 2º): 0.0
+Operação Principal: 20449
+Valor da Operação (Anexo Único): 1.00
+Multiplicador (art. 12): 0.2
+Parâmetros do Multiplicador: ['RFFPs/Improbidade: 0.0', 'Inaptidões: 0', 'Baixas: 0', 'Exclusão Simples: 0', 'Qtde Anos: 0.2']
+TOTAL DE PONTOS: 0205
+
+
+TDPF: 1010700202000127
+Qtde Operacoes: 1
+Qtde Anos: 3
+Porte: DEM
+Acompanhamento Comac: N
+Pontos do Tributo Principal (art. 10, I): 132
+Base Multiplicador (art. 10, II): 118
+Tributo Principal (código): 221
+Acréscimo (art. 10, § 2º): 0.0
+Operação Principal: 20449
+Valor da Operação (Anexo Único): 1.00
+Multiplicador (art. 12): 0.2
+Parâmetros do Multiplicador: ['RFFPs/Improbidade: 0.0', 'Inaptidões: 0', 'Baixas: 0', 'Exclusão Simples: 0', 'Qtde Anos: 0.2']
+TOTAL DE PONTOS: 0155
+
+
+TDPF: 1010700202000138
+Qtde Operacoes: 2
+Qtde Anos: 3
+Porte: DEM
+Acompanhamento Comac: N
+Pontos do Tributo Principal (art. 10, I): 137
+Base Multiplicador (art. 10, II): 118
+Tributo Principal (código): 3880
+Acréscimo (art. 10, § 2º): 0.4
+Operação Principal: 20449
+Valor da Operação (Anexo Único): 1.00
+Multiplicador (art. 12): 0.25
+Parâmetros do Multiplicador: ['RFFPs/Improbidade: 0.0', 'Inaptidões: 0', 'Baixas: 0', 'Exclusão Simples: 0', 'Qtde Operações: 0.05', 'Qtde Anos: 0.2', 'Qtde PER: 0']
+TOTAL DE PONTOS: 0221
+
+
+TDPF: 1010700202000142
+Qtde Operacoes: 2
+Qtde Anos: 2
+Porte: DIF
+Acompanhamento Comac: N
+Pontos do Tributo Principal (art. 10, I): 247
+Base Multiplicador (art. 10, II): 194
+Tributo Principal (código): 221
+Acréscimo (art. 10, § 2º): 0.0
+Operação Principal: 20449
+Valor da Operação (Anexo Único): 1.00
+Multiplicador (art. 12): 0.15000000000000002
+Parâmetros do Multiplicador: ['RFFPs/Improbidade: 0.0', 'Inaptidões: 0', 'Baixas: 0', 'Exclusão Simples: 0', 'Qtde Operações: 0.05', 'Qtde Anos: 0.1']
+TOTAL DE PONTOS: 0276
+
+
+TDPF: 1010700202000149
+Qtde Operacoes: 3
+Qtde Anos: 2
+Porte: DEM
+Acompanhamento Comac: N
+Pontos do Tributo Principal (art. 10, I): 132
+Base Multiplicador (art. 10, II): 118
+Tributo Principal (código): 694
+Acréscimo (art. 10, § 2º): 0.1
+Operação Principal: 60101
+Valor da Operação (Anexo Único): 1.00
+Multiplicador (art. 12): 0.2
+Parâmetros do Multiplicador: ['RFFPs/Improbidade: 0.0', 'Inaptidões: 0', 'Baixas: 0', 'Exclusão Simples: 0', 'Qtde Operações: 0.1', 'Qtde Anos: 0.1']
+TOTAL DE PONTOS: 0168
+
+
+TDPF: 1010700202000154
+Qtde Operacoes: 1
+Qtde Anos: 1
+Porte: DIF
+Acompanhamento Comac: S
+Pontos do Tributo Principal (art. 10, I): 159
+Base Multiplicador (art. 10, II): 194
+Tributo Principal (código): 1011
+Acréscimo (art. 10, § 2º): 0.0
+Operação Principal: 91131
+Valor da Operação (Anexo Único): 0.75
+Multiplicador (art. 12): 0.4
+Parâmetros do Multiplicador: ['RFFPs/Improbidade: 0.0', 'Inaptidões: 0', 'Baixas: 0', 'Exclusão Simples: 0', 'Acompanhamento: 0.4', 'Qtde PER: 0']
+TOTAL DE PONTOS: 0196
+
+
+TDPF: 1010700202000182
+Qtde Operacoes: 1
+Qtde Anos: 2
+Porte: DEM
+Acompanhamento Comac: N
+Pontos do Tributo Principal (art. 10, I): 132
+Base Multiplicador (art. 10, II): 118
+Tributo Principal (código): 221
+Acréscimo (art. 10, § 2º): 0.0
+Operação Principal: 21106
+Valor da Operação (Anexo Único): 1.00
+Multiplicador (art. 12): 0.1
+Parâmetros do Multiplicador: ['RFFPs/Improbidade: 0.0', 'Inaptidões: 0', 'Baixas: 0', 'Exclusão Simples: 0', 'Qtde Anos: 0.1']
+TOTAL DE PONTOS: 0143
+
+
+TDPF: 1010700202000198
+Qtde Operacoes: 1
+Qtde Anos: 2
+Porte: DIF
+Acompanhamento Comac: S
+Pontos do Tributo Principal (art. 10, I): 159
+Base Multiplicador (art. 10, II): 194
+Tributo Principal (código): 1011
+Acréscimo (art. 10, § 2º): 0.0
+Operação Principal: 10201
+Valor da Operação (Anexo Único): 1.00
+Multiplicador (art. 12): 0.5
+Parâmetros do Multiplicador: ['RFFPs/Improbidade: 0.0', 'Inaptidões: 0', 'Baixas: 0', 'Exclusão Simples: 0', 'Acompanhamento: 0.4', 'Qtde Anos: 0.1', 'Qtde PER: 0']
+TOTAL DE PONTOS: 0256
+
+
+TDPF: 1010700202000226
+Qtde Operacoes: 5
+Qtde Anos: 3
+Porte: MED
+Acompanhamento Comac: N
+Pontos do Tributo Principal (art. 10, I): 174
+Base Multiplicador (art. 10, II): 158
+Tributo Principal (código): 221
+Acréscimo (art. 10, § 2º): 0.1
+Operação Principal: 23151
+Valor da Operação (Anexo Único): 1.60
+Multiplicador (art. 12): 0.30000000000000004
+Parâmetros do Multiplicador: ['RFFPs/Improbidade: 0.0', 'Inaptidões: 0', 'Baixas: 0', 'Exclusão Simples: 0', 'Qtde Operações: 0.1', 'Qtde Anos: 0.2']
+TOTAL DE PONTOS: 0353
+
+
+TDPF: 1010700202000238
+Qtde Operacoes: 2
+Qtde Anos: 4
+Porte: MED
+Acompanhamento Comac: N
+Pontos do Tributo Principal (art. 10, I): 177
+Base Multiplicador (art. 10, II): 158
+Tributo Principal (código): 3880
+Acréscimo (art. 10, § 2º): 0.0
+Operação Principal: 30120
+Valor da Operação (Anexo Único): 1.25
+Multiplicador (art. 12): 0.25
+Parâmetros do Multiplicador: ['RFFPs/Improbidade: 0.0', 'Inaptidões: 0', 'Baixas: 0', 'Exclusão Simples: 0', 'Qtde Operações: 0.05', 'Qtde Anos: 0.2', 'Qtde PER: 0']
+TOTAL DE PONTOS: 0260
+
+
+TDPF: 1010700202000239
+Qtde Operacoes: 1
+Qtde Anos: 1
+Porte: MED
+Acompanhamento Comac: N
+Pontos do Tributo Principal (art. 10, I): 177
+Base Multiplicador (art. 10, II): 158
+Tributo Principal (código): 3880
+Acréscimo (art. 10, § 2º): 0.0
+Operação Principal: 30101
+Valor da Operação (Anexo Único): 1.00
+Multiplicador (art. 12): 0.0
+Parâmetros do Multiplicador: ['RFFPs/Improbidade: 0.0', 'Inaptidões: 0', 'Baixas: 0', 'Exclusão Simples: 0', 'Qtde PER: 0']
+TOTAL DE PONTOS: 0177
+
+
+TDPF: 1010700202000251
+Qtde Operacoes: 2
+Qtde Anos: 3
+Porte: DIF
+Acompanhamento Comac: N
+Pontos do Tributo Principal (art. 10, I): 247
+Base Multiplicador (art. 10, II): 194
+Tributo Principal (código): 221
+Acréscimo (art. 10, § 2º): 0.4
+Operação Principal: 20449
+Valor da Operação (Anexo Único): 1.00
+Multiplicador (art. 12): 0.25
+Parâmetros do Multiplicador: ['RFFPs/Improbidade: 0.0', 'Inaptidões: 0', 'Baixas: 0', 'Exclusão Simples: 0', 'Qtde Operações: 0.05', 'Qtde Anos: 0.2', 'Qtde PER: 0']
+TOTAL DE PONTOS: 0394
+
+
+TDPF: 1010700202000255
+Qtde Operacoes: 1
+Qtde Anos: 2
+Porte: DEM
+Acompanhamento Comac: N
+Pontos do Tributo Principal (art. 10, I): 130
+Base Multiplicador (art. 10, II): 118
+Tributo Principal (código): 1011
+Acréscimo (art. 10, § 2º): 0.0
+Operação Principal: 10201
+Valor da Operação (Anexo Único): 1.00
+Multiplicador (art. 12): 0.1
+Parâmetros do Multiplicador: ['RFFPs/Improbidade: 0.0', 'Inaptidões: 0', 'Baixas: 0', 'Exclusão Simples: 0', 'Qtde Anos: 0.1', 'Qtde PER: 0']
+TOTAL DE PONTOS: 0141
+
+
+TDPF: 1010700202000256
+Qtde Operacoes: 1
+Qtde Anos: 2
+Porte: DIF
+Acompanhamento Comac: N
+Pontos do Tributo Principal (art. 10, I): 159
+Base Multiplicador (art. 10, II): 194
+Tributo Principal (código): 1011
+Acréscimo (art. 10, § 2º): 0.0
+Operação Principal: 10201
+Valor da Operação (Anexo Único): 1.00
+Multiplicador (art. 12): 0.1
+Parâmetros do Multiplicador: ['RFFPs/Improbidade: 0.0', 'Inaptidões: 0', 'Baixas: 0', 'Exclusão Simples: 0', 'Qtde Anos: 0.1', 'Qtde PER: 0']
+TOTAL DE PONTOS: 0178
+
+
+TDPF: 1010700202000257
+Qtde Operacoes: 1
+Qtde Anos: 2
+Porte: DIF
+Acompanhamento Comac: N
+Pontos do Tributo Principal (art. 10, I): 159
+Base Multiplicador (art. 10, II): 194
+Tributo Principal (código): 1011
+Acréscimo (art. 10, § 2º): 0.0
+Operação Principal: 10201
+Valor da Operação (Anexo Único): 1.00
+Multiplicador (art. 12): 0.1
+Parâmetros do Multiplicador: ['RFFPs/Improbidade: 0.0', 'Inaptidões: 0', 'Baixas: 0', 'Exclusão Simples: 0', 'Qtde Anos: 0.1', 'Qtde PER: 0']
+TOTAL DE PONTOS: 0178
+
+
+TDPF: 1010700202000264
+Qtde Operacoes: 1
+Qtde Anos: 2
+Porte: MED
+Acompanhamento Comac: N
+Pontos do Tributo Principal (art. 10, I): 174
+Base Multiplicador (art. 10, II): 158
+Tributo Principal (código): 221
+Acréscimo (art. 10, § 2º): 0.0
+Operação Principal: 20449
+Valor da Operação (Anexo Único): 1.00
+Multiplicador (art. 12): 0.1
+Parâmetros do Multiplicador: ['RFFPs/Improbidade: 0.0', 'Inaptidões: 0', 'Baixas: 0', 'Exclusão Simples: 0', 'Qtde Anos: 0.1']
+TOTAL DE PONTOS: 0189
+
+
+TDPF: 1010700202000284
+Qtde Operacoes: 2
+Qtde Anos: 1
+Porte: DEM
+Acompanhamento Comac: N
+Pontos do Tributo Principal (art. 10, I): 137
+Base Multiplicador (art. 10, II): 118
+Tributo Principal (código): 3880
+Acréscimo (art. 10, § 2º): 0.4
+Operação Principal: 20652
+Valor da Operação (Anexo Único): 1.00
+Multiplicador (art. 12): 0.05
+Parâmetros do Multiplicador: ['RFFPs/Improbidade: 0.0', 'Inaptidões: 0', 'Baixas: 0', 'Exclusão Simples: 0', 'Qtde Operações: 0.05', 'Qtde PER: 0']
+TOTAL DE PONTOS: 0197
+
+
+TDPF: 1010700202000294
+Qtde Operacoes: 5
+Qtde Anos: 1
+Porte: DEM
+Acompanhamento Comac: N
+Pontos do Tributo Principal (art. 10, I): 137
+Base Multiplicador (art. 10, II): 118
+Tributo Principal (código): 3880
+Acréscimo (art. 10, § 2º): 0.4
+Operação Principal: 20652
+Valor da Operação (Anexo Único): 1.00
+Multiplicador (art. 12): 0.1
+Parâmetros do Multiplicador: ['RFFPs/Improbidade: 0.0', 'Inaptidões: 0', 'Baixas: 0', 'Exclusão Simples: 0', 'Qtde Operações: 0.1', 'Qtde PER: 0']
+TOTAL DE PONTOS: 0203
+
+
+TDPF: 1010700202000323
+Qtde Operacoes: 1
+Qtde Anos: 2
+Porte: DIF
+Acompanhamento Comac: N
+Pontos do Tributo Principal (art. 10, I): 210
+Base Multiplicador (art. 10, II): 194
+Tributo Principal (código): 3880
+Acréscimo (art. 10, § 2º): 0.0
+Operação Principal: 30101
+Valor da Operação (Anexo Único): 1.00
+Multiplicador (art. 12): 0.1
+Parâmetros do Multiplicador: ['RFFPs/Improbidade: 0.0', 'Inaptidões: 0', 'Baixas: 0', 'Exclusão Simples: 0', 'Qtde Anos: 0.1', 'Qtde PER: 0']
+TOTAL DE PONTOS: 0229
+
+
+TDPF: 1010700202000348
+Qtde Operacoes: 1
+Qtde Anos: 2
+Porte: MED
+Acompanhamento Comac: N
+Pontos do Tributo Principal (art. 10, I): 177
+Base Multiplicador (art. 10, II): 158
+Tributo Principal (código): 3880
+Acréscimo (art. 10, § 2º): 0.0
+Operação Principal: 30117
+Valor da Operação (Anexo Único): 0.75
+Multiplicador (art. 12): 0.1
+Parâmetros do Multiplicador: ['RFFPs/Improbidade: 0.0', 'Inaptidões: 0', 'Baixas: 0', 'Exclusão Simples: 0', 'Qtde Anos: 0.1', 'Qtde PER: 0']
+TOTAL DE PONTOS: 0148
+
+
+TDPF: 1010700202000366
+Qtde Operacoes: 1
+Qtde Anos: 1
+Porte: DEM
+Acompanhamento Comac: N
+Pontos do Tributo Principal (art. 10, I): 132
+Base Multiplicador (art. 10, II): 118
+Tributo Principal (código): 221
+Acréscimo (art. 10, § 2º): 0.0
+Operação Principal: 21106
+Valor da Operação (Anexo Único): 1.00
+Multiplicador (art. 12): 0.0
+Parâmetros do Multiplicador: ['RFFPs/Improbidade: 0.0', 'Inaptidões: 0', 'Baixas: 0', 'Exclusão Simples: 0']
+TOTAL DE PONTOS: 0132
+
+
+TDPF: 1010700202000388
+Qtde Operacoes: 0
+Qtde Anos: 4
+Porte: DEM
+Acompanhamento Comac: N
+Pontos do Tributo Principal (art. 10, I): 137
+Base Multiplicador (art. 10, II): 118
+Tributo Principal (código): 3880
+Acréscimo (art. 10, § 2º): 0.0
+Operação Principal: 93151
+Valor da Operação (Anexo Único): 0.75
+Multiplicador (art. 12): 0.2
+Parâmetros do Multiplicador: ['RFFPs/Improbidade: 0.0', 'Inaptidões: 0', 'Baixas: 0', 'Exclusão Simples: 0', 'Qtde Anos: 0.2', 'Qtde PER: 0']
+TOTAL DE PONTOS: 0126
+
+
+TDPF: 1010700202000398
+Qtde Operacoes: 1
+Qtde Anos: 1
+Porte: DIF
+Acompanhamento Comac: S
+Pontos do Tributo Principal (art. 10, I): 159
+Base Multiplicador (art. 10, II): 194
+Tributo Principal (código): 1011
+Acréscimo (art. 10, § 2º): 0.0
+Operação Principal: 91131
+Valor da Operação (Anexo Único): 0.75
+Multiplicador (art. 12): 0.4
+Parâmetros do Multiplicador: ['RFFPs/Improbidade: 0.0', 'Inaptidões: 0', 'Baixas: 0', 'Exclusão Simples: 0', 'Acompanhamento: 0.4', 'Qtde PER: 0']
+TOTAL DE PONTOS: 0196
+
+
+TDPF: 1010700202000401
+Qtde Operacoes: 1
+Qtde Anos: 1
+Porte: DIF
+Acompanhamento Comac: S
+Pontos do Tributo Principal (art. 10, I): 159
+Base Multiplicador (art. 10, II): 194
+Tributo Principal (código): 1011
+Acréscimo (art. 10, § 2º): 0.0
+Operação Principal: 91131
+Valor da Operação (Anexo Único): 0.75
+Multiplicador (art. 12): 0.4
+Parâmetros do Multiplicador: ['RFFPs/Improbidade: 0.0', 'Inaptidões: 0', 'Baixas: 0', 'Exclusão Simples: 0', 'Acompanhamento: 0.4', 'Qtde PER: 0']
+TOTAL DE PONTOS: 0196
+
+
+TDPF: 1010700202000434
+Qtde Operacoes: 1
+Qtde Anos: 1
+Porte: DIF
+Acompanhamento Comac: N
+Pontos do Tributo Principal (art. 10, I): 159
+Base Multiplicador (art. 10, II): 194
+Tributo Principal (código): 1011
+Acréscimo (art. 10, § 2º): 0.0
+Operação Principal: 91131
+Valor da Operação (Anexo Único): 0.75
+Multiplicador (art. 12): 0.0
+Parâmetros do Multiplicador: ['RFFPs/Improbidade: 0.0', 'Inaptidões: 0', 'Baixas: 0', 'Exclusão Simples: 0', 'Qtde PER: 0']
+TOTAL DE PONTOS: 0119
+
+
+TDPF: 1010700202000435
+Qtde Operacoes: 1
+Qtde Anos: 1
+Porte: DIF
+Acompanhamento Comac: N
+Pontos do Tributo Principal (art. 10, I): 159
+Base Multiplicador (art. 10, II): 194
+Tributo Principal (código): 1011
+Acréscimo (art. 10, § 2º): 0.0
+Operação Principal: 91131
+Valor da Operação (Anexo Único): 0.75
+Multiplicador (art. 12): 0.0
+Parâmetros do Multiplicador: ['RFFPs/Improbidade: 0.0', 'Inaptidões: 0', 'Baixas: 0', 'Exclusão Simples: 0', 'Qtde PER: 0']
+TOTAL DE PONTOS: 0119
+
+
+TDPF: 1010700202000436
+Qtde Operacoes: 1
+Qtde Anos: 1
+Porte: DIF
+Acompanhamento Comac: N
+Pontos do Tributo Principal (art. 10, I): 159
+Base Multiplicador (art. 10, II): 194
+Tributo Principal (código): 1011
+Acréscimo (art. 10, § 2º): 0.0
+Operação Principal: 91131
+Valor da Operação (Anexo Único): 0.75
+Multiplicador (art. 12): 0.0
+Parâmetros do Multiplicador: ['RFFPs/Improbidade: 0.0', 'Inaptidões: 0', 'Baixas: 0', 'Exclusão Simples: 0', 'Qtde PER: 0']
+TOTAL DE PONTOS: 0119
+
+
+TDPF: 1010700202000440
+Qtde Operacoes: 2
+Qtde Anos: 3
+Porte: MED
+Acompanhamento Comac: N
+Pontos do Tributo Principal (art. 10, I): 174
+Base Multiplicador (art. 10, II): 158
+Tributo Principal (código): 221
+Acréscimo (art. 10, § 2º): 0.0
+Operação Principal: 20303
+Valor da Operação (Anexo Único): 1.60
+Multiplicador (art. 12): 0.25
+Parâmetros do Multiplicador: ['RFFPs/Improbidade: 0.0', 'Inaptidões: 0', 'Baixas: 0', 'Exclusão Simples: 0', 'Qtde Operações: 0.05', 'Qtde Anos: 0.2']
+TOTAL DE PONTOS: 0317
+
+
+TDPF: 1010700202000443
+Qtde Operacoes: 1
+Qtde Anos: 1
+Porte: DEM
+Acompanhamento Comac: N
+Pontos do Tributo Principal (art. 10, I): 132
+Base Multiplicador (art. 10, II): 118
+Tributo Principal (código): 221
+Acréscimo (art. 10, § 2º): 0.0
+Operação Principal: 21106
+Valor da Operação (Anexo Único): 1.00
+Multiplicador (art. 12): 0.0
+Parâmetros do Multiplicador: ['RFFPs/Improbidade: 0.0', 'Inaptidões: 0', 'Baixas: 0', 'Exclusão Simples: 0']
+TOTAL DE PONTOS: 0132
+
+
+TDPF: 1010700202000465
+Qtde Operacoes: 2
+Qtde Anos: 5
+Porte: DEM
+Acompanhamento Comac: N
+Pontos do Tributo Principal (art. 10, I): 130
+Base Multiplicador (art. 10, II): 118
+Tributo Principal (código): 1011
+Acréscimo (art. 10, § 2º): 0.0
+Operação Principal: 91131
+Valor da Operação (Anexo Único): 0.75
+Multiplicador (art. 12): 0.25
+Parâmetros do Multiplicador: ['RFFPs/Improbidade: 0.0', 'Inaptidões: 0', 'Baixas: 0', 'Exclusão Simples: 0', 'Qtde Operações: 0.05', 'Qtde Anos: 0.2', 'Qtde PER: 0']
+TOTAL DE PONTOS: 0127
+
+
+TDPF: 1010800202000016
+Qtde Operacoes: 1
+Qtde Anos: 2
+Porte: DEM
+Acompanhamento Comac: N
+Pontos do Tributo Principal (art. 10, I): 132
+Base Multiplicador (art. 10, II): 118
+Tributo Principal (código): 221
+Acréscimo (art. 10, § 2º): 0.0
+Operação Principal: 91231
+Valor da Operação (Anexo Único): 1.00
+Multiplicador (art. 12): 0.1
+Parâmetros do Multiplicador: ['RFFPs/Improbidade: 0.0', 'Inaptidões: 0', 'Baixas: 0', 'Exclusão Simples: 0', 'Qtde Anos: 0.1']
+TOTAL DE PONTOS: 0143
+
+
+TDPF: 1010800202000077
+Qtde Operacoes: 1
+Qtde Anos: 4
+Porte: DEM
+Acompanhamento Comac: N
+Pontos do Tributo Principal (art. 10, I): 75
+Base Multiplicador (art. 10, II): 68
+Tributo Principal (código): 210
+Acréscimo (art. 10, § 2º): 0.0
+Operação Principal: 40101
+Valor da Operação (Anexo Único): 1.00
+Multiplicador (art. 12): 0.2
+Parâmetros do Multiplicador: ['RFFPs/Improbidade: 0.0', 'Inaptidões: 0', 'Baixas: 0', 'Exclusão Simples: 0', 'Qtde Anos: 0.2']
+TOTAL DE PONTOS: 0088
+
+
+TDPF: 1010800202000106
+Qtde Operacoes: 1
+Qtde Anos: 4
+Porte: DEM
+Acompanhamento Comac: N
+Pontos do Tributo Principal (art. 10, I): 75
+Base Multiplicador (art. 10, II): 68
+Tributo Principal (código): 210
+Acréscimo (art. 10, § 2º): 0.0
+Operação Principal: 40101
+Valor da Operação (Anexo Único): 1.00
+Multiplicador (art. 12): 0.2
+Parâmetros do Multiplicador: ['RFFPs/Improbidade: 0.0', 'Inaptidões: 0', 'Baixas: 0', 'Exclusão Simples: 0', 'Qtde Anos: 0.2']
+TOTAL DE PONTOS: 0088
+
+
+TDPF: 1011100201900133
+Qtde Operacoes: 1
+Qtde Anos: 2
+Porte: MED
+Acompanhamento Comac: N
+Pontos do Tributo Principal (art. 10, I): 177
+Base Multiplicador (art. 10, II): 158
+Tributo Principal (código): 3880
+Acréscimo (art. 10, § 2º): 0.0
+Operação Principal: 30120
+Valor da Operação (Anexo Único): 1.25
+Multiplicador (art. 12): 0.1
+Parâmetros do Multiplicador: ['RFFPs/Improbidade: 0.0', 'Inaptidões: 0', 'Baixas: 0', 'Exclusão Simples: 0', 'Qtde Anos: 0.1', 'Qtde PER: 0']
+TOTAL DE PONTOS: 0237
+
+
+TDPF: 1010700202100060
+Qtde Operacoes: 1
+Qtde Anos: 1
+Porte: DEM
+Acompanhamento Comac: N
+Pontos do Tributo Principal (art. 10, I): 130
+Base Multiplicador (art. 10, II): 118
+Tributo Principal (código): 1011
+Acréscimo (art. 10, § 2º): 0.0
+Operação Principal: 91131
+Valor da Operação (Anexo Único): 0.75
+Multiplicador (art. 12): 0.0
+Parâmetros do Multiplicador: ['RFFPs/Improbidade: 0.0', 'Inaptidões: 0', 'Baixas: 0', 'Exclusão Simples: 0', 'Qtde PER: 0']
+TOTAL DE PONTOS: 0097
+
+
+TDPF: 1010700202100098
+Qtde Operacoes: 1
+Qtde Anos: 1
+Porte: DIF
+Acompanhamento Comac: S
+Pontos do Tributo Principal (art. 10, I): 159
+Base Multiplicador (art. 10, II): 194
+Tributo Principal (código): 1011
+Acréscimo (art. 10, § 2º): 0.0
+Operação Principal: 91131
+Valor da Operação (Anexo Único): 0.75
+Multiplicador (art. 12): 0.4
+Parâmetros do Multiplicador: ['RFFPs/Improbidade: 0.0', 'Inaptidões: 0', 'Baixas: 0', 'Exclusão Simples: 0', 'Acompanhamento: 0.4', 'Qtde PER: 0']
+TOTAL DE PONTOS: 0196
+
+
+TDPF: 1010700202100102
+Qtde Operacoes: 1
+Qtde Anos: 1
+Porte: DIF
+Acompanhamento Comac: S
+Pontos do Tributo Principal (art. 10, I): 159
+Base Multiplicador (art. 10, II): 194
+Tributo Principal (código): 1011
+Acréscimo (art. 10, § 2º): 0.0
+Operação Principal: 91131
+Valor da Operação (Anexo Único): 0.75
+Multiplicador (art. 12): 0.4
+Parâmetros do Multiplicador: ['RFFPs/Improbidade: 0.0', 'Inaptidões: 0', 'Baixas: 0', 'Exclusão Simples: 0', 'Acompanhamento: 0.4', 'Qtde PER: 0']
+TOTAL DE PONTOS: 0196
+
+
+TDPF: 1010700202000399
+Qtde Operacoes: 1
+Qtde Anos: 4
+Porte: DIF
+Acompanhamento Comac: S
+Pontos do Tributo Principal (art. 10, I): 159
+Base Multiplicador (art. 10, II): 194
+Tributo Principal (código): 1011
+Acréscimo (art. 10, § 2º): 0.0
+Operação Principal: 91131
+Valor da Operação (Anexo Único): 0.75
+Multiplicador (art. 12): 0.6000000000000001
+Parâmetros do Multiplicador: ['RFFPs/Improbidade: 0.0', 'Inaptidões: 0', 'Baixas: 0', 'Exclusão Simples: 0', 'Acompanhamento: 0.4', 'Qtde Anos: 0.2', 'Qtde PER: 0']
+TOTAL DE PONTOS: 0235
+
+
+TDPF: 1000100201902372
+Qtde Operacoes: 1
+Qtde Anos: 2
+Porte: MED
+Acompanhamento Comac: N
+Pontos do Tributo Principal (art. 10, I): 148
+Base Multiplicador (art. 10, II): 158
+Tributo Principal (código): 1011
+Acréscimo (art. 10, § 2º): 0.0
+Operação Principal: 10201
+Valor da Operação (Anexo Único): 1.00
+Multiplicador (art. 12): 0.1
+Parâmetros do Multiplicador: ['RFFPs/Improbidade: 0.0', 'Inaptidões: 0', 'Baixas: 0', 'Exclusão Simples: 0', 'Qtde Anos: 0.1', 'Qtde PER: 0']
+TOTAL DE PONTOS: 0163
+
+
+TDPF: 1000100202002334
+Qtde Operacoes: 3
+Qtde Anos: 2
+Porte: DIF
+Acompanhamento Comac: N
+Pontos do Tributo Principal (art. 10, I): 247
+Base Multiplicador (art. 10, II): 194
+Tributo Principal (código): 221
+Acréscimo (art. 10, § 2º): 0.0
+Operação Principal: 20551
+Valor da Operação (Anexo Único): 1.25
+Multiplicador (art. 12): 0.2
+Parâmetros do Multiplicador: ['RFFPs/Improbidade: 0.0', 'Inaptidões: 0', 'Baixas: 0', 'Exclusão Simples: 0', 'Qtde Operações: 0.1', 'Qtde Anos: 0.1']
+TOTAL DE PONTOS: 0347
+
+
+TDPF: 1000100202100002
+Qtde Operacoes: 1
+Qtde Anos: 2
+Porte: DEM
+Acompanhamento Comac: N
+Pontos do Tributo Principal (art. 10, I): 75
+Base Multiplicador (art. 10, II): 68
+Tributo Principal (código): 210
+Acréscimo (art. 10, § 2º): 0.0
+Operação Principal: 40121
+Valor da Operação (Anexo Único): 1.25
+Multiplicador (art. 12): 0.1
+Parâmetros do Multiplicador: ['RFFPs/Improbidade: 0.0', 'Inaptidões: 0', 'Baixas: 0', 'Exclusão Simples: 0', 'Qtde Anos: 0.1']
+TOTAL DE PONTOS: 0100
+
+
+TDPF: 1010100202000173
+Qtde Operacoes: 4
+Qtde Anos: 2
+Porte: DIF
+Acompanhamento Comac: N
+Pontos do Tributo Principal (art. 10, I): 247
+Base Multiplicador (art. 10, II): 194
+Tributo Principal (código): 221
+Acréscimo (art. 10, § 2º): 0.0
+Operação Principal: 20501
+Valor da Operação (Anexo Único): 1.00
+Multiplicador (art. 12): 0.2
+Parâmetros do Multiplicador: ['RFFPs/Improbidade: 0.0', 'Inaptidões: 0', 'Baixas: 0', 'Exclusão Simples: 0', 'Qtde Operações: 0.1', 'Qtde Anos: 0.1']
+TOTAL DE PONTOS: 0285
+
+
+TDPF: 1010100202000182
+Qtde Operacoes: 1
+Qtde Anos: 1
+Porte: DEM
+Acompanhamento Comac: N
+Pontos do Tributo Principal (art. 10, I): 75
+Base Multiplicador (art. 10, II): 68
+Tributo Principal (código): 210
+Acréscimo (art. 10, § 2º): 0.0
+Operação Principal: 40111
+Valor da Operação (Anexo Único): 1.25
+Multiplicador (art. 12): 0.0
+Parâmetros do Multiplicador: ['RFFPs/Improbidade: 0.0', 'Inaptidões: 0', 'Baixas: 0', 'Exclusão Simples: 0']
+TOTAL DE PONTOS: 0093
+
+
+TDPF: 1010100202000186
+Qtde Operacoes: 1
+Qtde Anos: 2
+Porte: DEM
+Acompanhamento Comac: N
+Pontos do Tributo Principal (art. 10, I): 75
+Base Multiplicador (art. 10, II): 68
+Tributo Principal (código): 210
+Acréscimo (art. 10, § 2º): 0.0
+Operação Principal: 40121
+Valor da Operação (Anexo Único): 1.25
+Multiplicador (art. 12): 0.1
+Parâmetros do Multiplicador: ['RFFPs/Improbidade: 0.0', 'Inaptidões: 0', 'Baixas: 0', 'Exclusão Simples: 0', 'Qtde Anos: 0.1']
+TOTAL DE PONTOS: 0100
+
+
+TDPF: 1010100202000237
+Qtde Operacoes: 1
+Qtde Anos: 1
+Porte: DEM
+Acompanhamento Comac: N
+Pontos do Tributo Principal (art. 10, I): 75
+Base Multiplicador (art. 10, II): 68
+Tributo Principal (código): 210
+Acréscimo (art. 10, § 2º): 0.0
+Operação Principal: 40111
+Valor da Operação (Anexo Único): 1.25
+Multiplicador (art. 12): 0.0
+Parâmetros do Multiplicador: ['RFFPs/Improbidade: 0.0', 'Inaptidões: 0', 'Baixas: 0', 'Exclusão Simples: 0']
+TOTAL DE PONTOS: 0093
+
+
+TDPF: 1010100202000238
+Qtde Operacoes: 2
+Qtde Anos: 1
+Porte: DIF
+Acompanhamento Comac: N
+Pontos do Tributo Principal (art. 10, I): 105
+Base Multiplicador (art. 10, II): 85
+Tributo Principal (código): 210
+Acréscimo (art. 10, § 2º): 0.0
+Operação Principal: 91232
+Valor da Operação (Anexo Único): 1.00
+Multiplicador (art. 12): 0.05
+Parâmetros do Multiplicador: ['RFFPs/Improbidade: 0.0', 'Inaptidões: 0', 'Baixas: 0', 'Exclusão Simples: 0', 'Qtde Operações: 0.05']
+TOTAL DE PONTOS: 0109
+
+
+TDPF: 1010100202000258
+Qtde Operacoes: 1
+Qtde Anos: 3
+Porte: DEM
+Acompanhamento Comac: N
+Pontos do Tributo Principal (art. 10, I): 132
+Base Multiplicador (art. 10, II): 118
+Tributo Principal (código): 221
+Acréscimo (art. 10, § 2º): 0.0
+Operação Principal: 21106
+Valor da Operação (Anexo Único): 1.00
+Multiplicador (art. 12): 0.2
+Parâmetros do Multiplicador: ['RFFPs/Improbidade: 0.0', 'Inaptidões: 0', 'Baixas: 0', 'Exclusão Simples: 0', 'Qtde Anos: 0.2']
+TOTAL DE PONTOS: 0155
+
+
+TDPF: 1010100202000267
+Qtde Operacoes: 1
+Qtde Anos: 2
+Porte: DIF
+Acompanhamento Comac: N
+Pontos do Tributo Principal (art. 10, I): 105
+Base Multiplicador (art. 10, II): 85
+Tributo Principal (código): 210
+Acréscimo (art. 10, § 2º): 0.0
+Operação Principal: 40302
+Valor da Operação (Anexo Único): 1.25
+Multiplicador (art. 12): 0.1
+Parâmetros do Multiplicador: ['RFFPs/Improbidade: 0.0', 'Inaptidões: 0', 'Baixas: 0', 'Exclusão Simples: 0', 'Qtde Anos: 0.1']
+TOTAL DE PONTOS: 0139
+
+
+TDPF: 1010100202000271
+Qtde Operacoes: 3
+Qtde Anos: 2
+Porte: DEM
+Acompanhamento Comac: N
+Pontos do Tributo Principal (art. 10, I): 75
+Base Multiplicador (art. 10, II): 68
+Tributo Principal (código): 210
+Acréscimo (art. 10, § 2º): 0.0
+Operação Principal: 40302
+Valor da Operação (Anexo Único): 1.25
+Multiplicador (art. 12): 0.2
+Parâmetros do Multiplicador: ['RFFPs/Improbidade: 0.0', 'Inaptidões: 0', 'Baixas: 0', 'Exclusão Simples: 0', 'Qtde Operações: 0.1', 'Qtde Anos: 0.1']
+TOTAL DE PONTOS: 0107
+
+
+TDPF: 1010100202000273
+Qtde Operacoes: 1
+Qtde Anos: 1
+Porte: DEM
+Acompanhamento Comac: N
+Pontos do Tributo Principal (art. 10, I): 75
+Base Multiplicador (art. 10, II): 68
+Tributo Principal (código): 210
+Acréscimo (art. 10, § 2º): 0.0
+Operação Principal: 40111
+Valor da Operação (Anexo Único): 1.25
+Multiplicador (art. 12): 0.0
+Parâmetros do Multiplicador: ['RFFPs/Improbidade: 0.0', 'Inaptidões: 0', 'Baixas: 0', 'Exclusão Simples: 0']
+TOTAL DE PONTOS: 0093
+
+
+TDPF: 1010100202000275
+Qtde Operacoes: 3
+Qtde Anos: 3
+Porte: DEM
+Acompanhamento Comac: N
+Pontos do Tributo Principal (art. 10, I): 75
+Base Multiplicador (art. 10, II): 68
+Tributo Principal (código): 210
+Acréscimo (art. 10, § 2º): 0.0
+Operação Principal: 40302
+Valor da Operação (Anexo Único): 1.25
+Multiplicador (art. 12): 0.30000000000000004
+Parâmetros do Multiplicador: ['RFFPs/Improbidade: 0.0', 'Inaptidões: 0', 'Baixas: 0', 'Exclusão Simples: 0', 'Qtde Operações: 0.1', 'Qtde Anos: 0.2']
+TOTAL DE PONTOS: 0114
+
+
+TDPF: 1010100202000294
+Qtde Operacoes: 1
+Qtde Anos: 2
+Porte: DIF
+Acompanhamento Comac: S
+Pontos do Tributo Principal (art. 10, I): 105
+Base Multiplicador (art. 10, II): 85
+Tributo Principal (código): 210
+Acréscimo (art. 10, § 2º): 0.0
+Operação Principal: 40101
+Valor da Operação (Anexo Único): 1.00
+Multiplicador (art. 12): 1.5
+Parâmetros do Multiplicador: ['RFFPs/Improbidade: 0.0', 'Inaptidões: 0', 'Baixas: 0', 'Exclusão Simples: 0', 'Acompanhamento: 1.4', 'Qtde Anos: 0.1']
+TOTAL DE PONTOS: 0232
+
+
+TDPF: 1010100202000423
+Qtde Operacoes: 1
+Qtde Anos: 1
+Porte: DEM
+Acompanhamento Comac: N
+Pontos do Tributo Principal (art. 10, I): 111
+Base Multiplicador (art. 10, II): 118
+Tributo Principal (código): 2141
+Acréscimo (art. 10, § 2º): 0.0
+Operação Principal: 87602
+Valor da Operação (Anexo Único): 1.00
+Multiplicador (art. 12): 0.0
+Parâmetros do Multiplicador: ['RFFPs/Improbidade: 0.0', 'Inaptidões: 0', 'Baixas: 0', 'Exclusão Simples: 0', 'Estabelec Previd: 0', 'CEI/CAEPF/Obra: 0', 'Prestadores: 0', 'Tomadores: 0']
+TOTAL DE PONTOS: 0111
+
+
+TDPF: 1010100202100004
+Qtde Operacoes: 1
+Qtde Anos: 1
+Porte: DEM
+Acompanhamento Comac: N
+Pontos do Tributo Principal (art. 10, I): 75
+Base Multiplicador (art. 10, II): 68
+Tributo Principal (código): 210
+Acréscimo (art. 10, § 2º): 0.0
+Operação Principal: 40102
+Valor da Operação (Anexo Único): 1.00
+Multiplicador (art. 12): 0.0
+Parâmetros do Multiplicador: ['RFFPs/Improbidade: 0.0', 'Inaptidões: 0', 'Baixas: 0', 'Exclusão Simples: 0']
+TOTAL DE PONTOS: 0075
+
+
+TDPF: 1010100202100010
+Qtde Operacoes: 1
+Qtde Anos: 1
+Porte: DEM
+Acompanhamento Comac: N
+Pontos do Tributo Principal (art. 10, I): 75
+Base Multiplicador (art. 10, II): 68
+Tributo Principal (código): 210
+Acréscimo (art. 10, § 2º): 0.0
+Operação Principal: 40301
+Valor da Operação (Anexo Único): 1.00
+Multiplicador (art. 12): 0.0
+Parâmetros do Multiplicador: ['RFFPs/Improbidade: 0.0', 'Inaptidões: 0', 'Baixas: 0', 'Exclusão Simples: 0']
+TOTAL DE PONTOS: 0075
+
+
+TDPF: 1010100202100038
+Qtde Operacoes: 1
+Qtde Anos: 1
+Porte: DEM
+Acompanhamento Comac: N
+Pontos do Tributo Principal (art. 10, I): 75
+Base Multiplicador (art. 10, II): 68
+Tributo Principal (código): 210
+Acréscimo (art. 10, § 2º): 0.0
+Operação Principal: 40121
+Valor da Operação (Anexo Único): 1.25
+Multiplicador (art. 12): 0.0
+Parâmetros do Multiplicador: ['RFFPs/Improbidade: 0.0', 'Inaptidões: 0', 'Baixas: 0', 'Exclusão Simples: 0']
+TOTAL DE PONTOS: 0093
+
+
+TDPF: 1010200202000044
+Qtde Operacoes: 2
+Qtde Anos: 1
+Porte: DEM
+Acompanhamento Comac: N
+Pontos do Tributo Principal (art. 10, I): 132
+Base Multiplicador (art. 10, II): 118
+Tributo Principal (código): 694
+Acréscimo (art. 10, § 2º): 0.0
+Operação Principal: 21106
+Valor da Operação (Anexo Único): 1.00
+Multiplicador (art. 12): 0.05
+Parâmetros do Multiplicador: ['RFFPs/Improbidade: 0.0', 'Inaptidões: 0', 'Baixas: 0', 'Exclusão Simples: 0', 'Qtde Operações: 0.05']
+TOTAL DE PONTOS: 0137
+
+
+TDPF: 1010200202000071
+Qtde Operacoes: 3
+Qtde Anos: 2
+Porte: MED
+Acompanhamento Comac: N
+Pontos do Tributo Principal (art. 10, I): 174
+Base Multiplicador (art. 10, II): 158
+Tributo Principal (código): 221
+Acréscimo (art. 10, § 2º): 0.0
+Operação Principal: 20501
+Valor da Operação (Anexo Único): 1.00
+Multiplicador (art. 12): 0.2
+Parâmetros do Multiplicador: ['RFFPs/Improbidade: 0.0', 'Inaptidões: 0', 'Baixas: 0', 'Exclusão Simples: 0', 'Qtde Operações: 0.1', 'Qtde Anos: 0.1']
+TOTAL DE PONTOS: 0205
+
+
+TDPF: 1010200202000075
+Qtde Operacoes: 2
+Qtde Anos: 1
+Porte: DEM
+Acompanhamento Comac: N
+Pontos do Tributo Principal (art. 10, I): 132
+Base Multiplicador (art. 10, II): 118
+Tributo Principal (código): 694
+Acréscimo (art. 10, § 2º): 0.0
+Operação Principal: 21106
+Valor da Operação (Anexo Único): 1.00
+Multiplicador (art. 12): 0.05
+Parâmetros do Multiplicador: ['RFFPs/Improbidade: 0.0', 'Inaptidões: 0', 'Baixas: 0', 'Exclusão Simples: 0', 'Qtde Operações: 0.05']
+TOTAL DE PONTOS: 0137
+
+
+TDPF: 1010200202000078
+Qtde Operacoes: 2
+Qtde Anos: 1
+Porte: DEM
+Acompanhamento Comac: N
+Pontos do Tributo Principal (art. 10, I): 132
+Base Multiplicador (art. 10, II): 118
+Tributo Principal (código): 694
+Acréscimo (art. 10, § 2º): 0.0
+Operação Principal: 21106
+Valor da Operação (Anexo Único): 1.00
+Multiplicador (art. 12): 0.05
+Parâmetros do Multiplicador: ['RFFPs/Improbidade: 0.0', 'Inaptidões: 0', 'Baixas: 0', 'Exclusão Simples: 0', 'Qtde Operações: 0.05']
+TOTAL DE PONTOS: 0137
+
+
+TDPF: 1010200202000079
+Qtde Operacoes: 2
+Qtde Anos: 1
+Porte: DEM
+Acompanhamento Comac: N
+Pontos do Tributo Principal (art. 10, I): 132
+Base Multiplicador (art. 10, II): 118
+Tributo Principal (código): 694
+Acréscimo (art. 10, § 2º): 0.0
+Operação Principal: 21106
+Valor da Operação (Anexo Único): 1.00
+Multiplicador (art. 12): 0.05
+Parâmetros do Multiplicador: ['RFFPs/Improbidade: 0.0', 'Inaptidões: 0', 'Baixas: 0', 'Exclusão Simples: 0', 'Qtde Operações: 0.05']
+TOTAL DE PONTOS: 0137
+
+
+TDPF: 1010200202000118
+Qtde Operacoes: 1
+Qtde Anos: 2
+Porte: DEM
+Acompanhamento Comac: N
+Pontos do Tributo Principal (art. 10, I): 87
+Base Multiplicador (art. 10, II): 118
+Tributo Principal (código): 238
+Acréscimo (art. 10, § 2º): 0.0
+Operação Principal: 50151
+Valor da Operação (Anexo Único): 1.00
+Multiplicador (art. 12): 0.1
+Parâmetros do Multiplicador: ['RFFPs/Improbidade: 0.0', 'Inaptidões: 0', 'Baixas: 0', 'Exclusão Simples: 0', 'Qtde Anos: 0.1']
+TOTAL DE PONTOS: 0098
+
+
+TDPF: 1010200202000121
+Qtde Operacoes: 3
+Qtde Anos: 2
+Porte: DEM
+Acompanhamento Comac: N
+Pontos do Tributo Principal (art. 10, I): 137
+Base Multiplicador (art. 10, II): 118
+Tributo Principal (código): 3880
+Acréscimo (art. 10, § 2º): 0.4
+Operação Principal: 30307
+Valor da Operação (Anexo Único): 0.75
+Multiplicador (art. 12): 0.2
+Parâmetros do Multiplicador: ['RFFPs/Improbidade: 0.0', 'Inaptidões: 0', 'Baixas: 0', 'Exclusão Simples: 0', 'Qtde Operações: 0.1', 'Qtde Anos: 0.1', 'Qtde PER: 0']
+TOTAL DE PONTOS: 0167
+
+
+TDPF: 1010300201900980
+Qtde Operacoes: 2
+Qtde Anos: 3
+Porte: DEM
+Acompanhamento Comac: N
+Pontos do Tributo Principal (art. 10, I): 111
+Base Multiplicador (art. 10, II): 118
+Tributo Principal (código): 2141
+Acréscimo (art. 10, § 2º): 0.0
+Operação Principal: 86701
+Valor da Operação (Anexo Único): 1.00
+Multiplicador (art. 12): 0.25
+Parâmetros do Multiplicador: ['RFFPs/Improbidade: 0.0', 'Inaptidões: 0', 'Baixas: 0', 'Exclusão Simples: 0', 'Qtde Operações: 0.05', 'Qtde Anos: 0.2', 'Estabelec Previd: 0', 'CEI/CAEPF/Obra: 0', 'Prestadores: 0', 'Tomadores: 0']
+TOTAL DE PONTOS: 0140
+
+
+TDPF: 1010300202000141
+Qtde Operacoes: 1
+Qtde Anos: 4
+Porte: DEM
+Acompanhamento Comac: N
+Pontos do Tributo Principal (art. 10, I): 132
+Base Multiplicador (art. 10, II): 118
+Tributo Principal (código): 221
+Acréscimo (art. 10, § 2º): 0.0
+Operação Principal: 20449
+Valor da Operação (Anexo Único): 1.00
+Multiplicador (art. 12): 0.2
+Parâmetros do Multiplicador: ['RFFPs/Improbidade: 0.0', 'Inaptidões: 0', 'Baixas: 0', 'Exclusão Simples: 0', 'Qtde Anos: 0.2']
+TOTAL DE PONTOS: 0155
+
+
+TDPF: 1010300202000142
+Qtde Operacoes: 1
+Qtde Anos: 4
+Porte: MED
+Acompanhamento Comac: N
+Pontos do Tributo Principal (art. 10, I): 174
+Base Multiplicador (art. 10, II): 158
+Tributo Principal (código): 221
+Acréscimo (art. 10, § 2º): 0.0
+Operação Principal: 20449
+Valor da Operação (Anexo Único): 1.00
+Multiplicador (art. 12): 0.2
+Parâmetros do Multiplicador: ['RFFPs/Improbidade: 0.0', 'Inaptidões: 0', 'Baixas: 0', 'Exclusão Simples: 0', 'Qtde Anos: 0.2']
+TOTAL DE PONTOS: 0205
+
+
+TDPF: 1010300202000178
+Qtde Operacoes: 2
+Qtde Anos: 2
+Porte: DEM
+Acompanhamento Comac: N
+Pontos do Tributo Principal (art. 10, I): 132
+Base Multiplicador (art. 10, II): 118
+Tributo Principal (código): 694
+Acréscimo (art. 10, § 2º): 0.0
+Operação Principal: 21106
+Valor da Operação (Anexo Único): 1.00
+Multiplicador (art. 12): 0.15000000000000002
+Parâmetros do Multiplicador: ['RFFPs/Improbidade: 0.0', 'Inaptidões: 0', 'Baixas: 0', 'Exclusão Simples: 0', 'Qtde Operações: 0.05', 'Qtde Anos: 0.1']
+TOTAL DE PONTOS: 0149
+
+
+TDPF: 1010300202000192
+Qtde Operacoes: 3
+Qtde Anos: 4
+Porte: DEM
+Acompanhamento Comac: N
+Pontos do Tributo Principal (art. 10, I): 137
+Base Multiplicador (art. 10, II): 118
+Tributo Principal (código): 3880
+Acréscimo (art. 10, § 2º): 0.4
+Operação Principal: 30101
+Valor da Operação (Anexo Único): 1.00
+Multiplicador (art. 12): 0.30000000000000004
+Parâmetros do Multiplicador: ['RFFPs/Improbidade: 0.0', 'Inaptidões: 0', 'Baixas: 0', 'Exclusão Simples: 0', 'Qtde Operações: 0.1', 'Qtde Anos: 0.2', 'Qtde PER: 0']
+TOTAL DE PONTOS: 0227
+
+
+TDPF: 1010300202000219
+Qtde Operacoes: 1
+Qtde Anos: 3
+Porte: DIF
+Acompanhamento Comac: S
+Pontos do Tributo Principal (art. 10, I): 247
+Base Multiplicador (art. 10, II): 194
+Tributo Principal (código): 221
+Acréscimo (art. 10, § 2º): 0.0
+Operação Principal: 20303
+Valor da Operação (Anexo Único): 1.60
+Multiplicador (art. 12): 0.6000000000000001
+Parâmetros do Multiplicador: ['RFFPs/Improbidade: 0.0', 'Inaptidões: 0', 'Baixas: 0', 'Exclusão Simples: 0', 'Acompanhamento: 0.4', 'Qtde Anos: 0.2']
+TOTAL DE PONTOS: 0511
+
+
+TDPF: 1010600202000215
+Qtde Operacoes: 1
+Qtde Anos: 3
+Porte: DEM
+Acompanhamento Comac: N
+Pontos do Tributo Principal (art. 10, I): 111
+Base Multiplicador (art. 10, II): 118
+Tributo Principal (código): 2141
+Acréscimo (art. 10, § 2º): 0.0
+Operação Principal: 86301
+Valor da Operação (Anexo Único): 1.00
+Multiplicador (art. 12): 0.2
+Parâmetros do Multiplicador: ['RFFPs/Improbidade: 0.0', 'Inaptidões: 0', 'Baixas: 0', 'Exclusão Simples: 0', 'Qtde Anos: 0.2', 'Estabelec Previd: 0', 'CEI/CAEPF/Obra: 0', 'Prestadores: 0', 'Tomadores: 0']
+TOTAL DE PONTOS: 0134
+
+
+TDPF: 1010600202000279
+Qtde Operacoes: 2
+Qtde Anos: 3
+Porte: MED
+Acompanhamento Comac: N
+Pontos do Tributo Principal (art. 10, I): 131
+Base Multiplicador (art. 10, II): 158
+Tributo Principal (código): 2141
+Acréscimo (art. 10, § 2º): 0.0
+Operação Principal: 86701
+Valor da Operação (Anexo Único): 1.00
+Multiplicador (art. 12): 0.25
+Parâmetros do Multiplicador: ['RFFPs/Improbidade: 0.0', 'Inaptidões: 0', 'Baixas: 0', 'Exclusão Simples: 0', 'Qtde Operações: 0.05', 'Qtde Anos: 0.2', 'Estabelec Previd: 0', 'CEI/CAEPF/Obra: 0', 'Prestadores: 0', 'Tomadores: 0']
+TOTAL DE PONTOS: 0170
+
+
+TDPF: 1010600202000319
+Qtde Operacoes: 2
+Qtde Anos: 2
+Porte: DEM
+Acompanhamento Comac: N
+Pontos do Tributo Principal (art. 10, I): 111
+Base Multiplicador (art. 10, II): 118
+Tributo Principal (código): 2141
+Acréscimo (art. 10, § 2º): 0.0
+Operação Principal: 86201
+Valor da Operação (Anexo Único): 1.00
+Multiplicador (art. 12): 0.15000000000000002
+Parâmetros do Multiplicador: ['RFFPs/Improbidade: 0.0', 'Inaptidões: 0', 'Baixas: 0', 'Exclusão Simples: 0', 'Qtde Operações: 0.05', 'Qtde Anos: 0.1', 'Estabelec Previd: 0', 'CEI/CAEPF/Obra: 0', 'Prestadores: 0', 'Tomadores: 0']
+TOTAL DE PONTOS: 0128
+
+
+TDPF: 1010600202000336
+Qtde Operacoes: 2
+Qtde Anos: 2
+Porte: DEM
+Acompanhamento Comac: N
+Pontos do Tributo Principal (art. 10, I): 111
+Base Multiplicador (art. 10, II): 118
+Tributo Principal (código): 2141
+Acréscimo (art. 10, § 2º): 0.0
+Operação Principal: 86201
+Valor da Operação (Anexo Único): 1.00
+Multiplicador (art. 12): 0.15000000000000002
+Parâmetros do Multiplicador: ['RFFPs/Improbidade: 0.0', 'Inaptidões: 0', 'Baixas: 0', 'Exclusão Simples: 0', 'Qtde Operações: 0.05', 'Qtde Anos: 0.1', 'Estabelec Previd: 0', 'CEI/CAEPF/Obra: 0', 'Prestadores: 0', 'Tomadores: 0']
+TOTAL DE PONTOS: 0128
+
+
+TDPF: 1010600202000426
+Qtde Operacoes: 3
+Qtde Anos: 2
+Porte: MED
+Acompanhamento Comac: N
+Pontos do Tributo Principal (art. 10, I): 131
+Base Multiplicador (art. 10, II): 158
+Tributo Principal (código): 2141
+Acréscimo (art. 10, § 2º): 0.0
+Operação Principal: 86201
+Valor da Operação (Anexo Único): 1.00
+Multiplicador (art. 12): 0.2
+Parâmetros do Multiplicador: ['RFFPs/Improbidade: 0.0', 'Inaptidões: 0', 'Baixas: 0', 'Exclusão Simples: 0', 'Qtde Operações: 0.1', 'Qtde Anos: 0.1', 'Estabelec Previd: 0', 'CEI/CAEPF/Obra: 0', 'Prestadores: 0', 'Tomadores: 0']
+TOTAL DE PONTOS: 0162
+
+
+TDPF: 1010600202000432
+Qtde Operacoes: 1
+Qtde Anos: 1
+Porte: DIF
+Acompanhamento Comac: S
+Pontos do Tributo Principal (art. 10, I): 159
+Base Multiplicador (art. 10, II): 194
+Tributo Principal (código): 1011
+Acréscimo (art. 10, § 2º): 0.0
+Operação Principal: 10201
+Valor da Operação (Anexo Único): 1.00
+Multiplicador (art. 12): 0.4
+Parâmetros do Multiplicador: ['RFFPs/Improbidade: 0.0', 'Inaptidões: 0', 'Baixas: 0', 'Exclusão Simples: 0', 'Acompanhamento: 0.4', 'Qtde PER: 0']
+TOTAL DE PONTOS: 0236
+
+
+TDPF: 1010600202100031
+Qtde Operacoes: 1
+Qtde Anos: 2
+Porte: MED
+Acompanhamento Comac: N
+Pontos do Tributo Principal (art. 10, I): 148
+Base Multiplicador (art. 10, II): 158
+Tributo Principal (código): 1011
+Acréscimo (art. 10, § 2º): 0.0
+Operação Principal: 10201
+Valor da Operação (Anexo Único): 1.00
+Multiplicador (art. 12): 0.1
+Parâmetros do Multiplicador: ['RFFPs/Improbidade: 0.0', 'Inaptidões: 0', 'Baixas: 0', 'Exclusão Simples: 0', 'Qtde Anos: 0.1', 'Qtde PER: 0']
+TOTAL DE PONTOS: 0163
+
+
+TDPF: 1010600202100032
+Qtde Operacoes: 1
+Qtde Anos: 2
+Porte: MED
+Acompanhamento Comac: N
+Pontos do Tributo Principal (art. 10, I): 148
+Base Multiplicador (art. 10, II): 158
+Tributo Principal (código): 1011
+Acréscimo (art. 10, § 2º): 0.0
+Operação Principal: 10201
+Valor da Operação (Anexo Único): 1.00
+Multiplicador (art. 12): 0.1
+Parâmetros do Multiplicador: ['RFFPs/Improbidade: 0.0', 'Inaptidões: 0', 'Baixas: 0', 'Exclusão Simples: 0', 'Qtde Anos: 0.1', 'Qtde PER: 0']
+TOTAL DE PONTOS: 0163
+
+
+TDPF: 1010700201900109
+Qtde Operacoes: 3
+Qtde Anos: 5
+Porte: MED
+Acompanhamento Comac: N
+Pontos do Tributo Principal (art. 10, I): 131
+Base Multiplicador (art. 10, II): 158
+Tributo Principal (código): 2141
+Acréscimo (art. 10, § 2º): 0.0
+Operação Principal: 86201
+Valor da Operação (Anexo Único): 1.00
+Multiplicador (art. 12): 0.30000000000000004
+Parâmetros do Multiplicador: ['RFFPs/Improbidade: 0.0', 'Inaptidões: 0', 'Baixas: 0', 'Exclusão Simples: 0', 'Qtde Operações: 0.1', 'Qtde Anos: 0.2', 'Estabelec Previd: 0', 'CEI/CAEPF/Obra: 0', 'Prestadores: 0', 'Tomadores: 0']
+TOTAL DE PONTOS: 0178
+
+
+TDPF: 1010700202000100
+Qtde Operacoes: 1
+Qtde Anos: 1
+Porte: DEM
+Acompanhamento Comac: N
+Pontos do Tributo Principal (art. 10, I): 130
+Base Multiplicador (art. 10, II): 118
+Tributo Principal (código): 1011
+Acréscimo (art. 10, § 2º): 0.0
+Operação Principal: 10201
+Valor da Operação (Anexo Único): 1.00
+Multiplicador (art. 12): 0.0
+Parâmetros do Multiplicador: ['RFFPs/Improbidade: 0.0', 'Inaptidões: 0', 'Baixas: 0', 'Exclusão Simples: 0', 'Qtde PER: 0']
+TOTAL DE PONTOS: 0130
+
+
+TDPF: 1010700202000211
+Qtde Operacoes: 1
+Qtde Anos: 2
+Porte: DIF
+Acompanhamento Comac: S
+Pontos do Tributo Principal (art. 10, I): 210
+Base Multiplicador (art. 10, II): 194
+Tributo Principal (código): 3880
+Acréscimo (art. 10, § 2º): 0.0
+Operação Principal: 30101
+Valor da Operação (Anexo Único): 1.00
+Multiplicador (art. 12): 0.5
+Parâmetros do Multiplicador: ['RFFPs/Improbidade: 0.0', 'Inaptidões: 0', 'Baixas: 0', 'Exclusão Simples: 0', 'Acompanhamento: 0.4', 'Qtde Anos: 0.1', 'Qtde PER: 0']
+TOTAL DE PONTOS: 0307
+
+
+TDPF: 1010700202000240
+Qtde Operacoes: 1
+Qtde Anos: 2
+Porte: MED
+Acompanhamento Comac: N
+Pontos do Tributo Principal (art. 10, I): 177
+Base Multiplicador (art. 10, II): 158
+Tributo Principal (código): 3880
+Acréscimo (art. 10, § 2º): 0.0
+Operação Principal: 30120
+Valor da Operação (Anexo Único): 1.25
+Multiplicador (art. 12): 0.1
+Parâmetros do Multiplicador: ['RFFPs/Improbidade: 0.0', 'Inaptidões: 0', 'Baixas: 0', 'Exclusão Simples: 0', 'Qtde Anos: 0.1', 'Qtde PER: 0']
+TOTAL DE PONTOS: 0237
+
+
+TDPF: 1010700202000252
+Qtde Operacoes: 1
+Qtde Anos: 2
+Porte: MED
+Acompanhamento Comac: N
+Pontos do Tributo Principal (art. 10, I): 148
+Base Multiplicador (art. 10, II): 158
+Tributo Principal (código): 1011
+Acréscimo (art. 10, § 2º): 0.0
+Operação Principal: 10201
+Valor da Operação (Anexo Único): 1.00
+Multiplicador (art. 12): 0.1
+Parâmetros do Multiplicador: ['RFFPs/Improbidade: 0.0', 'Inaptidões: 0', 'Baixas: 0', 'Exclusão Simples: 0', 'Qtde Anos: 0.1', 'Qtde PER: 0']
+TOTAL DE PONTOS: 0163
+
+
+TDPF: 1010700202000254
+Qtde Operacoes: 1
+Qtde Anos: 2
+Porte: MED
+Acompanhamento Comac: N
+Pontos do Tributo Principal (art. 10, I): 148
+Base Multiplicador (art. 10, II): 158
+Tributo Principal (código): 1011
+Acréscimo (art. 10, § 2º): 0.0
+Operação Principal: 10201
+Valor da Operação (Anexo Único): 1.00
+Multiplicador (art. 12): 0.1
+Parâmetros do Multiplicador: ['RFFPs/Improbidade: 0.0', 'Inaptidões: 0', 'Baixas: 0', 'Exclusão Simples: 0', 'Qtde Anos: 0.1', 'Qtde PER: 0']
+TOTAL DE PONTOS: 0163
+
+
+TDPF: 1010700202000259
+Qtde Operacoes: 1
+Qtde Anos: 4
+Porte: MED
+Acompanhamento Comac: N
+Pontos do Tributo Principal (art. 10, I): 177
+Base Multiplicador (art. 10, II): 158
+Tributo Principal (código): 3880
+Acréscimo (art. 10, § 2º): 0.0
+Operação Principal: 30120
+Valor da Operação (Anexo Único): 1.25
+Multiplicador (art. 12): 0.2
+Parâmetros do Multiplicador: ['RFFPs/Improbidade: 0.0', 'Inaptidões: 0', 'Baixas: 0', 'Exclusão Simples: 0', 'Qtde Anos: 0.2', 'Qtde PER: 0']
+TOTAL DE PONTOS: 0252
+
+
+TDPF: 1010700202000298
+Qtde Operacoes: 2
+Qtde Anos: 1
+Porte: DEM
+Acompanhamento Comac: N
+Pontos do Tributo Principal (art. 10, I): 137
+Base Multiplicador (art. 10, II): 118
+Tributo Principal (código): 3880
+Acréscimo (art. 10, § 2º): 0.4
+Operação Principal: 20652
+Valor da Operação (Anexo Único): 1.00
+Multiplicador (art. 12): 0.05
+Parâmetros do Multiplicador: ['RFFPs/Improbidade: 0.0', 'Inaptidões: 0', 'Baixas: 0', 'Exclusão Simples: 0', 'Qtde Operações: 0.05', 'Qtde PER: 0']
+TOTAL DE PONTOS: 0197
+
+
+TDPF: 1010700202000303
+Qtde Operacoes: 1
+Qtde Anos: 3
+Porte: MED
+Acompanhamento Comac: N
+Pontos do Tributo Principal (art. 10, I): 177
+Base Multiplicador (art. 10, II): 158
+Tributo Principal (código): 3880
+Acréscimo (art. 10, § 2º): 0.0
+Operação Principal: 30101
+Valor da Operação (Anexo Único): 1.00
+Multiplicador (art. 12): 0.2
+Parâmetros do Multiplicador: ['RFFPs/Improbidade: 0.0', 'Inaptidões: 0', 'Baixas: 0', 'Exclusão Simples: 0', 'Qtde Anos: 0.2', 'Qtde PER: 0']
+TOTAL DE PONTOS: 0208
+
+
+TDPF: 1010700202000308
+Qtde Operacoes: 2
+Qtde Anos: 1
+Porte: DIF
+Acompanhamento Comac: S
+Pontos do Tributo Principal (art. 10, I): 247
+Base Multiplicador (art. 10, II): 194
+Tributo Principal (código): 221
+Acréscimo (art. 10, § 2º): 0.4
+Operação Principal: 20652
+Valor da Operação (Anexo Único): 1.00
+Multiplicador (art. 12): 0.45
+Parâmetros do Multiplicador: ['RFFPs/Improbidade: 0.0', 'Inaptidões: 0', 'Baixas: 0', 'Exclusão Simples: 0', 'Acompanhamento: 0.4', 'Qtde Operações: 0.05', 'Qtde PER: 0']
+TOTAL DE PONTOS: 0433
+
+
+TDPF: 1010700202000318
+Qtde Operacoes: 0
+Qtde Anos: 4
+Porte: DIF
+Acompanhamento Comac: N
+Pontos do Tributo Principal (art. 10, I): 210
+Base Multiplicador (art. 10, II): 194
+Tributo Principal (código): 3880
+Acréscimo (art. 10, § 2º): 0.0
+Operação Principal: 30901
+Valor da Operação (Anexo Único): 1.00
+Multiplicador (art. 12): 0.2
+Parâmetros do Multiplicador: ['RFFPs/Improbidade: 0.0', 'Inaptidões: 0', 'Baixas: 0', 'Exclusão Simples: 0', 'Qtde Anos: 0.2', 'Qtde PER: 0']
+TOTAL DE PONTOS: 0248
+
+
+TDPF: 1010700202000360
+Qtde Operacoes: 2
+Qtde Anos: 2
+Porte: DEM
+Acompanhamento Comac: N
+Pontos do Tributo Principal (art. 10, I): 137
+Base Multiplicador (art. 10, II): 118
+Tributo Principal (código): 3880
+Acréscimo (art. 10, § 2º): 0.0
+Operação Principal: 30120
+Valor da Operação (Anexo Único): 1.25
+Multiplicador (art. 12): 0.15000000000000002
+Parâmetros do Multiplicador: ['RFFPs/Improbidade: 0.0', 'Inaptidões: 0', 'Baixas: 0', 'Exclusão Simples: 0', 'Qtde Operações: 0.05', 'Qtde Anos: 0.1', 'Qtde PER: 0']
+TOTAL DE PONTOS: 0188
+
+
+TDPF: 1010700202000362
+Qtde Operacoes: 1
+Qtde Anos: 2
+Porte: DEM
+Acompanhamento Comac: N
+Pontos do Tributo Principal (art. 10, I): 132
+Base Multiplicador (art. 10, II): 118
+Tributo Principal (código): 221
+Acréscimo (art. 10, § 2º): 0.0
+Operação Principal: 20303
+Valor da Operação (Anexo Único): 1.60
+Multiplicador (art. 12): 0.1
+Parâmetros do Multiplicador: ['RFFPs/Improbidade: 0.0', 'Inaptidões: 0', 'Baixas: 0', 'Exclusão Simples: 0', 'Qtde Anos: 0.1']
+TOTAL DE PONTOS: 0223
+
+
+TDPF: 1010700202000363
+Qtde Operacoes: 4
+Qtde Anos: 3
+Porte: DEM
+Acompanhamento Comac: N
+Pontos do Tributo Principal (art. 10, I): 132
+Base Multiplicador (art. 10, II): 118
+Tributo Principal (código): 221
+Acréscimo (art. 10, § 2º): 0.0
+Operação Principal: 20501
+Valor da Operação (Anexo Único): 1.00
+Multiplicador (art. 12): 0.30000000000000004
+Parâmetros do Multiplicador: ['RFFPs/Improbidade: 0.0', 'Inaptidões: 0', 'Baixas: 0', 'Exclusão Simples: 0', 'Qtde Operações: 0.1', 'Qtde Anos: 0.2']
+TOTAL DE PONTOS: 0167
+
+
+TDPF: 1010700202000364
+Qtde Operacoes: 2
+Qtde Anos: 2
+Porte: DIF
+Acompanhamento Comac: N
+Pontos do Tributo Principal (art. 10, I): 210
+Base Multiplicador (art. 10, II): 194
+Tributo Principal (código): 3880
+Acréscimo (art. 10, § 2º): 0.0
+Operação Principal: 30120
+Valor da Operação (Anexo Único): 1.25
+Multiplicador (art. 12): 0.15000000000000002
+Parâmetros do Multiplicador: ['RFFPs/Improbidade: 0.0', 'Inaptidões: 0', 'Baixas: 0', 'Exclusão Simples: 0', 'Qtde Operações: 0.05', 'Qtde Anos: 0.1', 'Qtde PER: 0']
+TOTAL DE PONTOS: 0291
+
+
+TDPF: 1010700202000365
+Qtde Operacoes: 2
+Qtde Anos: 2
+Porte: DEM
+Acompanhamento Comac: N
+Pontos do Tributo Principal (art. 10, I): 137
+Base Multiplicador (art. 10, II): 118
+Tributo Principal (código): 3880
+Acréscimo (art. 10, § 2º): 0.0
+Operação Principal: 30120
+Valor da Operação (Anexo Único): 1.25
+Multiplicador (art. 12): 0.15000000000000002
+Parâmetros do Multiplicador: ['RFFPs/Improbidade: 0.0', 'Inaptidões: 0', 'Baixas: 0', 'Exclusão Simples: 0', 'Qtde Operações: 0.05', 'Qtde Anos: 0.1', 'Qtde PER: 0']
+TOTAL DE PONTOS: 0188
+
+
+TDPF: 1010700202000367
+Qtde Operacoes: 2
+Qtde Anos: 2
+Porte: MED
+Acompanhamento Comac: N
+Pontos do Tributo Principal (art. 10, I): 177
+Base Multiplicador (art. 10, II): 158
+Tributo Principal (código): 3880
+Acréscimo (art. 10, § 2º): 0.0
+Operação Principal: 30120
+Valor da Operação (Anexo Único): 1.25
+Multiplicador (art. 12): 0.15000000000000002
+Parâmetros do Multiplicador: ['RFFPs/Improbidade: 0.0', 'Inaptidões: 0', 'Baixas: 0', 'Exclusão Simples: 0', 'Qtde Operações: 0.05', 'Qtde Anos: 0.1', 'Qtde PER: 0']
+TOTAL DE PONTOS: 0244
+
+
+TDPF: 1010700202000391
+Qtde Operacoes: 2
+Qtde Anos: 3
+Porte: MED
+Acompanhamento Comac: N
+Pontos do Tributo Principal (art. 10, I): 174
+Base Multiplicador (art. 10, II): 158
+Tributo Principal (código): 221
+Acréscimo (art. 10, § 2º): 0.0
+Operação Principal: 20303
+Valor da Operação (Anexo Único): 1.60
+Multiplicador (art. 12): 0.25
+Parâmetros do Multiplicador: ['RFFPs/Improbidade: 0.0', 'Inaptidões: 0', 'Baixas: 0', 'Exclusão Simples: 0', 'Qtde Operações: 0.05', 'Qtde Anos: 0.2']
+TOTAL DE PONTOS: 0317
+
+
+TDPF: 1010700202000455
+Qtde Operacoes: 2
+Qtde Anos: 1
+Porte: DEM
+Acompanhamento Comac: N
+Pontos do Tributo Principal (art. 10, I): 137
+Base Multiplicador (art. 10, II): 118
+Tributo Principal (código): 3880
+Acréscimo (art. 10, § 2º): 0.0
+Operação Principal: 30120
+Valor da Operação (Anexo Único): 1.25
+Multiplicador (art. 12): 0.05
+Parâmetros do Multiplicador: ['RFFPs/Improbidade: 0.0', 'Inaptidões: 0', 'Baixas: 0', 'Exclusão Simples: 0', 'Qtde Operações: 0.05', 'Qtde PER: 0']
+TOTAL DE PONTOS: 0177
+
+
+TDPF: 1010700202100033
+Qtde Operacoes: 1
+Qtde Anos: 4
+Porte: MED
+Acompanhamento Comac: N
+Pontos do Tributo Principal (art. 10, I): 148
+Base Multiplicador (art. 10, II): 158
+Tributo Principal (código): 1011
+Acréscimo (art. 10, § 2º): 0.0
+Operação Principal: 91131
+Valor da Operação (Anexo Único): 0.75
+Multiplicador (art. 12): 0.2
+Parâmetros do Multiplicador: ['RFFPs/Improbidade: 0.0', 'Inaptidões: 0', 'Baixas: 0', 'Exclusão Simples: 0', 'Qtde Anos: 0.2', 'Qtde PER: 0']
+TOTAL DE PONTOS: 0142
+
+
+TDPF: 1010800202000008
+Qtde Operacoes: 1
+Qtde Anos: 2
+Porte: DEM
+Acompanhamento Comac: N
+Pontos do Tributo Principal (art. 10, I): 132
+Base Multiplicador (art. 10, II): 118
+Tributo Principal (código): 221
+Acréscimo (art. 10, § 2º): 0.0
+Operação Principal: 91231
+Valor da Operação (Anexo Único): 1.00
+Multiplicador (art. 12): 0.1
+Parâmetros do Multiplicador: ['RFFPs/Improbidade: 0.0', 'Inaptidões: 0', 'Baixas: 0', 'Exclusão Simples: 0', 'Qtde Anos: 0.1']
+TOTAL DE PONTOS: 0143
+
+
+TDPF: 1010800202000033
+Qtde Operacoes: 1
+Qtde Anos: 3
+Porte: DIF
+Acompanhamento Comac: S
+Pontos do Tributo Principal (art. 10, I): 159
+Base Multiplicador (art. 10, II): 194
+Tributo Principal (código): 1011
+Acréscimo (art. 10, § 2º): 0.0
+Operação Principal: 91131
+Valor da Operação (Anexo Único): 0.75
+Multiplicador (art. 12): 0.6000000000000001
+Parâmetros do Multiplicador: ['RFFPs/Improbidade: 0.0', 'Inaptidões: 0', 'Baixas: 0', 'Exclusão Simples: 0', 'Acompanhamento: 0.4', 'Qtde Anos: 0.2', 'Qtde PER: 0']
+TOTAL DE PONTOS: 0235
+
+
+TDPF: 1010800202000043
+Qtde Operacoes: 1
+Qtde Anos: 4
+Porte: DEM
+Acompanhamento Comac: N
+Pontos do Tributo Principal (art. 10, I): 75
+Base Multiplicador (art. 10, II): 68
+Tributo Principal (código): 210
+Acréscimo (art. 10, § 2º): 0.0
+Operação Principal: 40121
+Valor da Operação (Anexo Único): 1.25
+Multiplicador (art. 12): 0.2
+Parâmetros do Multiplicador: ['RFFPs/Improbidade: 0.0', 'Inaptidões: 0', 'Baixas: 0', 'Exclusão Simples: 0', 'Qtde Anos: 0.2']
+TOTAL DE PONTOS: 0107
+
+
+TDPF: 1010800202000048
+Qtde Operacoes: 1
+Qtde Anos: 2
+Porte: DEM
+Acompanhamento Comac: N
+Pontos do Tributo Principal (art. 10, I): 75
+Base Multiplicador (art. 10, II): 68
+Tributo Principal (código): 210
+Acréscimo (art. 10, § 2º): 0.0
+Operação Principal: 40121
+Valor da Operação (Anexo Único): 1.25
+Multiplicador (art. 12): 0.1
+Parâmetros do Multiplicador: ['RFFPs/Improbidade: 0.0', 'Inaptidões: 0', 'Baixas: 0', 'Exclusão Simples: 0', 'Qtde Anos: 0.1']
+TOTAL DE PONTOS: 0100
+
+
+TDPF: 1010600202000401
+Qtde Operacoes: 1
+Qtde Anos: 2
+Porte: DIF
+Acompanhamento Comac: N
+Pontos do Tributo Principal (art. 10, I): 159
+Base Multiplicador (art. 10, II): 194
+Tributo Principal (código): 1011
+Acréscimo (art. 10, § 2º): 0.0
+Operação Principal: 10201
+Valor da Operação (Anexo Único): 1.00
+Multiplicador (art. 12): 0.1
+Parâmetros do Multiplicador: ['RFFPs/Improbidade: 0.0', 'Inaptidões: 0', 'Baixas: 0', 'Exclusão Simples: 0', 'Qtde Anos: 0.1', 'Qtde PER: 0']
+TOTAL DE PONTOS: 0178
+
+
+TDPF: 1010600202000402
+Qtde Operacoes: 1
+Qtde Anos: 2
+Porte: DIF
+Acompanhamento Comac: S
+Pontos do Tributo Principal (art. 10, I): 159
+Base Multiplicador (art. 10, II): 194
+Tributo Principal (código): 1011
+Acréscimo (art. 10, § 2º): 0.0
+Operação Principal: 10201
+Valor da Operação (Anexo Único): 1.00
+Multiplicador (art. 12): 0.5
+Parâmetros do Multiplicador: ['RFFPs/Improbidade: 0.0', 'Inaptidões: 0', 'Baixas: 0', 'Exclusão Simples: 0', 'Acompanhamento: 0.4', 'Qtde Anos: 0.1', 'Qtde PER: 0']
+TOTAL DE PONTOS: 0256
+
+
+TDPF: 1000100202000089
+Qtde Operacoes: 3
+Qtde Anos: 2
+Porte: DEM
+Acompanhamento Comac: N
+Pontos do Tributo Principal (art. 10, I): 132
+Base Multiplicador (art. 10, II): 118
+Tributo Principal (código): 694
+Acréscimo (art. 10, § 2º): 0.4
+Operação Principal: 20101
+Valor da Operação (Anexo Único): 1.00
+Multiplicador (art. 12): 0.2
+Parâmetros do Multiplicador: ['RFFPs/Improbidade: 0.0', 'Inaptidões: 0', 'Baixas: 0', 'Exclusão Simples: 0', 'Qtde Operações: 0.1', 'Qtde Anos: 0.1', 'Qtde PER: 0']
+TOTAL DE PONTOS: 0208
+
+
+TDPF: 1010100201900059
+Qtde Operacoes: 2
+Qtde Anos: 3
+Porte: DEM
+Acompanhamento Comac: N
+Pontos do Tributo Principal (art. 10, I): 132
+Base Multiplicador (art. 10, II): 118
+Tributo Principal (código): 221
+Acréscimo (art. 10, § 2º): 0.0
+Operação Principal: 91241
+Valor da Operação (Anexo Único): 0.75
+Multiplicador (art. 12): 0.25
+Parâmetros do Multiplicador: ['RFFPs/Improbidade: 0.0', 'Inaptidões: 0', 'Baixas: 0', 'Exclusão Simples: 0', 'Qtde Operações: 0.05', 'Qtde Anos: 0.2']
+TOTAL DE PONTOS: 0128
+
+
+TDPF: 1010100201900476
+Qtde Operacoes: 5
+Qtde Anos: 2
+Porte: DEM
+Acompanhamento Comac: N
+Pontos do Tributo Principal (art. 10, I): 132
+Base Multiplicador (art. 10, II): 118
+Tributo Principal (código): 694
+Acréscimo (art. 10, § 2º): 0.1
+Operação Principal: 20601
+Valor da Operação (Anexo Único): 1.00
+Multiplicador (art. 12): 0.2
+Parâmetros do Multiplicador: ['RFFPs/Improbidade: 0.0', 'Inaptidões: 0', 'Baixas: 0', 'Exclusão Simples: 0', 'Qtde Operações: 0.1', 'Qtde Anos: 0.1']
+TOTAL DE PONTOS: 0168
+
+
+TDPF: 1010100202000008
+Qtde Operacoes: 1
+Qtde Anos: 2
+Porte: DEM
+Acompanhamento Comac: N
+Pontos do Tributo Principal (art. 10, I): 111
+Base Multiplicador (art. 10, II): 118
+Tributo Principal (código): 2141
+Acréscimo (art. 10, § 2º): 0.0
+Operação Principal: 87602
+Valor da Operação (Anexo Único): 1.00
+Multiplicador (art. 12): 0.1
+Parâmetros do Multiplicador: ['RFFPs/Improbidade: 0.0', 'Inaptidões: 0', 'Baixas: 0', 'Exclusão Simples: 0', 'Qtde Anos: 0.1', 'Estabelec Previd: 0', 'CEI/CAEPF/Obra: 0', 'Prestadores: 0', 'Tomadores: 0']
+TOTAL DE PONTOS: 0122
+
+
+TDPF: 1010100202000014
+Qtde Operacoes: 2
+Qtde Anos: 2
+Porte: DEM
+Acompanhamento Comac: N
+Pontos do Tributo Principal (art. 10, I): 132
+Base Multiplicador (art. 10, II): 118
+Tributo Principal (código): 694
+Acréscimo (art. 10, § 2º): 0.0
+Operação Principal: 30307
+Valor da Operação (Anexo Único): 0.75
+Multiplicador (art. 12): 0.15000000000000002
+Parâmetros do Multiplicador: ['RFFPs/Improbidade: 0.0', 'Inaptidões: 0', 'Baixas: 0', 'Exclusão Simples: 0', 'Qtde Operações: 0.05', 'Qtde Anos: 0.1']
+TOTAL DE PONTOS: 0116
+
+
+TDPF: 1010100202000017
+Qtde Operacoes: 2
+Qtde Anos: 1
+Porte: DIF
+Acompanhamento Comac: S
+Pontos do Tributo Principal (art. 10, I): 247
+Base Multiplicador (art. 10, II): 194
+Tributo Principal (código): 221
+Acréscimo (art. 10, § 2º): 0.0
+Operação Principal: 20652
+Valor da Operação (Anexo Único): 1.00
+Multiplicador (art. 12): 0.45
+Parâmetros do Multiplicador: ['RFFPs/Improbidade: 0.0', 'Inaptidões: 0', 'Baixas: 0', 'Exclusão Simples: 0', 'Acompanhamento: 0.4', 'Qtde Operações: 0.05']
+TOTAL DE PONTOS: 0334
+
+
+TDPF: 1010100202000107
+Qtde Operacoes: 6
+Qtde Anos: 2
+Porte: MED
+Acompanhamento Comac: N
+Pontos do Tributo Principal (art. 10, I): 174
+Base Multiplicador (art. 10, II): 158
+Tributo Principal (código): 221
+Acréscimo (art. 10, § 2º): 0.1
+Operação Principal: 20461
+Valor da Operação (Anexo Único): 1.00
+Multiplicador (art. 12): 0.2
+Parâmetros do Multiplicador: ['RFFPs/Improbidade: 0.0', 'Inaptidões: 0', 'Baixas: 0', 'Exclusão Simples: 0', 'Qtde Operações: 0.1', 'Qtde Anos: 0.1']
+TOTAL DE PONTOS: 0223
+
+
+TDPF: 1010100202000171
+Qtde Operacoes: 3
+Qtde Anos: 2
+Porte: DEM
+Acompanhamento Comac: N
+Pontos do Tributo Principal (art. 10, I): 132
+Base Multiplicador (art. 10, II): 118
+Tributo Principal (código): 694
+Acréscimo (art. 10, § 2º): 0.0
+Operação Principal: 21106
+Valor da Operação (Anexo Único): 1.00
+Multiplicador (art. 12): 0.2
+Parâmetros do Multiplicador: ['RFFPs/Improbidade: 0.0', 'Inaptidões: 0', 'Baixas: 0', 'Exclusão Simples: 0', 'Qtde Operações: 0.1', 'Qtde Anos: 0.1']
+TOTAL DE PONTOS: 0155
+
+
+TDPF: 1010100202000176
+Qtde Operacoes: 5
+Qtde Anos: 1
+Porte: DIF
+Acompanhamento Comac: N
+Pontos do Tributo Principal (art. 10, I): 247
+Base Multiplicador (art. 10, II): 194
+Tributo Principal (código): 221
+Acréscimo (art. 10, § 2º): 0.4
+Operação Principal: 30101
+Valor da Operação (Anexo Único): 1.00
+Multiplicador (art. 12): 0.1
+Parâmetros do Multiplicador: ['RFFPs/Improbidade: 0.0', 'Inaptidões: 0', 'Baixas: 0', 'Exclusão Simples: 0', 'Qtde Operações: 0.1', 'Qtde PER: 0']
+TOTAL DE PONTOS: 0365
+
+
+TDPF: 1010100202000181
+Qtde Operacoes: 1
+Qtde Anos: 3
+Porte: DEM
+Acompanhamento Comac: N
+Pontos do Tributo Principal (art. 10, I): 75
+Base Multiplicador (art. 10, II): 68
+Tributo Principal (código): 210
+Acréscimo (art. 10, § 2º): 0.0
+Operação Principal: 40111
+Valor da Operação (Anexo Único): 1.25
+Multiplicador (art. 12): 0.2
+Parâmetros do Multiplicador: ['RFFPs/Improbidade: 0.0', 'Inaptidões: 0', 'Baixas: 0', 'Exclusão Simples: 0', 'Qtde Anos: 0.2']
+TOTAL DE PONTOS: 0107
+
+
+TDPF: 1010100202000183
+Qtde Operacoes: 1
+Qtde Anos: 3
+Porte: DEM
+Acompanhamento Comac: N
+Pontos do Tributo Principal (art. 10, I): 75
+Base Multiplicador (art. 10, II): 68
+Tributo Principal (código): 210
+Acréscimo (art. 10, § 2º): 0.0
+Operação Principal: 40301
+Valor da Operação (Anexo Único): 1.00
+Multiplicador (art. 12): 0.2
+Parâmetros do Multiplicador: ['RFFPs/Improbidade: 0.0', 'Inaptidões: 0', 'Baixas: 0', 'Exclusão Simples: 0', 'Qtde Anos: 0.2']
+TOTAL DE PONTOS: 0088
+
+
+TDPF: 1010100202000266
+Qtde Operacoes: 1
+Qtde Anos: 2
+Porte: DIF
+Acompanhamento Comac: N
+Pontos do Tributo Principal (art. 10, I): 105
+Base Multiplicador (art. 10, II): 85
+Tributo Principal (código): 210
+Acréscimo (art. 10, § 2º): 0.0
+Operação Principal: 40302
+Valor da Operação (Anexo Único): 1.25
+Multiplicador (art. 12): 0.1
+Parâmetros do Multiplicador: ['RFFPs/Improbidade: 0.0', 'Inaptidões: 0', 'Baixas: 0', 'Exclusão Simples: 0', 'Qtde Anos: 0.1']
+TOTAL DE PONTOS: 0139
+
+
+TDPF: 1010100202000396
+Qtde Operacoes: 1
+Qtde Anos: 1
+Porte: DIF
+Acompanhamento Comac: N
+Pontos do Tributo Principal (art. 10, I): 105
+Base Multiplicador (art. 10, II): 85
+Tributo Principal (código): 210
+Acréscimo (art. 10, § 2º): 0.0
+Operação Principal: 40301
+Valor da Operação (Anexo Único): 1.00
+Multiplicador (art. 12): 0.0
+Parâmetros do Multiplicador: ['RFFPs/Improbidade: 0.0', 'Inaptidões: 0', 'Baixas: 0', 'Exclusão Simples: 0']
+TOTAL DE PONTOS: 0105
+
+
+TDPF: 1010100202000402
+Qtde Operacoes: 1
+Qtde Anos: 2
+Porte: DIF
+Acompanhamento Comac: S
+Pontos do Tributo Principal (art. 10, I): 247
+Base Multiplicador (art. 10, II): 194
+Tributo Principal (código): 221
+Acréscimo (art. 10, § 2º): 0.0
+Operação Principal: 20551
+Valor da Operação (Anexo Único): 1.25
+Multiplicador (art. 12): 0.5
+Parâmetros do Multiplicador: ['RFFPs/Improbidade: 0.0', 'Inaptidões: 0', 'Baixas: 0', 'Exclusão Simples: 0', 'Acompanhamento: 0.4', 'Qtde Anos: 0.1']
+TOTAL DE PONTOS: 0405
+
+
+TDPF: 1010100202000429
+Qtde Operacoes: 1
+Qtde Anos: 3
+Porte: DEM
+Acompanhamento Comac: N
+Pontos do Tributo Principal (art. 10, I): 111
+Base Multiplicador (art. 10, II): 118
+Tributo Principal (código): 2141
+Acréscimo (art. 10, § 2º): 0.0
+Operação Principal: 86201
+Valor da Operação (Anexo Único): 1.00
+Multiplicador (art. 12): 0.2
+Parâmetros do Multiplicador: ['RFFPs/Improbidade: 0.0', 'Inaptidões: 0', 'Baixas: 0', 'Exclusão Simples: 0', 'Qtde Anos: 0.2', 'Estabelec Previd: 0', 'CEI/CAEPF/Obra: 0', 'Prestadores: 0', 'Tomadores: 0']
+TOTAL DE PONTOS: 0134
+
+
+TDPF: 1010100202000488
+Qtde Operacoes: 1
+Qtde Anos: 3
+Porte: DEM
+Acompanhamento Comac: N
+Pontos do Tributo Principal (art. 10, I): 132
+Base Multiplicador (art. 10, II): 118
+Tributo Principal (código): 221
+Acréscimo (art. 10, § 2º): 0.0
+Operação Principal: 20449
+Valor da Operação (Anexo Único): 1.00
+Multiplicador (art. 12): 0.2
+Parâmetros do Multiplicador: ['RFFPs/Improbidade: 0.0', 'Inaptidões: 0', 'Baixas: 0', 'Exclusão Simples: 0', 'Qtde Anos: 0.2']
+TOTAL DE PONTOS: 0155
+
+
+TDPF: 1010100202000572
+Qtde Operacoes: 1
+Qtde Anos: 2
+Porte: DIF
+Acompanhamento Comac: N
+Pontos do Tributo Principal (art. 10, I): 105
+Base Multiplicador (art. 10, II): 85
+Tributo Principal (código): 210
+Acréscimo (art. 10, § 2º): 0.0
+Operação Principal: 93202
+Valor da Operação (Anexo Único): 0.75
+Multiplicador (art. 12): 0.1
+Parâmetros do Multiplicador: ['RFFPs/Improbidade: 0.0', 'Inaptidões: 0', 'Baixas: 0', 'Exclusão Simples: 0', 'Qtde Anos: 0.1']
+TOTAL DE PONTOS: 0087
+
+
+TDPF: 1010200201900117
+Qtde Operacoes: 1
+Qtde Anos: 1
+Porte: DEM
+Acompanhamento Comac: N
+Pontos do Tributo Principal (art. 10, I): 132
+Base Multiplicador (art. 10, II): 118
+Tributo Principal (código): 221
+Acréscimo (art. 10, § 2º): 0.0
+Operação Principal: 21103
+Valor da Operação (Anexo Único): 1.00
+Multiplicador (art. 12): 0.0
+Parâmetros do Multiplicador: ['RFFPs/Improbidade: 0.0', 'Inaptidões: 0', 'Baixas: 0', 'Exclusão Simples: 0']
+TOTAL DE PONTOS: 0132
+
+
+TDPF: 1010200202100001
+Qtde Operacoes: 3
+Qtde Anos: 3
+Porte: DEM
+Acompanhamento Comac: N
+Pontos do Tributo Principal (art. 10, I): 137
+Base Multiplicador (art. 10, II): 118
+Tributo Principal (código): 3880
+Acréscimo (art. 10, § 2º): 0.4
+Operação Principal: 30307
+Valor da Operação (Anexo Único): 0.75
+Multiplicador (art. 12): 0.30000000000000004
+Parâmetros do Multiplicador: ['RFFPs/Improbidade: 0.0', 'Inaptidões: 0', 'Baixas: 0', 'Exclusão Simples: 0', 'Qtde Operações: 0.1', 'Qtde Anos: 0.2', 'Qtde PER: 0']
+TOTAL DE PONTOS: 0179
+
+
+TDPF: 1010300201900163
+Qtde Operacoes: 2
+Qtde Anos: 4
+Porte: MED
+Acompanhamento Comac: N
+Pontos do Tributo Principal (art. 10, I): 131
+Base Multiplicador (art. 10, II): 158
+Tributo Principal (código): 2141
+Acréscimo (art. 10, § 2º): 0.0
+Operação Principal: 86701
+Valor da Operação (Anexo Único): 1.00
+Multiplicador (art. 12): 0.25
+Parâmetros do Multiplicador: ['RFFPs/Improbidade: 0.0', 'Inaptidões: 0', 'Baixas: 0', 'Exclusão Simples: 0', 'Qtde Operações: 0.05', 'Qtde Anos: 0.2', 'Estabelec Previd: 0', 'CEI/CAEPF/Obra: 0', 'Prestadores: 0', 'Tomadores: 0']
+TOTAL DE PONTOS: 0170
+
+
+TDPF: 1010300201900164
+Qtde Operacoes: 2
+Qtde Anos: 4
+Porte: MED
+Acompanhamento Comac: N
+Pontos do Tributo Principal (art. 10, I): 131
+Base Multiplicador (art. 10, II): 158
+Tributo Principal (código): 2141
+Acréscimo (art. 10, § 2º): 0.0
+Operação Principal: 86701
+Valor da Operação (Anexo Único): 1.00
+Multiplicador (art. 12): 0.25
+Parâmetros do Multiplicador: ['RFFPs/Improbidade: 0.0', 'Inaptidões: 0', 'Baixas: 0', 'Exclusão Simples: 0', 'Qtde Operações: 0.05', 'Qtde Anos: 0.2', 'Estabelec Previd: 0', 'CEI/CAEPF/Obra: 0', 'Prestadores: 0', 'Tomadores: 0']
+TOTAL DE PONTOS: 0170
+
+
+TDPF: 1010300201900244
+Qtde Operacoes: 1
+Qtde Anos: 2
+Porte: DEM
+Acompanhamento Comac: N
+Pontos do Tributo Principal (art. 10, I): 132
+Base Multiplicador (art. 10, II): 118
+Tributo Principal (código): 221
+Acréscimo (art. 10, § 2º): 0.0
+Operação Principal: 20104
+Valor da Operação (Anexo Único): 1.00
+Multiplicador (art. 12): 0.1
+Parâmetros do Multiplicador: ['RFFPs/Improbidade: 0.0', 'Inaptidões: 0', 'Baixas: 0', 'Exclusão Simples: 0', 'Qtde Anos: 0.1']
+TOTAL DE PONTOS: 0143
+
+
+TDPF: 1010300202000018
+Qtde Operacoes: 3
+Qtde Anos: 4
+Porte: MED
+Acompanhamento Comac: N
+Pontos do Tributo Principal (art. 10, I): 131
+Base Multiplicador (art. 10, II): 158
+Tributo Principal (código): 2141
+Acréscimo (art. 10, § 2º): 0.0
+Operação Principal: 86201
+Valor da Operação (Anexo Único): 1.00
+Multiplicador (art. 12): 0.30000000000000004
+Parâmetros do Multiplicador: ['RFFPs/Improbidade: 0.0', 'Inaptidões: 0', 'Baixas: 0', 'Exclusão Simples: 0', 'Qtde Operações: 0.1', 'Qtde Anos: 0.2', 'Estabelec Previd: 0', 'CEI/CAEPF/Obra: 0', 'Prestadores: 0', 'Tomadores: 0']
+TOTAL DE PONTOS: 0178
+
+
+TDPF: 1010300202000084
+Qtde Operacoes: 1
+Qtde Anos: 3
+Porte: DEM
+Acompanhamento Comac: N
+Pontos do Tributo Principal (art. 10, I): 132
+Base Multiplicador (art. 10, II): 118
+Tributo Principal (código): 221
+Acréscimo (art. 10, § 2º): 0.0
+Operação Principal: 21106
+Valor da Operação (Anexo Único): 1.00
+Multiplicador (art. 12): 0.2
+Parâmetros do Multiplicador: ['RFFPs/Improbidade: 0.0', 'Inaptidões: 0', 'Baixas: 0', 'Exclusão Simples: 0', 'Qtde Anos: 0.2']
+TOTAL DE PONTOS: 0155
+
+
+TDPF: 1010300202000113
+Qtde Operacoes: 3
+Qtde Anos: 2
+Porte: DEM
+Acompanhamento Comac: N
+Pontos do Tributo Principal (art. 10, I): 132
+Base Multiplicador (art. 10, II): 118
+Tributo Principal (código): 694
+Acréscimo (art. 10, § 2º): 0.0
+Operação Principal: 91231
+Valor da Operação (Anexo Único): 1.00
+Multiplicador (art. 12): 0.2
+Parâmetros do Multiplicador: ['RFFPs/Improbidade: 0.0', 'Inaptidões: 0', 'Baixas: 0', 'Exclusão Simples: 0', 'Qtde Operações: 0.1', 'Qtde Anos: 0.1']
+TOTAL DE PONTOS: 0155
+
+
+TDPF: 1010300202000145
+Qtde Operacoes: 1
+Qtde Anos: 3
+Porte: DEM
+Acompanhamento Comac: N
+Pontos do Tributo Principal (art. 10, I): 132
+Base Multiplicador (art. 10, II): 118
+Tributo Principal (código): 221
+Acréscimo (art. 10, § 2º): 0.0
+Operação Principal: 21106
+Valor da Operação (Anexo Único): 1.00
+Multiplicador (art. 12): 0.2
+Parâmetros do Multiplicador: ['RFFPs/Improbidade: 0.0', 'Inaptidões: 0', 'Baixas: 0', 'Exclusão Simples: 0', 'Qtde Anos: 0.2']
+TOTAL DE PONTOS: 0155
+
+
+TDPF: 1010300202000193
+Qtde Operacoes: 4
+Qtde Anos: 3
+Porte: DEM
+Acompanhamento Comac: N
+Pontos do Tributo Principal (art. 10, I): 132
+Base Multiplicador (art. 10, II): 118
+Tributo Principal (código): 221
+Acréscimo (art. 10, § 2º): 0.4
+Operação Principal: 27106
+Valor da Operação (Anexo Único): 1.25
+Multiplicador (art. 12): 0.30000000000000004
+Parâmetros do Multiplicador: ['RFFPs/Improbidade: 0.0', 'Inaptidões: 0', 'Baixas: 0', 'Exclusão Simples: 0', 'Qtde Operações: 0.1', 'Qtde Anos: 0.2', 'Estabelec Previd: 0', 'CEI/CAEPF/Obra: 0', 'Prestadores: 0', 'Tomadores: 0']
+TOTAL DE PONTOS: 0266
+
+
+TDPF: 1010400201900242
+Qtde Operacoes: 1
+Qtde Anos: 3
+Porte: DEM
+Acompanhamento Comac: N
+Pontos do Tributo Principal (art. 10, I): 75
+Base Multiplicador (art. 10, II): 68
+Tributo Principal (código): 210
+Acréscimo (art. 10, § 2º): 0.0
+Operação Principal: 40121
+Valor da Operação (Anexo Único): 1.25
+Multiplicador (art. 12): 0.2
+Parâmetros do Multiplicador: ['RFFPs/Improbidade: 0.0', 'Inaptidões: 0', 'Baixas: 0', 'Exclusão Simples: 0', 'Qtde Anos: 0.2']
+TOTAL DE PONTOS: 0107
+
+
+TDPF: 1010400202000019
+Qtde Operacoes: 1
+Qtde Anos: 1
+Porte: DEM
+Acompanhamento Comac: N
+Pontos do Tributo Principal (art. 10, I): 137
+Base Multiplicador (art. 10, II): 118
+Tributo Principal (código): 3880
+Acréscimo (art. 10, § 2º): 0.0
+Operação Principal: 30901
+Valor da Operação (Anexo Único): 1.00
+Multiplicador (art. 12): 0.0
+Parâmetros do Multiplicador: ['RFFPs/Improbidade: 0.0', 'Inaptidões: 0', 'Baixas: 0', 'Exclusão Simples: 0', 'Qtde PER: 0']
+TOTAL DE PONTOS: 0137
+
+
+TDPF: 1010400202000044
+Qtde Operacoes: 1
+Qtde Anos: 3
+Porte: DIF
+Acompanhamento Comac: N
+Pontos do Tributo Principal (art. 10, I): 105
+Base Multiplicador (art. 10, II): 85
+Tributo Principal (código): 210
+Acréscimo (art. 10, § 2º): 0.0
+Operação Principal: 40101
+Valor da Operação (Anexo Único): 1.00
+Multiplicador (art. 12): 0.2
+Parâmetros do Multiplicador: ['RFFPs/Improbidade: 0.0', 'Inaptidões: 0', 'Baixas: 0', 'Exclusão Simples: 0', 'Qtde Anos: 0.2']
+TOTAL DE PONTOS: 0122
+
+
+TDPF: 1010400202000045
+Qtde Operacoes: 1
+Qtde Anos: 3
+Porte: DIF
+Acompanhamento Comac: N
+Pontos do Tributo Principal (art. 10, I): 105
+Base Multiplicador (art. 10, II): 85
+Tributo Principal (código): 210
+Acréscimo (art. 10, § 2º): 0.0
+Operação Principal: 40101
+Valor da Operação (Anexo Único): 1.00
+Multiplicador (art. 12): 0.2
+Parâmetros do Multiplicador: ['RFFPs/Improbidade: 0.0', 'Inaptidões: 0', 'Baixas: 0', 'Exclusão Simples: 0', 'Qtde Anos: 0.2']
+TOTAL DE PONTOS: 0122
+
+
+TDPF: 1010400202000046
+Qtde Operacoes: 2
+Qtde Anos: 3
+Porte: DIF
+Acompanhamento Comac: N
+Pontos do Tributo Principal (art. 10, I): 105
+Base Multiplicador (art. 10, II): 85
+Tributo Principal (código): 210
+Acréscimo (art. 10, § 2º): 0.0
+Operação Principal: 40301
+Valor da Operação (Anexo Único): 1.00
+Multiplicador (art. 12): 0.25
+Parâmetros do Multiplicador: ['RFFPs/Improbidade: 0.0', 'Inaptidões: 0', 'Baixas: 0', 'Exclusão Simples: 0', 'Qtde Operações: 0.05', 'Qtde Anos: 0.2']
+TOTAL DE PONTOS: 0126
+
+
+TDPF: 1010400202000047
+Qtde Operacoes: 1
+Qtde Anos: 3
+Porte: DIF
+Acompanhamento Comac: N
+Pontos do Tributo Principal (art. 10, I): 105
+Base Multiplicador (art. 10, II): 85
+Tributo Principal (código): 210
+Acréscimo (art. 10, § 2º): 0.0
+Operação Principal: 40101
+Valor da Operação (Anexo Único): 1.00
+Multiplicador (art. 12): 0.2
+Parâmetros do Multiplicador: ['RFFPs/Improbidade: 0.0', 'Inaptidões: 0', 'Baixas: 0', 'Exclusão Simples: 0', 'Qtde Anos: 0.2']
+TOTAL DE PONTOS: 0122
+
+
+TDPF: 1010400202000048
+Qtde Operacoes: 1
+Qtde Anos: 3
+Porte: DIF
+Acompanhamento Comac: N
+Pontos do Tributo Principal (art. 10, I): 105
+Base Multiplicador (art. 10, II): 85
+Tributo Principal (código): 210
+Acréscimo (art. 10, § 2º): 0.0
+Operação Principal: 40101
+Valor da Operação (Anexo Único): 1.00
+Multiplicador (art. 12): 0.2
+Parâmetros do Multiplicador: ['RFFPs/Improbidade: 0.0', 'Inaptidões: 0', 'Baixas: 0', 'Exclusão Simples: 0', 'Qtde Anos: 0.2']
+TOTAL DE PONTOS: 0122
+
+
+TDPF: 1010400202000049
+Qtde Operacoes: 1
+Qtde Anos: 3
+Porte: DIF
+Acompanhamento Comac: N
+Pontos do Tributo Principal (art. 10, I): 105
+Base Multiplicador (art. 10, II): 85
+Tributo Principal (código): 210
+Acréscimo (art. 10, § 2º): 0.0
+Operação Principal: 40101
+Valor da Operação (Anexo Único): 1.00
+Multiplicador (art. 12): 0.2
+Parâmetros do Multiplicador: ['RFFPs/Improbidade: 0.0', 'Inaptidões: 0', 'Baixas: 0', 'Exclusão Simples: 0', 'Qtde Anos: 0.2']
+TOTAL DE PONTOS: 0122
+
+
+TDPF: 1010400202000050
+Qtde Operacoes: 1
+Qtde Anos: 3
+Porte: DEM
+Acompanhamento Comac: N
+Pontos do Tributo Principal (art. 10, I): 75
+Base Multiplicador (art. 10, II): 68
+Tributo Principal (código): 210
+Acréscimo (art. 10, § 2º): 0.0
+Operação Principal: 40101
+Valor da Operação (Anexo Único): 1.00
+Multiplicador (art. 12): 0.2
+Parâmetros do Multiplicador: ['RFFPs/Improbidade: 0.0', 'Inaptidões: 0', 'Baixas: 0', 'Exclusão Simples: 0', 'Qtde Anos: 0.2']
+TOTAL DE PONTOS: 0088
+
+
+TDPF: 1010400202000051
+Qtde Operacoes: 1
+Qtde Anos: 3
+Porte: DIF
+Acompanhamento Comac: N
+Pontos do Tributo Principal (art. 10, I): 105
+Base Multiplicador (art. 10, II): 85
+Tributo Principal (código): 210
+Acréscimo (art. 10, § 2º): 0.0
+Operação Principal: 40101
+Valor da Operação (Anexo Único): 1.00
+Multiplicador (art. 12): 0.2
+Parâmetros do Multiplicador: ['RFFPs/Improbidade: 0.0', 'Inaptidões: 0', 'Baixas: 0', 'Exclusão Simples: 0', 'Qtde Anos: 0.2']
+TOTAL DE PONTOS: 0122
+
+
+TDPF: 1010400202000073
+Qtde Operacoes: 1
+Qtde Anos: 1
+Porte: DEM
+Acompanhamento Comac: N
+Pontos do Tributo Principal (art. 10, I): 75
+Base Multiplicador (art. 10, II): 68
+Tributo Principal (código): 210
+Acréscimo (art. 10, § 2º): 0.0
+Operação Principal: 40111
+Valor da Operação (Anexo Único): 1.25
+Multiplicador (art. 12): 0.0
+Parâmetros do Multiplicador: ['RFFPs/Improbidade: 0.0', 'Inaptidões: 0', 'Baixas: 0', 'Exclusão Simples: 0']
+TOTAL DE PONTOS: 0093
+
+
+TDPF: 1010400202000112
+Qtde Operacoes: 1
+Qtde Anos: 2
+Porte: DEM
+Acompanhamento Comac: N
+Pontos do Tributo Principal (art. 10, I): 75
+Base Multiplicador (art. 10, II): 68
+Tributo Principal (código): 210
+Acréscimo (art. 10, § 2º): 0.0
+Operação Principal: 40121
+Valor da Operação (Anexo Único): 1.25
+Multiplicador (art. 12): 0.1
+Parâmetros do Multiplicador: ['RFFPs/Improbidade: 0.0', 'Inaptidões: 0', 'Baixas: 0', 'Exclusão Simples: 0', 'Qtde Anos: 0.1']
+TOTAL DE PONTOS: 0100
+
+
+TDPF: 1010600202000181
+Qtde Operacoes: 1
+Qtde Anos: 3
+Porte: MED
+Acompanhamento Comac: N
+Pontos do Tributo Principal (art. 10, I): 148
+Base Multiplicador (art. 10, II): 158
+Tributo Principal (código): 1011
+Acréscimo (art. 10, § 2º): 0.0
+Operação Principal: 10201
+Valor da Operação (Anexo Único): 1.00
+Multiplicador (art. 12): 0.2
+Parâmetros do Multiplicador: ['RFFPs/Improbidade: 0.0', 'Inaptidões: 0', 'Baixas: 0', 'Exclusão Simples: 0', 'Qtde Anos: 0.2', 'Qtde PER: 0']
+TOTAL DE PONTOS: 0179
+
+
+TDPF: 1010600202000220
+Qtde Operacoes: 2
+Qtde Anos: 3
+Porte: DEM
+Acompanhamento Comac: N
+Pontos do Tributo Principal (art. 10, I): 111
+Base Multiplicador (art. 10, II): 118
+Tributo Principal (código): 2141
+Acréscimo (art. 10, § 2º): 0.0
+Operação Principal: 86201
+Valor da Operação (Anexo Único): 1.00
+Multiplicador (art. 12): 0.25
+Parâmetros do Multiplicador: ['RFFPs/Improbidade: 0.0', 'Inaptidões: 0', 'Baixas: 0', 'Exclusão Simples: 0', 'Qtde Operações: 0.05', 'Qtde Anos: 0.2', 'Estabelec Previd: 0', 'CEI/CAEPF/Obra: 0', 'Prestadores: 0', 'Tomadores: 0']
+TOTAL DE PONTOS: 0140
+
+
+TDPF: 1010600202000382
+Qtde Operacoes: 1
+Qtde Anos: 1
+Porte: DEM
+Acompanhamento Comac: N
+Pontos do Tributo Principal (art. 10, I): 130
+Base Multiplicador (art. 10, II): 118
+Tributo Principal (código): 1011
+Acréscimo (art. 10, § 2º): 0.0
+Operação Principal: 10201
+Valor da Operação (Anexo Único): 1.00
+Multiplicador (art. 12): 0.0
+Parâmetros do Multiplicador: ['RFFPs/Improbidade: 0.0', 'Inaptidões: 0', 'Baixas: 0', 'Exclusão Simples: 0', 'Qtde PER: 0']
+TOTAL DE PONTOS: 0130
+
+
+TDPF: 1010600202000391
+Qtde Operacoes: 1
+Qtde Anos: 1
+Porte: DEM
+Acompanhamento Comac: N
+Pontos do Tributo Principal (art. 10, I): 130
+Base Multiplicador (art. 10, II): 118
+Tributo Principal (código): 1011
+Acréscimo (art. 10, § 2º): 0.0
+Operação Principal: 10201
+Valor da Operação (Anexo Único): 1.00
+Multiplicador (art. 12): 0.0
+Parâmetros do Multiplicador: ['RFFPs/Improbidade: 0.0', 'Inaptidões: 0', 'Baixas: 0', 'Exclusão Simples: 0', 'Qtde PER: 0']
+TOTAL DE PONTOS: 0130
+
+
+TDPF: 1010600202100050
+Qtde Operacoes: 1
+Qtde Anos: 1
+Porte: DIF
+Acompanhamento Comac: S
+Pontos do Tributo Principal (art. 10, I): 194
+Base Multiplicador (art. 10, II): 194
+Tributo Principal (código): 0
+Acréscimo (art. 10, § 2º): 0.0
+Operação Principal: 91141
+Valor da Operação (Anexo Único): 0.20
+Multiplicador (art. 12): 0.4
+Parâmetros do Multiplicador: ['RFFPs/Improbidade: 0.0', 'Inaptidões: 0', 'Baixas: 0', 'Exclusão Simples: 0', 'Acompanhamento: 0.4']
+TOTAL DE PONTOS: 0116
+
+
+TDPF: 1010700202000042
+Qtde Operacoes: 4
+Qtde Anos: 3
+Porte: DEM
+Acompanhamento Comac: N
+Pontos do Tributo Principal (art. 10, I): 132
+Base Multiplicador (art. 10, II): 118
+Tributo Principal (código): 221
+Acréscimo (art. 10, § 2º): 0.0
+Operação Principal: 20449
+Valor da Operação (Anexo Único): 1.00
+Multiplicador (art. 12): 0.30000000000000004
+Parâmetros do Multiplicador: ['RFFPs/Improbidade: 0.0', 'Inaptidões: 0', 'Baixas: 0', 'Exclusão Simples: 0', 'Qtde Operações: 0.1', 'Qtde Anos: 0.2']
+TOTAL DE PONTOS: 0167
+
+
+TDPF: 1010700202000107
+Qtde Operacoes: 2
+Qtde Anos: 1
+Porte: DEM
+Acompanhamento Comac: N
+Pontos do Tributo Principal (art. 10, I): 137
+Base Multiplicador (art. 10, II): 118
+Tributo Principal (código): 3880
+Acréscimo (art. 10, § 2º): 0.0
+Operação Principal: 30120
+Valor da Operação (Anexo Único): 1.25
+Multiplicador (art. 12): 0.05
+Parâmetros do Multiplicador: ['RFFPs/Improbidade: 0.0', 'Inaptidões: 0', 'Baixas: 0', 'Exclusão Simples: 0', 'Qtde Operações: 0.05', 'Qtde PER: 0']
+TOTAL DE PONTOS: 0177
+
+
+TDPF: 1010700202000126
+Qtde Operacoes: 1
+Qtde Anos: 3
+Porte: MED
+Acompanhamento Comac: N
+Pontos do Tributo Principal (art. 10, I): 174
+Base Multiplicador (art. 10, II): 158
+Tributo Principal (código): 221
+Acréscimo (art. 10, § 2º): 0.0
+Operação Principal: 20449
+Valor da Operação (Anexo Único): 1.00
+Multiplicador (art. 12): 0.2
+Parâmetros do Multiplicador: ['RFFPs/Improbidade: 0.0', 'Inaptidões: 0', 'Baixas: 0', 'Exclusão Simples: 0', 'Qtde Anos: 0.2']
+TOTAL DE PONTOS: 0205
+
+
+TDPF: 1010700202000127
+Qtde Operacoes: 1
+Qtde Anos: 3
+Porte: DEM
+Acompanhamento Comac: N
+Pontos do Tributo Principal (art. 10, I): 132
+Base Multiplicador (art. 10, II): 118
+Tributo Principal (código): 221
+Acréscimo (art. 10, § 2º): 0.0
+Operação Principal: 20449
+Valor da Operação (Anexo Único): 1.00
+Multiplicador (art. 12): 0.2
+Parâmetros do Multiplicador: ['RFFPs/Improbidade: 0.0', 'Inaptidões: 0', 'Baixas: 0', 'Exclusão Simples: 0', 'Qtde Anos: 0.2']
+TOTAL DE PONTOS: 0155
+
+
+TDPF: 1010700202000138
+Qtde Operacoes: 2
+Qtde Anos: 3
+Porte: DEM
+Acompanhamento Comac: N
+Pontos do Tributo Principal (art. 10, I): 137
+Base Multiplicador (art. 10, II): 118
+Tributo Principal (código): 3880
+Acréscimo (art. 10, § 2º): 0.4
+Operação Principal: 20449
+Valor da Operação (Anexo Único): 1.00
+Multiplicador (art. 12): 0.25
+Parâmetros do Multiplicador: ['RFFPs/Improbidade: 0.0', 'Inaptidões: 0', 'Baixas: 0', 'Exclusão Simples: 0', 'Qtde Operações: 0.05', 'Qtde Anos: 0.2', 'Qtde PER: 0']
+TOTAL DE PONTOS: 0221
+
+
+TDPF: 1010700202000142
+Qtde Operacoes: 2
+Qtde Anos: 2
+Porte: DIF
+Acompanhamento Comac: N
+Pontos do Tributo Principal (art. 10, I): 247
+Base Multiplicador (art. 10, II): 194
+Tributo Principal (código): 221
+Acréscimo (art. 10, § 2º): 0.0
+Operação Principal: 20449
+Valor da Operação (Anexo Único): 1.00
+Multiplicador (art. 12): 0.15000000000000002
+Parâmetros do Multiplicador: ['RFFPs/Improbidade: 0.0', 'Inaptidões: 0', 'Baixas: 0', 'Exclusão Simples: 0', 'Qtde Operações: 0.05', 'Qtde Anos: 0.1']
+TOTAL DE PONTOS: 0276
+
+
+TDPF: 1010700202000149
+Qtde Operacoes: 3
+Qtde Anos: 2
+Porte: DEM
+Acompanhamento Comac: N
+Pontos do Tributo Principal (art. 10, I): 132
+Base Multiplicador (art. 10, II): 118
+Tributo Principal (código): 694
+Acréscimo (art. 10, § 2º): 0.1
+Operação Principal: 60101
+Valor da Operação (Anexo Único): 1.00
+Multiplicador (art. 12): 0.2
+Parâmetros do Multiplicador: ['RFFPs/Improbidade: 0.0', 'Inaptidões: 0', 'Baixas: 0', 'Exclusão Simples: 0', 'Qtde Operações: 0.1', 'Qtde Anos: 0.1']
+TOTAL DE PONTOS: 0168
+
+
+TDPF: 1010700202000154
+Qtde Operacoes: 1
+Qtde Anos: 1
+Porte: DIF
+Acompanhamento Comac: S
+Pontos do Tributo Principal (art. 10, I): 159
+Base Multiplicador (art. 10, II): 194
+Tributo Principal (código): 1011
+Acréscimo (art. 10, § 2º): 0.0
+Operação Principal: 91131
+Valor da Operação (Anexo Único): 0.75
+Multiplicador (art. 12): 0.4
+Parâmetros do Multiplicador: ['RFFPs/Improbidade: 0.0', 'Inaptidões: 0', 'Baixas: 0', 'Exclusão Simples: 0', 'Acompanhamento: 0.4', 'Qtde PER: 0']
+TOTAL DE PONTOS: 0196
+
+
+TDPF: 1010700202000182
+Qtde Operacoes: 1
+Qtde Anos: 2
+Porte: DEM
+Acompanhamento Comac: N
+Pontos do Tributo Principal (art. 10, I): 132
+Base Multiplicador (art. 10, II): 118
+Tributo Principal (código): 221
+Acréscimo (art. 10, § 2º): 0.0
+Operação Principal: 21106
+Valor da Operação (Anexo Único): 1.00
+Multiplicador (art. 12): 0.1
+Parâmetros do Multiplicador: ['RFFPs/Improbidade: 0.0', 'Inaptidões: 0', 'Baixas: 0', 'Exclusão Simples: 0', 'Qtde Anos: 0.1']
+TOTAL DE PONTOS: 0143
+
+
+TDPF: 1010700202000198
+Qtde Operacoes: 1
+Qtde Anos: 2
+Porte: DIF
+Acompanhamento Comac: S
+Pontos do Tributo Principal (art. 10, I): 159
+Base Multiplicador (art. 10, II): 194
+Tributo Principal (código): 1011
+Acréscimo (art. 10, § 2º): 0.0
+Operação Principal: 10201
+Valor da Operação (Anexo Único): 1.00
+Multiplicador (art. 12): 0.5
+Parâmetros do Multiplicador: ['RFFPs/Improbidade: 0.0', 'Inaptidões: 0', 'Baixas: 0', 'Exclusão Simples: 0', 'Acompanhamento: 0.4', 'Qtde Anos: 0.1', 'Qtde PER: 0']
+TOTAL DE PONTOS: 0256
+
+
+TDPF: 1010700202000226
+Qtde Operacoes: 5
+Qtde Anos: 3
+Porte: MED
+Acompanhamento Comac: N
+Pontos do Tributo Principal (art. 10, I): 174
+Base Multiplicador (art. 10, II): 158
+Tributo Principal (código): 221
+Acréscimo (art. 10, § 2º): 0.1
+Operação Principal: 23151
+Valor da Operação (Anexo Único): 1.60
+Multiplicador (art. 12): 0.30000000000000004
+Parâmetros do Multiplicador: ['RFFPs/Improbidade: 0.0', 'Inaptidões: 0', 'Baixas: 0', 'Exclusão Simples: 0', 'Qtde Operações: 0.1', 'Qtde Anos: 0.2']
+TOTAL DE PONTOS: 0353
+
+
+TDPF: 1010700202000238
+Qtde Operacoes: 2
+Qtde Anos: 4
+Porte: MED
+Acompanhamento Comac: N
+Pontos do Tributo Principal (art. 10, I): 177
+Base Multiplicador (art. 10, II): 158
+Tributo Principal (código): 3880
+Acréscimo (art. 10, § 2º): 0.0
+Operação Principal: 30120
+Valor da Operação (Anexo Único): 1.25
+Multiplicador (art. 12): 0.25
+Parâmetros do Multiplicador: ['RFFPs/Improbidade: 0.0', 'Inaptidões: 0', 'Baixas: 0', 'Exclusão Simples: 0', 'Qtde Operações: 0.05', 'Qtde Anos: 0.2', 'Qtde PER: 0']
+TOTAL DE PONTOS: 0260
+
+
+TDPF: 1010700202000239
+Qtde Operacoes: 1
+Qtde Anos: 1
+Porte: MED
+Acompanhamento Comac: N
+Pontos do Tributo Principal (art. 10, I): 177
+Base Multiplicador (art. 10, II): 158
+Tributo Principal (código): 3880
+Acréscimo (art. 10, § 2º): 0.0
+Operação Principal: 30101
+Valor da Operação (Anexo Único): 1.00
+Multiplicador (art. 12): 0.0
+Parâmetros do Multiplicador: ['RFFPs/Improbidade: 0.0', 'Inaptidões: 0', 'Baixas: 0', 'Exclusão Simples: 0', 'Qtde PER: 0']
+TOTAL DE PONTOS: 0177
+
+
+TDPF: 1010700202000251
+Qtde Operacoes: 2
+Qtde Anos: 3
+Porte: DIF
+Acompanhamento Comac: N
+Pontos do Tributo Principal (art. 10, I): 247
+Base Multiplicador (art. 10, II): 194
+Tributo Principal (código): 221
+Acréscimo (art. 10, § 2º): 0.4
+Operação Principal: 20449
+Valor da Operação (Anexo Único): 1.00
+Multiplicador (art. 12): 0.25
+Parâmetros do Multiplicador: ['RFFPs/Improbidade: 0.0', 'Inaptidões: 0', 'Baixas: 0', 'Exclusão Simples: 0', 'Qtde Operações: 0.05', 'Qtde Anos: 0.2', 'Qtde PER: 0']
+TOTAL DE PONTOS: 0394
+
+
+TDPF: 1010700202000255
+Qtde Operacoes: 1
+Qtde Anos: 2
+Porte: DEM
+Acompanhamento Comac: N
+Pontos do Tributo Principal (art. 10, I): 130
+Base Multiplicador (art. 10, II): 118
+Tributo Principal (código): 1011
+Acréscimo (art. 10, § 2º): 0.0
+Operação Principal: 10201
+Valor da Operação (Anexo Único): 1.00
+Multiplicador (art. 12): 0.1
+Parâmetros do Multiplicador: ['RFFPs/Improbidade: 0.0', 'Inaptidões: 0', 'Baixas: 0', 'Exclusão Simples: 0', 'Qtde Anos: 0.1', 'Qtde PER: 0']
+TOTAL DE PONTOS: 0141
+
+
+TDPF: 1010700202000256
+Qtde Operacoes: 1
+Qtde Anos: 2
+Porte: DIF
+Acompanhamento Comac: N
+Pontos do Tributo Principal (art. 10, I): 159
+Base Multiplicador (art. 10, II): 194
+Tributo Principal (código): 1011
+Acréscimo (art. 10, § 2º): 0.0
+Operação Principal: 10201
+Valor da Operação (Anexo Único): 1.00
+Multiplicador (art. 12): 0.1
+Parâmetros do Multiplicador: ['RFFPs/Improbidade: 0.0', 'Inaptidões: 0', 'Baixas: 0', 'Exclusão Simples: 0', 'Qtde Anos: 0.1', 'Qtde PER: 0']
+TOTAL DE PONTOS: 0178
+
+
+TDPF: 1010700202000257
+Qtde Operacoes: 1
+Qtde Anos: 2
+Porte: DIF
+Acompanhamento Comac: N
+Pontos do Tributo Principal (art. 10, I): 159
+Base Multiplicador (art. 10, II): 194
+Tributo Principal (código): 1011
+Acréscimo (art. 10, § 2º): 0.0
+Operação Principal: 10201
+Valor da Operação (Anexo Único): 1.00
+Multiplicador (art. 12): 0.1
+Parâmetros do Multiplicador: ['RFFPs/Improbidade: 0.0', 'Inaptidões: 0', 'Baixas: 0', 'Exclusão Simples: 0', 'Qtde Anos: 0.1', 'Qtde PER: 0']
+TOTAL DE PONTOS: 0178
+
+
+TDPF: 1010700202000264
+Qtde Operacoes: 1
+Qtde Anos: 2
+Porte: MED
+Acompanhamento Comac: N
+Pontos do Tributo Principal (art. 10, I): 174
+Base Multiplicador (art. 10, II): 158
+Tributo Principal (código): 221
+Acréscimo (art. 10, § 2º): 0.0
+Operação Principal: 20449
+Valor da Operação (Anexo Único): 1.00
+Multiplicador (art. 12): 0.1
+Parâmetros do Multiplicador: ['RFFPs/Improbidade: 0.0', 'Inaptidões: 0', 'Baixas: 0', 'Exclusão Simples: 0', 'Qtde Anos: 0.1']
+TOTAL DE PONTOS: 0189
+
+
+TDPF: 1010700202000284
+Qtde Operacoes: 2
+Qtde Anos: 1
+Porte: DEM
+Acompanhamento Comac: N
+Pontos do Tributo Principal (art. 10, I): 137
+Base Multiplicador (art. 10, II): 118
+Tributo Principal (código): 3880
+Acréscimo (art. 10, § 2º): 0.4
+Operação Principal: 20652
+Valor da Operação (Anexo Único): 1.00
+Multiplicador (art. 12): 0.05
+Parâmetros do Multiplicador: ['RFFPs/Improbidade: 0.0', 'Inaptidões: 0', 'Baixas: 0', 'Exclusão Simples: 0', 'Qtde Operações: 0.05', 'Qtde PER: 0']
+TOTAL DE PONTOS: 0197
+
+
+TDPF: 1010700202000294
+Qtde Operacoes: 5
+Qtde Anos: 1
+Porte: DEM
+Acompanhamento Comac: N
+Pontos do Tributo Principal (art. 10, I): 137
+Base Multiplicador (art. 10, II): 118
+Tributo Principal (código): 3880
+Acréscimo (art. 10, § 2º): 0.4
+Operação Principal: 20652
+Valor da Operação (Anexo Único): 1.00
+Multiplicador (art. 12): 0.1
+Parâmetros do Multiplicador: ['RFFPs/Improbidade: 0.0', 'Inaptidões: 0', 'Baixas: 0', 'Exclusão Simples: 0', 'Qtde Operações: 0.1', 'Qtde PER: 0']
+TOTAL DE PONTOS: 0203
+
+
+TDPF: 1010700202000323
+Qtde Operacoes: 1
+Qtde Anos: 2
+Porte: DIF
+Acompanhamento Comac: N
+Pontos do Tributo Principal (art. 10, I): 210
+Base Multiplicador (art. 10, II): 194
+Tributo Principal (código): 3880
+Acréscimo (art. 10, § 2º): 0.0
+Operação Principal: 30101
+Valor da Operação (Anexo Único): 1.00
+Multiplicador (art. 12): 0.1
+Parâmetros do Multiplicador: ['RFFPs/Improbidade: 0.0', 'Inaptidões: 0', 'Baixas: 0', 'Exclusão Simples: 0', 'Qtde Anos: 0.1', 'Qtde PER: 0']
+TOTAL DE PONTOS: 0229
+
+
+TDPF: 1010700202000348
+Qtde Operacoes: 1
+Qtde Anos: 2
+Porte: MED
+Acompanhamento Comac: N
+Pontos do Tributo Principal (art. 10, I): 177
+Base Multiplicador (art. 10, II): 158
+Tributo Principal (código): 3880
+Acréscimo (art. 10, § 2º): 0.0
+Operação Principal: 30117
+Valor da Operação (Anexo Único): 0.75
+Multiplicador (art. 12): 0.1
+Parâmetros do Multiplicador: ['RFFPs/Improbidade: 0.0', 'Inaptidões: 0', 'Baixas: 0', 'Exclusão Simples: 0', 'Qtde Anos: 0.1', 'Qtde PER: 0']
+TOTAL DE PONTOS: 0148
+
+
+TDPF: 1010700202000366
+Qtde Operacoes: 1
+Qtde Anos: 1
+Porte: DEM
+Acompanhamento Comac: N
+Pontos do Tributo Principal (art. 10, I): 132
+Base Multiplicador (art. 10, II): 118
+Tributo Principal (código): 221
+Acréscimo (art. 10, § 2º): 0.0
+Operação Principal: 21106
+Valor da Operação (Anexo Único): 1.00
+Multiplicador (art. 12): 0.0
+Parâmetros do Multiplicador: ['RFFPs/Improbidade: 0.0', 'Inaptidões: 0', 'Baixas: 0', 'Exclusão Simples: 0']
+TOTAL DE PONTOS: 0132
+
+
+TDPF: 1010700202000388
+Qtde Operacoes: 0
+Qtde Anos: 4
+Porte: DEM
+Acompanhamento Comac: N
+Pontos do Tributo Principal (art. 10, I): 137
+Base Multiplicador (art. 10, II): 118
+Tributo Principal (código): 3880
+Acréscimo (art. 10, § 2º): 0.0
+Operação Principal: 93151
+Valor da Operação (Anexo Único): 0.75
+Multiplicador (art. 12): 0.2
+Parâmetros do Multiplicador: ['RFFPs/Improbidade: 0.0', 'Inaptidões: 0', 'Baixas: 0', 'Exclusão Simples: 0', 'Qtde Anos: 0.2', 'Qtde PER: 0']
+TOTAL DE PONTOS: 0126
+
+
+TDPF: 1010700202000398
+Qtde Operacoes: 1
+Qtde Anos: 1
+Porte: DIF
+Acompanhamento Comac: S
+Pontos do Tributo Principal (art. 10, I): 159
+Base Multiplicador (art. 10, II): 194
+Tributo Principal (código): 1011
+Acréscimo (art. 10, § 2º): 0.0
+Operação Principal: 91131
+Valor da Operação (Anexo Único): 0.75
+Multiplicador (art. 12): 0.4
+Parâmetros do Multiplicador: ['RFFPs/Improbidade: 0.0', 'Inaptidões: 0', 'Baixas: 0', 'Exclusão Simples: 0', 'Acompanhamento: 0.4', 'Qtde PER: 0']
+TOTAL DE PONTOS: 0196
+
+
+TDPF: 1010700202000401
+Qtde Operacoes: 1
+Qtde Anos: 1
+Porte: DIF
+Acompanhamento Comac: S
+Pontos do Tributo Principal (art. 10, I): 159
+Base Multiplicador (art. 10, II): 194
+Tributo Principal (código): 1011
+Acréscimo (art. 10, § 2º): 0.0
+Operação Principal: 91131
+Valor da Operação (Anexo Único): 0.75
+Multiplicador (art. 12): 0.4
+Parâmetros do Multiplicador: ['RFFPs/Improbidade: 0.0', 'Inaptidões: 0', 'Baixas: 0', 'Exclusão Simples: 0', 'Acompanhamento: 0.4', 'Qtde PER: 0']
+TOTAL DE PONTOS: 0196
+
+
+TDPF: 1010700202000434
+Qtde Operacoes: 1
+Qtde Anos: 1
+Porte: DIF
+Acompanhamento Comac: N
+Pontos do Tributo Principal (art. 10, I): 159
+Base Multiplicador (art. 10, II): 194
+Tributo Principal (código): 1011
+Acréscimo (art. 10, § 2º): 0.0
+Operação Principal: 91131
+Valor da Operação (Anexo Único): 0.75
+Multiplicador (art. 12): 0.0
+Parâmetros do Multiplicador: ['RFFPs/Improbidade: 0.0', 'Inaptidões: 0', 'Baixas: 0', 'Exclusão Simples: 0', 'Qtde PER: 0']
+TOTAL DE PONTOS: 0119
+
+
+TDPF: 1010700202000435
+Qtde Operacoes: 1
+Qtde Anos: 1
+Porte: DIF
+Acompanhamento Comac: N
+Pontos do Tributo Principal (art. 10, I): 159
+Base Multiplicador (art. 10, II): 194
+Tributo Principal (código): 1011
+Acréscimo (art. 10, § 2º): 0.0
+Operação Principal: 91131
+Valor da Operação (Anexo Único): 0.75
+Multiplicador (art. 12): 0.0
+Parâmetros do Multiplicador: ['RFFPs/Improbidade: 0.0', 'Inaptidões: 0', 'Baixas: 0', 'Exclusão Simples: 0', 'Qtde PER: 0']
+TOTAL DE PONTOS: 0119
+
+
+TDPF: 1010700202000436
+Qtde Operacoes: 1
+Qtde Anos: 1
+Porte: DIF
+Acompanhamento Comac: N
+Pontos do Tributo Principal (art. 10, I): 159
+Base Multiplicador (art. 10, II): 194
+Tributo Principal (código): 1011
+Acréscimo (art. 10, § 2º): 0.0
+Operação Principal: 91131
+Valor da Operação (Anexo Único): 0.75
+Multiplicador (art. 12): 0.0
+Parâmetros do Multiplicador: ['RFFPs/Improbidade: 0.0', 'Inaptidões: 0', 'Baixas: 0', 'Exclusão Simples: 0', 'Qtde PER: 0']
+TOTAL DE PONTOS: 0119
+
+
+TDPF: 1010700202000440
+Qtde Operacoes: 2
+Qtde Anos: 3
+Porte: MED
+Acompanhamento Comac: N
+Pontos do Tributo Principal (art. 10, I): 174
+Base Multiplicador (art. 10, II): 158
+Tributo Principal (código): 221
+Acréscimo (art. 10, § 2º): 0.0
+Operação Principal: 20303
+Valor da Operação (Anexo Único): 1.60
+Multiplicador (art. 12): 0.25
+Parâmetros do Multiplicador: ['RFFPs/Improbidade: 0.0', 'Inaptidões: 0', 'Baixas: 0', 'Exclusão Simples: 0', 'Qtde Operações: 0.05', 'Qtde Anos: 0.2']
+TOTAL DE PONTOS: 0317
+
+
+TDPF: 1010700202000443
+Qtde Operacoes: 1
+Qtde Anos: 1
+Porte: DEM
+Acompanhamento Comac: N
+Pontos do Tributo Principal (art. 10, I): 132
+Base Multiplicador (art. 10, II): 118
+Tributo Principal (código): 221
+Acréscimo (art. 10, § 2º): 0.0
+Operação Principal: 21106
+Valor da Operação (Anexo Único): 1.00
+Multiplicador (art. 12): 0.0
+Parâmetros do Multiplicador: ['RFFPs/Improbidade: 0.0', 'Inaptidões: 0', 'Baixas: 0', 'Exclusão Simples: 0']
+TOTAL DE PONTOS: 0132
+
+
+TDPF: 1010700202000465
+Qtde Operacoes: 2
+Qtde Anos: 5
+Porte: DEM
+Acompanhamento Comac: N
+Pontos do Tributo Principal (art. 10, I): 130
+Base Multiplicador (art. 10, II): 118
+Tributo Principal (código): 1011
+Acréscimo (art. 10, § 2º): 0.0
+Operação Principal: 91131
+Valor da Operação (Anexo Único): 0.75
+Multiplicador (art. 12): 0.25
+Parâmetros do Multiplicador: ['RFFPs/Improbidade: 0.0', 'Inaptidões: 0', 'Baixas: 0', 'Exclusão Simples: 0', 'Qtde Operações: 0.05', 'Qtde Anos: 0.2', 'Qtde PER: 0']
+TOTAL DE PONTOS: 0127
+
+
+TDPF: 1010800202000016
+Qtde Operacoes: 1
+Qtde Anos: 2
+Porte: DEM
+Acompanhamento Comac: N
+Pontos do Tributo Principal (art. 10, I): 132
+Base Multiplicador (art. 10, II): 118
+Tributo Principal (código): 221
+Acréscimo (art. 10, § 2º): 0.0
+Operação Principal: 91231
+Valor da Operação (Anexo Único): 1.00
+Multiplicador (art. 12): 0.1
+Parâmetros do Multiplicador: ['RFFPs/Improbidade: 0.0', 'Inaptidões: 0', 'Baixas: 0', 'Exclusão Simples: 0', 'Qtde Anos: 0.1']
+TOTAL DE PONTOS: 0143
+
+
+TDPF: 1010800202000077
+Qtde Operacoes: 1
+Qtde Anos: 4
+Porte: DEM
+Acompanhamento Comac: N
+Pontos do Tributo Principal (art. 10, I): 75
+Base Multiplicador (art. 10, II): 68
+Tributo Principal (código): 210
+Acréscimo (art. 10, § 2º): 0.0
+Operação Principal: 40101
+Valor da Operação (Anexo Único): 1.00
+Multiplicador (art. 12): 0.2
+Parâmetros do Multiplicador: ['RFFPs/Improbidade: 0.0', 'Inaptidões: 0', 'Baixas: 0', 'Exclusão Simples: 0', 'Qtde Anos: 0.2']
+TOTAL DE PONTOS: 0088
+
+
+TDPF: 1010800202000106
+Qtde Operacoes: 1
+Qtde Anos: 4
+Porte: DEM
+Acompanhamento Comac: N
+Pontos do Tributo Principal (art. 10, I): 75
+Base Multiplicador (art. 10, II): 68
+Tributo Principal (código): 210
+Acréscimo (art. 10, § 2º): 0.0
+Operação Principal: 40101
+Valor da Operação (Anexo Único): 1.00
+Multiplicador (art. 12): 0.2
+Parâmetros do Multiplicador: ['RFFPs/Improbidade: 0.0', 'Inaptidões: 0', 'Baixas: 0', 'Exclusão Simples: 0', 'Qtde Anos: 0.2']
+TOTAL DE PONTOS: 0088
+
+
+TDPF: 1011100201900133
+Qtde Operacoes: 1
+Qtde Anos: 2
+Porte: MED
+Acompanhamento Comac: N
+Pontos do Tributo Principal (art. 10, I): 177
+Base Multiplicador (art. 10, II): 158
+Tributo Principal (código): 3880
+Acréscimo (art. 10, § 2º): 0.0
+Operação Principal: 30120
+Valor da Operação (Anexo Único): 1.25
+Multiplicador (art. 12): 0.1
+Parâmetros do Multiplicador: ['RFFPs/Improbidade: 0.0', 'Inaptidões: 0', 'Baixas: 0', 'Exclusão Simples: 0', 'Qtde Anos: 0.1', 'Qtde PER: 0']
+TOTAL DE PONTOS: 0237
+
+
+TDPF: 1010700202100060
+Qtde Operacoes: 1
+Qtde Anos: 1
+Porte: DEM
+Acompanhamento Comac: N
+Pontos do Tributo Principal (art. 10, I): 130
+Base Multiplicador (art. 10, II): 118
+Tributo Principal (código): 1011
+Acréscimo (art. 10, § 2º): 0.0
+Operação Principal: 91131
+Valor da Operação (Anexo Único): 0.75
+Multiplicador (art. 12): 0.0
+Parâmetros do Multiplicador: ['RFFPs/Improbidade: 0.0', 'Inaptidões: 0', 'Baixas: 0', 'Exclusão Simples: 0', 'Qtde PER: 0']
+TOTAL DE PONTOS: 0097
+
+
+TDPF: 1010700202100098
+Qtde Operacoes: 1
+Qtde Anos: 1
+Porte: DIF
+Acompanhamento Comac: S
+Pontos do Tributo Principal (art. 10, I): 159
+Base Multiplicador (art. 10, II): 194
+Tributo Principal (código): 1011
+Acréscimo (art. 10, § 2º): 0.0
+Operação Principal: 91131
+Valor da Operação (Anexo Único): 0.75
+Multiplicador (art. 12): 0.4
+Parâmetros do Multiplicador: ['RFFPs/Improbidade: 0.0', 'Inaptidões: 0', 'Baixas: 0', 'Exclusão Simples: 0', 'Acompanhamento: 0.4', 'Qtde PER: 0']
+TOTAL DE PONTOS: 0196
+
+
+TDPF: 1010700202100102
+Qtde Operacoes: 1
+Qtde Anos: 1
+Porte: DIF
+Acompanhamento Comac: S
+Pontos do Tributo Principal (art. 10, I): 159
+Base Multiplicador (art. 10, II): 194
+Tributo Principal (código): 1011
+Acréscimo (art. 10, § 2º): 0.0
+Operação Principal: 91131
+Valor da Operação (Anexo Único): 0.75
+Multiplicador (art. 12): 0.4
+Parâmetros do Multiplicador: ['RFFPs/Improbidade: 0.0', 'Inaptidões: 0', 'Baixas: 0', 'Exclusão Simples: 0', 'Acompanhamento: 0.4', 'Qtde PER: 0']
+TOTAL DE PONTOS: 0196
+
+
+TDPF: 1010700202000399
+Qtde Operacoes: 1
+Qtde Anos: 4
+Porte: DIF
+Acompanhamento Comac: S
+Pontos do Tributo Principal (art. 10, I): 159
+Base Multiplicador (art. 10, II): 194
+Tributo Principal (código): 1011
+Acréscimo (art. 10, § 2º): 0.0
+Operação Principal: 91131
+Valor da Operação (Anexo Único): 0.75
+Multiplicador (art. 12): 0.6000000000000001
+Parâmetros do Multiplicador: ['RFFPs/Improbidade: 0.0', 'Inaptidões: 0', 'Baixas: 0', 'Exclusão Simples: 0', 'Acompanhamento: 0.4', 'Qtde Anos: 0.2', 'Qtde PER: 0']
+TOTAL DE PONTOS: 0235

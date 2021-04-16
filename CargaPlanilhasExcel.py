@@ -558,11 +558,14 @@ def realizaCargaDados():
                 os.rename(dirExcel+"ALOCACOES.xlsx", dirExcel+"ALOCACOES_Processado_"+datetime.now().strftime('%Y-%m-%d')+".xlsx")
                 logging.info("Arquivos renomeados")
             except:
+                print("Erro ao tentar renomear os arquivos")            
                 logging.error("Erro ao tentar renomear os arquivos")            
         except:
             print("Erro ao tentar efetivar as atualização do indicador de supervisor dos TDPFs - É necessário verificar o erro e tentar fazer novamente a carga.")
             logging.info("Erro ao tentar efetivar as atualização do indicador de supervisor dos TDPFs")
-            conn.rollback()             
+            conn.rollback()        
+            logging.error(mysql.connector.Error)
+            print(mysql.connector.Error)                   
     print("Carga finalizada")
     cursor.close()
     conn.close() 
@@ -646,23 +649,224 @@ def realizaCargaDCCs():
             elif ultJuntada.date()<data.date():
                 cursor.execute(comando, (data, codigo))
                 atualizou = True
+    bErro = False
     if atualizou:
         try:
             conn.commit()
-            logging.info("Tabela de Juntadas atualizada")
-            try:
-                os.rename(dirExcel+"DCCS.xlsx", dirExcel+"DCCS_Processado_"+datetime.now().strftime('%Y-%m-%d')+".xlsx")
-                logging.info("Arquivo de DCCs renomeado")
-            except:
-                logging.error("Erro ao tentar renomear o arquivo de DCCs")              
+            logging.info("Tabela de Juntadas atualizada")             
         except:
             conn.rollback()
             logging.error("Erro ao tentar atualizar a tabela de Juntadas")
-    print("Carga das Juntadas dos DCCs finalizada.")
+            logging.error(mysql.connector.Error)
+            print(mysql.connector.Error)              
+            bErro = True
+    if not bErro:
+        try:
+            os.rename(dirExcel+"DCCS.xlsx", dirExcel+"DCCS_Processado_"+datetime.now().strftime('%Y-%m-%d')+".xlsx")
+            logging.info("Arquivo de DCCs renomeado")
+        except:
+            print("Erro ao tentar renomear o arquivo de DCCs")         
+            logging.error("Erro ao tentar renomear o arquivo de DCCs")         
+    print("Carga das Juntadas dos DCCs finalizada - ", datetime.now())
     conn.close()
     return
 
-        
+def realizaCargaCienciasPendentes():
+    global dirExcel, termina, hostSrv, hora3
+    try:
+        dfCiencias= pd.read_excel(dirExcel+"CIENCIASPENDENTES.xlsx", 
+                                  dtype={'RPF Gerencial - Num.':str, 'Proc. Doc. Lanç. - Numero Inf.': str, 
+                                         'Dia Registro Doc. Lançamento':datetime, 'Data Última Extração': datetime})
+    except:
+        print("Erro no acesso ao arquivo de CIENCIASPENDENTES.xlsx ou só há arquivos já processados; outra tentativa será feita às "+hora3)
+        logging.info("Arquivo Excel de CIENCIASPENDENTES não foi encontrado. Outra ciência será tentada às "+hora3) 
+        return
+    #dfCiencias['Proc. Doc. Lanç. - Numero Inf.']=dfCiencias['Proc. Doc. Lanç. - Numero Inf.'].astype(str)
+    print(dfCiencias.dtypes)
+    MYSQL_DATABASE = os.getenv("MYSQL_DATABASE", "databasenormal")
+    MYSQL_USER = os.getenv("MYSQL_USER", "my_user")
+    MYSQL_PASSWORD = os.getenv("MYSQL_PASSWORD", "mypass1234") 
+
+    try:
+        logging.info("Conectando ao servidor de banco de dados (3)...")
+        logging.info(MYSQL_DATABASE)
+        logging.info(MYSQL_USER)
+
+        conn = mysql.connector.connect(user=MYSQL_USER, password=MYSQL_PASSWORD,
+                                    host=hostSrv,
+                                    database=MYSQL_DATABASE)
+        logging.info("Conexão efetuada com sucesso ao MySql (3)!")                               
+    except mysql.connector.Error as err:
+        print("Erro na conexão com o BD (2) - veja Log: "+datetime.now().strftime('%d/%m/%Y %H:%M'))
+        if err.errno == errorcode.ER_ACCESS_DENIED_ERROR:
+            logging.info("Usuário ou senha inválido(s) (3).")
+        elif err.errno == errorcode.ER_BAD_DB_ERROR:
+            logging.error("Banco de dados não existe (3).")
+        else:
+            logging.error(err)
+            logging.error("Erro na conexão com o Banco de Dados (3)")
+        return
+    print("Realizando carga das Ciências Pendentes em "+datetime.now().strftime("%d/%m/%Y %H:%M"))   
+    cursor = conn.cursor(buffered=True)   
+    for linha in range(dfCiencias.shape[0]):   
+        tdpf = getAlgarismos(dfCiencias.iat[linha, 0])
+        processo = dfCiencias.iat[linha, 2]
+        registro = dfCiencias.iat[linha, 6]
+        extracao = dfCiencias.iat[linha, 10]  
+        #print(extracao, " - ", print(paraData(extracao)))
+        meio = dfCiencias.iat[linha, 9] #se o meio estiver preenchido, foi feita a ciência no SIEF Processos
+        consultaTdpf = "Select Codigo from TDPFS Where Numero=%s"
+        cursor.execute(consultaTdpf, (tdpf,))
+        row = cursor.fetchone()
+        if not row: #TDPF não encontrado - não interessa
+            continue
+        chaveTdpf = row[0]
+        consultaProcesso = "Select Codigo, Finalizado from AvisosCiencia Where TDPF=%s and Processo=%s"
+        cursor.execute(consultaProcesso, (chaveTdpf, processo))
+        row = cursor.fetchone()
+        if not row and meio in [None, np.nan, ""]: #registro não existe - devemos incluí-lo se meio não estiver preenchido (se meio estiver preenchido, houve ciência)
+            print(chaveTdpf, " - ", processo)
+            insere = "Insert Into AvisosCiencia (TDPF, Processo, Integracao, Extracao) Values (%s, %s, %s, %s)"
+            try:
+                cursor.execute(insere, (chaveTdpf, processo, paraData(registro), paraData(extracao)))
+            except:
+                print("Processo: " + processo + " - TDPF: "+tdpf)
+                logging.error(mysql.connector.Error)
+                logging.info("Processo: "+ processo + " - TDPF: "+tdpf)
+                print(mysql.connector.Error)
+        elif row and not meio in  [None, np.nan, ""]: #meio está preenchido - temos que finalizar o registro existente
+            finalizaSQL = "Update AvisosCiencia Set Finalizado=%s, Extracao=%s Where Codigo=%s"
+            cursor.execute(finalizaSQL, (datetime.now(), paraData(extracao), row[0]))
+        elif row:
+            extracaoSQL = "Update AvisosCiencia Set Extracao=%s Where Codigo=%s" #atualizamos a data de extração (a ciência ainda não foi registrada)
+            cursor.execute(extracaoSQL, (paraData(extracao), row[0]))
+    cursor.execute("Select MAX(Extracao) from AvisosCiencia")
+    row = cursor.fetchone() #buscamos a maior data de extração registrada na tabela
+    if row:
+        extracao = row[0]
+        print("Extração (Max): ", extracao)
+        #finalizamos todos os registros cuja extração se deu em data anterior à última extração (não foram atualizados acima)
+        cursor.execute("Update AvisosCiencia Set Finalizado=%s Where Extracao<%s", (datetime.now(), extracao.date()))
+    try:
+        conn.commit()
+        logging.error("Tabela de AvisosCiencia foi atualizada.")
+        print("Tabela de AvisosCiencia foi atualizada - ", datetime.now())
+        try:
+            os.rename(dirExcel+"CIENCIASPENDENTES.xlsx", dirExcel+"CIENCIASPENDENTES_Processado_"+datetime.now().strftime('%Y-%m-%d')+".xlsx")
+            logging.info("Arquivo de CIENCIASPENDENTES renomeado")
+        except:
+            print("Erro ao renomear arquivo de Ciências Pendentes")
+            logging.error("Erro ao tentar renomear o arquivo de CIENCIASPENDENTES")                     
+    except:
+        conn.rollback()
+        logging.error("Erro ao tentar atualizar a tabela de AvisosCiencia")
+        print("Erro ao tentar atualizar a tabela de AvisosCiencia - ", datetime.now())
+        logging.error(mysql.connector.Error)
+        print(mysql.connector.Error)         
+    return
+
+def realizaCargaIndicadores(): #carga dos indicadores obtidos do Ação Fiscal na tabela Resultados
+    global dirExcel, termina, hostSrv, hora4
+    try:
+        dfIndicadores= pd.read_excel(dirExcel+"INDICADORES.xlsx", dtype={'TDPF':object})
+    except:
+        print("Erro no acesso ao arquivo de INDICADORES.xlsx ou só há arquivos já processados; outra tentativa será feita às "+hora4)
+        logging.info("Arquivo Excel de Indicadores não foi encontrado; outra tentativa será feita às "+hora4) 
+        return
+    MYSQL_DATABASE = os.getenv("MYSQL_DATABASE", "databasenormal")
+    MYSQL_USER = os.getenv("MYSQL_USER", "my_user")
+    MYSQL_PASSWORD = os.getenv("MYSQL_PASSWORD", "mypass1234") 
+    print(dfIndicadores.dtypes)
+    try:
+        logging.info("Conectando ao servidor de banco de dados (2)...")
+        logging.info(MYSQL_DATABASE)
+        logging.info(MYSQL_USER)
+
+        conn = mysql.connector.connect(user=MYSQL_USER, password=MYSQL_PASSWORD,
+                                    host=hostSrv, database=MYSQL_DATABASE)
+        logging.info("Conexão efetuada com sucesso ao MySql (4)!")                               
+    except mysql.connector.Error as err:
+        print("Erro na conexão com o BD (4) - veja Log: "+datetime.now().strftime('%d/%m/%Y %H:%M'))
+        if err.errno == errorcode.ER_ACCESS_DENIED_ERROR:
+            logging.info("Usuário ou senha inválido(s) (4).")
+        elif err.errno == errorcode.ER_BAD_DB_ERROR:
+            logging.error("Banco de dados não existe (4).")
+        else:
+            logging.error(err)
+            logging.error("Erro na conexão com o Banco de Dados (4)")
+        return
+    print("Realizando carga dos Indicadores em "+datetime.now().strftime("%d/%m/%Y %H:%M"))
+    cursor = conn.cursor(buffered=True)   
+    atualizou = False 
+    consultaTdpf = "Select Codigo from TDPFS Where Numero=%s"
+    consultaResultado = """Select Arrolamentos, MedCautelar, RepPenais, Inaptidoes, Baixas, ExcSimples, DigVincs from Resultados 
+                           Where Resultados.TDPF=%s"""
+    insere = "Insert Into Resultados (TDPF, Arrolamentos, MedCautelar, RepPenais, Inaptidoes, Baixas, ExcSimples, DigVincs, Data, SujPassivos, Situacao11, Interposicao, Situacao15, EstabPrev1, EstabPrev2, Segurados, Prestadores, Tomadores, QtdePER, LancMuldi, Compensacao, CreditoExt) Values (%s, %s, %s, %s, %s, %s, %s, %s, %s, 0, 'N', 'N', 'N', 0, 0, 0, 0, 0, 0, 'N', 'N', 'N')"
+    atualiza = "Update Resultados Set Arrolamentos=%s, MedCautelar=%s, RepPenais=%s, Inaptidoes=%s, Baixas=%s, ExcSimples=%s, DigVincs=%s Where TDPF=%s"
+    incluidos = 0
+    atualizados = 0
+    for linha in range(dfIndicadores.shape[0]):
+        if (linha+1)%300==0:
+            print(linha+1, " processadas ...")
+        tdpf = getAlgarismos(dfIndicadores.iat[linha, 0])
+        cursor.execute(consultaTdpf, (tdpf,))
+        row = cursor.fetchone()
+        if row==None:
+            #TDPF não encontrado - não há o que fazer
+            continue
+        chaveTdpf = row[0]
+        parametros = []
+        parametros.append(chaveTdpf)
+        for i in range(1, 8, 1): #carrega os indicadores nesta lista
+            parametros.append(int(dfIndicadores.iat[linha, i]))
+            if i==2: #medida cautelar é sim (S) ou não (N)
+                parametros[2] = "S" if dfIndicadores.iat[linha, 2]>0 else "N"
+                
+        #print(tdpf, parametros)
+        cursor.execute(consultaResultado, (chaveTdpf,))
+        row = cursor.fetchone()
+        if row==None:
+            parametros.append(datetime.now())
+            cursor.execute(insere, tuple(parametros)) #não há a linha na tabela para o TDPF - fazemos sua inserção
+            incluidos+=1
+        else:
+            parametros.pop(0)  #excluo a chaveTdpf da primeira posição para inclui-la na última, por conta da estrutura do SQL Update   
+            #iria respeitar a informação outrora prestada, mas resolvi seguir a informação do Ação Fiscal (oficial), por isso comentei o for abaixo <--------
+            #for i in range(7):
+            #    if i==1:
+            #        if parametros[1]=="N" and row[1]=="S": #medida cautelar é S ou N
+            #            parametros[1] = "S" #se estava 'S', mantemos
+            #    else:
+            #        parametros[i] = max(parametros[i], row[i] if row[i]!=None else 0) #não reduzimos o valor já informado
+            parametros.append(chaveTdpf)
+            cursor.execute(atualiza, tuple(parametros))
+            atualizados+=1
+        atualizou = True
+    print(linha+1, " processadas no total.")   
+    print(incluidos, " registro incluídos.")
+    print(atualizados, " registros atualizados.")         
+    if atualizou:
+        try:
+            conn.commit()
+            logging.error("Tabela de Resultados foi atualizada.")
+            print("Tabela de Resultados foi atualizada - ", datetime.now())
+            try:
+                os.rename(dirExcel+"INDICADORES.xlsx", dirExcel+"INDICADORES_Processado_"+datetime.now().strftime('%Y-%m-%d')+".xlsx")
+                logging.info("Arquivo de INDICADORES renomeado")
+            except:
+                print("Erro ao renomear o arquivo de Indicadores")
+                logging.error("Erro ao tentar renomear o arquivo de INDICADORES")             
+        except:
+            conn.rollback()
+            logging.error("Erro ao tentar atualizar a tabela de Resultados")
+            print("Erro ao tentar atualizar a tabela de Resultados - ", datetime.now())
+            logging.error(mysql.connector.Error)
+            print(mysql.connector.Error)  
+    else:
+        print("Nenhuma atualização de indicadores ocorreu - ", datetime.now())
+        logging.info("Nenhuma atualização de indicadores ocorreu.")
+    return          
+
 
 def disparador():
     global termina
@@ -687,11 +891,17 @@ hora1 = "09:30"
 schedule.every().day.at(hora1).do(realizaCargaDados) #a cada 24 horas, verifica se há arquivos para fazer a carga
 hora2 = "14:30"
 schedule.every().day.at(hora2).do(realizaCargaDCCs)
+hora3 = "11:30"
+schedule.every().day.at(hora3).do(realizaCargaCienciasPendentes)
+hora4 = "10:30"
+schedule.every().day.at(hora4).do(realizaCargaIndicadores)
 termina = False
 threadDisparador = threading.Thread(target=disparador, daemon=True) #encerra thread quando sair do programa sem esperá-la
 threadDisparador.start()
 realizaCargaDados() #faz a primeira tentativa de carga das planilhas logo no acionamento do programa
-realizaCargaDCCs()
+realizaCargaDCCs() #idem para os DCCs
+realizaCargaCienciasPendentes() #ciencias pendentes de AI 
+realizaCargaIndicadores()
 while not termina:
     entrada = input("Digite QUIT para terminar o serviço Carga BOT: ")
     if entrada:

@@ -33,7 +33,7 @@ CREATE TABLE `Ciencias` (
   `Codigo` BIGINT NOT NULL AUTO_INCREMENT, 
   `TDPF` BIGINT, 
   `Data` DATETIME, 
-  `Documento` VARCHAR(50),
+  `Documento` VARCHAR(70),
   PRIMARY KEY (`Codigo`), 
   INDEX (`TDPF`)
 ) ENGINE=innodb DEFAULT CHARSET=utf8;
@@ -86,6 +86,7 @@ CREATE TABLE `Usuarios` (
   `ValidadeChave` DATETIME, 
   `Tentativas` INTEGER DEFAULT 0, 
   `DataEnvio` DATETIME,
+  `Orgao` INTEGER DEFAULT 0,
   INDEX (`CPF`), 
   INDEX (`idTelegram`), 
   PRIMARY KEY (`Codigo`), 
@@ -207,9 +208,10 @@ CREATE TABLE `Operacoes` (
   `Operacao` BIGINT,
   `PeriodoInicial` DATETIME, 
   `PeriodoFinal` DATETIME,
+  `Tributo` INTEGER,
   PRIMARY KEY (`Codigo`), 
   INDEX (`TDPF`),
-  UNIQUE (`TDPF`, `Operacao`)
+  UNIQUE (`TDPF`, `Operacao`, `Tributo`)
 ) ENGINE=innodb DEFAULT CHARSET=utf8;  
 
 DROP TABLE IF EXISTS `OperacoesFiscais`;
@@ -218,7 +220,6 @@ CREATE TABLE `OperacoesFiscais` (
   `Codigo` BIGINT NOT NULL AUTO_INCREMENT, 
   `Operacao` INTEGER,
   `Descricao` VARCHAR(200),
-  `Tributo` INTEGER, 
   `Valor` DECIMAL(3,2),
   PRIMARY KEY (`Codigo`), 
   UNIQUE (`Operacao`)
@@ -244,4 +245,64 @@ CREATE TABLE `Log` (
   `Data` DATETIME, 
   PRIMARY KEY (`Codigo`), 
   Index (`IP`)
+) ENGINE=innodb DEFAULT CHARSET=utf8;
+
+DROP TABLE IF EXISTS `Orgaos`;
+
+CREATE TABLE `Orgaos` (
+  `Codigo` INTEGER NOT NULL AUTO_INCREMENT, 
+  `Orgao` VARCHAR(25),
+  `Tipo` CHAR(1) DEFAULT 'L',
+  PRIMARY KEY (`Codigo`), 
+  UNIQUE (`Orgao`)
+) ENGINE=innodb DEFAULT CHARSET=utf8; 
+
+DROP TABLE IF EXISTS `Jurisdicao`;
+
+CREATE TABLE `Jurisdicao` (
+  `Codigo` INTEGER NOT NULL AUTO_INCREMENT, 
+  `Orgao` INTEGER,
+  `Equipe` VARCHAR(25),
+  PRIMARY KEY (`Codigo`), 
+  INDEX (`Orgao`),
+  INDEX (`Equipe`)
+) ENGINE=innodb DEFAULT CHARSET=utf8; 
+
+DROP TABLE IF EXISTS `Juntadas`;
+
+CREATE TABLE `Juntadas` (
+  `Codigo` BIGINT NOT NULL AUTO_INCREMENT,  
+  `TDPF` BIGINT, 
+  `Solicitacao` DATETIME, 
+  `Aviso` DATETIME, 
+  INDEX (`TDPF`),  
+  PRIMARY KEY (`Codigo`)
+) ENGINE=innodb DEFAULT CHARSET=utf8;
+
+DROP TABLE IF EXISTS `Prorrogacoes`;
+
+CREATE TABLE `Prorrogacoes` (
+  `Codigo` BIGINT NOT NULL AUTO_INCREMENT, 
+  `TDPF` BIGINT, 
+  `Assunto` VARCHAR(100),
+  `Documento` VARCHAR(100),
+  `Tipo` VARCHAR(2),  
+  `Data` DATETIME, 
+  `Supervisor` INTEGER,
+  `DataAssinatura` DATETIME, 
+  `Fundamentos` VARCHAR(8192),
+  PRIMARY KEY (`Codigo`), 
+  INDEX (`TDPF`),
+  UNIQUE (`TDPF`, `Data`)
+) ENGINE=innodb DEFAULT CHARSET=utf8;
+
+DROP TABLE IF EXISTS `AssinaturaFiscal`;
+
+CREATE TABLE `AssinaturaFiscal` (
+  `Codigo` BIGINT NOT NULL AUTO_INCREMENT, 
+  `Prorrogacao` BIGINT, 
+  `Fiscal` INTEGER,
+  `DataAssinatura` DATETIME, 
+  PRIMARY KEY (`Codigo`), 
+  INDEX (`Prorrogacao`)
 ) ENGINE=innodb DEFAULT CHARSET=utf8;

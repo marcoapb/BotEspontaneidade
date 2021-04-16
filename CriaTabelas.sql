@@ -34,6 +34,7 @@ CREATE TABLE `Ciencias` (
   `TDPF` BIGINT, 
   `Data` DATETIME, 
   `Documento` VARCHAR(70),
+  `Vencimento` DATETIME,
   PRIMARY KEY (`Codigo`), 
   INDEX (`TDPF`)
 ) ENGINE=innodb DEFAULT CHARSET=utf8;
@@ -179,7 +180,6 @@ CREATE TABLE `Resultados` (
   `Inaptidoes` INTEGER,
   `Baixas` INTEGER,
   `ExcSimples` INTEGER,
-  `Monitoramento` VARCHAR(1),
   `SujPassivos` INTEGER,
   `DigVincs` INTEGER,
   `Situacao11` VARCHAR(1),
@@ -290,10 +290,14 @@ CREATE TABLE `Prorrogacoes` (
   `Data` DATETIME, 
   `Supervisor` INTEGER,
   `DataAssinatura` DATETIME, 
-  `Fundamentos` VARCHAR(8192),
+  `Fundamentos` VARCHAR(2000),
+  `Numero` INTEGER,
+  `Motivo` INTEGER,
+  `RegistroRHAF` DATETIME,
   PRIMARY KEY (`Codigo`), 
   INDEX (`TDPF`),
-  UNIQUE (`TDPF`, `Data`)
+  UNIQUE (`TDPF`, `Data`),
+  UNIQUE (`TDPF`, `Numero`)
 ) ENGINE=innodb DEFAULT CHARSET=utf8;
 
 DROP TABLE IF EXISTS `AssinaturaFiscal`;
@@ -305,4 +309,20 @@ CREATE TABLE `AssinaturaFiscal` (
   `DataAssinatura` DATETIME, 
   PRIMARY KEY (`Codigo`), 
   INDEX (`Prorrogacao`)
+) ENGINE=innodb DEFAULT CHARSET=utf8;
+
+DROP TABLE IF EXISTS `AvisosCiencia`;
+
+CREATE TABLE `AvisosCiencia` (
+  `Codigo` BIGINT NOT NULL AUTO_INCREMENT, 
+  `TDPF` BIGINT, 
+  `Processo` VARCHAR(17),
+  `Integracao` DATETIME,
+  `Extracao` DATETIME,
+  `Aviso` DATETIME, 
+  `Finalizado` DATETIME,
+  PRIMARY KEY (`Codigo`),   
+  INDEX (`TDPF`), 
+  UNIQUE (`TDPF`, `Processo`), 
+  UNIQUE (`Processo`) 
 ) ENGINE=innodb DEFAULT CHARSET=utf8;

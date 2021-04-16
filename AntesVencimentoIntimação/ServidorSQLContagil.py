@@ -32,8 +32,9 @@ import smtplib
 #função para o envio de e-mail - copiado do Bot_Telegram.py
 def enviaEmail(email, texto, assunto, arquivo=None):
     try:
-        server = smtplib.SMTP('INETRFOC.RFOC.SRF: 25') #servidor de email Notes
-        pass
+        #server = smtplib.SMTP('INETRFOC.RFOC.SRF: 25') #servidor de email Notes
+        #pass
+        server = smtplib.SMTP('exchangerfoc.rfoc.srf: 25')
     except:
         return 1	
     # create message object instance
@@ -104,6 +105,10 @@ def validaCPF(cpfPar):
     calc = lambda t: int(t[1]) * (t[0] + 2)
     d1 = (sum(map(calc, enumerate(reversed(cpf[:-2])))) * 10) % 11
     d2 = (sum(map(calc, enumerate(reversed(cpf[:-1])))) * 10) % 11
+    if d1==10:
+        d1 = 0
+    if d2==10:
+        d2 = 0    
     return str(d1) == cpf[-2] and str(d2) == cpf[-1]
 
 #transforma uma data string de dd/mm/yyyy para yyyy/mm/dd para fins de consulta, inclusão ou atualização no BD SQL
@@ -271,12 +276,28 @@ def zeraTentativas(codigo, conn): #zera as tentativas de utilizar a senha em cas
         conn.rollback() #não há o que fazer
     return 
 
+def eliminaTags(texto):
+    tags = 0
+    if texto==None:
+        return ""
+    textoLimpo = ""
+    for j in range(len(texto)):
+        if texto[j:j+1]=="<":
+            tags+=1
+            continue
+        if texto[j:j+1]==">":
+            tags-=1
+            continue
+        if tags==0:
+            textoLimpo = textoLimpo + texto[j:j+1]
+    return textoLimpo
+
 def verificaAlocacao(conn, cpf, tdpf): #verifica se o fiscal (cpf) está alocado ao TDPF em andamento - retorna tb o nome do fiscalizado
     cursor = conn.cursor(buffered=True)
     comando = """Select TDPFS.Nome, TDPFS.Vencimento, TDPFS.Emissao 
-                from TDPFS, Alocacoes, Fiscais 
-                Where TDPFS.Numero=%s and Fiscais.CPF=%s and Fiscais.Codigo=Alocacoes.Fiscal and TDPFS.Codigo=Alocacoes.TDPF and 
-                TDPFS.Encerramento Is Null and Alocacoes.Desalocacao Is Null"""
+                 from TDPFS, Alocacoes, Fiscais 
+                 Where TDPFS.Numero=%s and Fiscais.CPF=%s and Fiscais.Codigo=Alocacoes.Fiscal and TDPFS.Codigo=Alocacoes.TDPF and 
+                 TDPFS.Encerramento Is Null and Alocacoes.Desalocacao Is Null"""
     cursor.execute(comando, (tdpf, cpf))
     row = cursor.fetchone()  
     if not row:
@@ -288,8 +309,8 @@ def verificaAlocacao(conn, cpf, tdpf): #verifica se o fiscal (cpf) está alocado
 def verificaSupervisao(conn, cpf, tdpf): #verifica se o fiscal (cpf) é supervisor da equipe do fiscal responsável pelo TDPF - retorna tb o nome do fiscalizado
     cursor = conn.cursor(buffered=True)
     comando = """Select TDPFS.Nome, TDPFS.Vencimento, TDPFS.Emissao 
-                from TDPFS, Supervisores, Fiscais 
-                Where TDPFS.Numero=%s and TDPFS.Grupo=Supervisores.Equipe and Fiscais.CPF=%s and Fiscais.Codigo=Supervisores.Fiscal and Supervisores.Fim Is Null"""
+                 from TDPFS, Supervisores, Fiscais 
+                 Where TDPFS.Numero=%s and TDPFS.Grupo=Supervisores.Equipe and Fiscais.CPF=%s and Fiscais.Codigo=Supervisores.Fiscal and Supervisores.Fim Is Null"""
     cursor.execute(comando, (tdpf, cpf))
     row = cursor.fetchone()  
     if not row:
@@ -349,8 +370,22 @@ def estaoChavesValidas(addr):
     else:
         return True
 
+def buscaTipoOrgao(orgao, cursor):
+    if orgao==0 or orgao==None:
+        return "L"
+    comando = "Select Tipo from Orgaos Where Codigo=%s"
+    cursor.execute(comando, (orgao,))
+    row = cursor.fetchone()
+    if row==None or len(row)==0:
+        return"L"
+    else:
+        orgaoResp = row[0]
+        if orgaoResp=="" or orgaoResp==None:
+            orgaoResp = "L"  
+        return orgaoResp          
+
 def trataMsgRecebida(msgRecebida, c, addr): #c é o socket estabelecido com o cliente que será utilizado para a resposta
-    global chavesCripto, ambiente
+    global chavesCripto, ambiente, CPF1, CPF2, CPF3, SENHADCCS
     tamChave = 6 #tamanho da chave do ContÁgil (chave de registro) 
     tamMsg = 100
     tamNome = 100
@@ -390,7 +425,7 @@ def trataMsgRecebida(msgRecebida, c, addr): #c é o socket estabelecido com o cl
                 comando = "Select Codigo, email, DataEnvio from Usuarios Where CPF=%s"
                 cursor.execute(comando, (cpf,))
                 row = cursor.fetchone()
-                if not row:
+                if not row or len(row)==0:
                     resposta = "97CPF NÃO CONSTA DA BASE DE DADOS DO SERVIÇO"
                     enviaResposta(resposta, c) 
                     return  
@@ -472,7 +507,7 @@ def trataMsgRecebida(msgRecebida, c, addr): #c é o socket estabelecido com o cl
         return  
 
         
-    if codigo<1 or codigo>29:
+    if codigo<1 or (codigo>37 and codigo!=60):
         resposta = "99CÓD DA REQUISIÇÃO É INVÁLIDO (C)" 
         enviaResposta(resposta, c)          
         return     
@@ -503,58 +538,73 @@ def trataMsgRecebida(msgRecebida, c, addr): #c é o socket estabelecido com o cl
             conn.rollback()
 
     if codigo==1: #status do usuário 
-        comando = "Select Codigo, CPF, Adesao, Saida, d1, d2, d3, email, Chave, ValidadeChave, Tentativas from Usuarios Where CPF=%s"
+        comando = "Select Codigo, CPF, Adesao, Saida, d1, d2, d3, email, Chave, ValidadeChave, Tentativas, Orgao from Usuarios Where CPF=%s"
         cursor.execute(comando, (cpf,))
-        rows = cursor.fetchall() #pode haver mais de um cadastro por CPF, mas só um ativo
-        if len(rows)==0:
-            resposta = "0103" #01 - status; 03 - não consta (não foram carregados)
+        row = cursor.fetchone() 
+        if row==None or len(row)==0:
+            resposta = "0104" #01 - status; 04 - não consta na base (não foram carregados)
             enviaResposta(resposta, c) 
             conn.close()
             return            
         ativo = False
-        for row in rows:
-            if row[3]==None and row[2]!=None: #tem um registro ativo
-                ativo = True
-                tentativas = row[10]
-                if tentativas==None:
-                    tentativas = 0
-                chaveBD = row[8]
-                if chaveBD==None:
-                    chaveBD = -int(chaveContagil)  
-                if tentativas>=3:
-                    result = "4"
-                elif chaveBD==int(chaveContagil):
-                    if row[9]==None:
-                        result = "2"
-                    else:  
-                        logging.info(row[9].date())                        
-                        if datetime.today().date()<=row[9].date():
-                            result = "1"+row[9].strftime("%d/%m/%Y") #chave dentro da validade
-                            zeraTentativas(row[0], conn)
-                        else:
-                            result = "2" #chave fora da validade
-                else: #chave digitada não confere 
-                    result = "3"
-                    atualizaTentativas(row[0], tentativas, conn)
-                break
+        registrado = False
+        if row[3]==None and row[2]!=None: #tem um registro ativo
+            ativo = True
+        if row[8]!=None: #usuário tem chave cadastrada (está registrado)
+            registrado = True            
+            tentativas = row[10]
+            if tentativas==None:
+                tentativas = 0
+            chaveBD = row[8]
+            if tentativas>=3:
+                result = "4"
+            elif chaveBD==int(chaveContagil):
+                if row[9]==None:
+                    result = "2"
+                else:  
+                    logging.info(row[9].date())                        
+                    if datetime.today().date()<=row[9].date():
+                        result = "1"+row[9].strftime("%d/%m/%Y") #chave dentro da validade
+                        zeraTentativas(row[0], conn)
+                    else:
+                        result = "2" #chave fora da validade
+            else: #chave digitada não confere 
+                result = "3"
+                atualizaTentativas(row[0], tentativas, conn)
+        orgao = row[11]
+        tipoOrgaoUsuario = buscaTipoOrgao(orgao, cursor)        
         if ativo:
-            resposta = "0101"+result #01 - status; 01 - ativo
+            resposta = "0101"+tipoOrgaoUsuario+result #01 - status; 01 - ativo
+        elif registrado:
+            resposta = "0102"+tipoOrgaoUsuario+result #01 - status; 02 - inativo no Bot (não tem senha ou saiu)
         else:
-            resposta = "0102" #01 - status; 02 - inativo/não registrado  
+            resposta - "0103"+tipoOrgaoUsuario #01 - status; 03 - não registrado (nem tem senha)
         enviaResposta(resposta, c) 
         conn.close()
         return    
     
     
     #validamos a chave do contágil ligada àquele CPF (registro ativo) - serviços de 2 em diante
-    comando = "Select Codigo, Chave, ValidadeChave, Tentativas, email, d1, d2, d3 from Usuarios Where CPF=%s and  Saida Is Null and Adesao Is Not Null"            
+    comando = "Select Codigo, Chave, ValidadeChave, Tentativas, email, d1, d2, d3, Orgao, Adesao, Saida from Usuarios Where CPF=%s"            
     cursor.execute(comando, (cpf,))
     row = cursor.fetchone()   
-    if not row: #o usuário está inativo
-        resposta = "90USUÁRIO NÃO ENCONTRADO OU INATIVO"
+    if not row or len(row)==0: #o usuário está inativo
+        resposta = "90USUÁRIO NÃO ENCONTRADO NA BASE DE DADOS"
         enviaResposta(resposta, c)  
         conn.close()
         return
+    orgaoUsuario =  row[8]
+    tipoOrgaoUsuario = buscaTipoOrgao(orgaoUsuario, cursor) 
+    if (row[9]==None or row[10]!=None) and (tipoOrgaoUsuario=="L" or not codigo in [13, 24, 25, 28, 29]): #adesão nula ou inatividade
+                                                                                                          #só permitimos acesso para usuários nacionais e regionais ou para as 
+                                                                                                          #requisições listadas
+        if row[9]==None:
+            resposta = "90USUÁRIO NÃO SE REGISTROU NO BOT TELEGRAM OU OPÇÃO NÃO DISPONÍVEL PARA O TIPO DE USUÁRIO"
+        else:
+            resposta = "90USUÁRIO ESTÁ INATIVO NO BOT TELEGRAM OU OPÇÃO NÃO DISPONÍVEL PARA O TIPO DE USUÁRIO"
+        enviaResposta(resposta, c)  
+        conn.close()
+        return           
     tentativas = row[3]
     if tentativas==None:
         tentativas = 0         
@@ -570,20 +620,20 @@ def trataMsgRecebida(msgRecebida, c, addr): #c é o socket estabelecido com o cl
         conn.close()
         return
     if row[2]==None:
-        resposta = "90CHAVE DE ACESSO VIA CONTÁGIL SEM VALIDADE - GERE OUTRA NO TELEGRAM"
+        resposta = "90CHAVE DE ACESSO VIA CONTÁGIL SEM VALIDADE - GERE OUTRA"
         enviaResposta(resposta, c) 
         conn.close()
         return        
     if datetime.today().date()>row[2].date():
-        resposta = "90CHAVE DE ACESSO VIA CONTÁGIL ESTÁ EXPIRADA - GERE OUTRA NO TELEGRAM"
+        resposta = "90CHAVE DE ACESSO VIA CONTÁGIL ESTÁ EXPIRADA - GERE OUTRA"
         enviaResposta(resposta, c)  
         conn.close()
         return    
     if tentativas>=3:
-        resposta = "90CHAVE DE ACESSO VIA CONTÁGIL ESTÁ EXPIRADA - TENTATIVAS EXCEDIDAS - GERE OUTRA NO TELEGRAM"
+        resposta = "90CHAVE DE ACESSO VIA CONTÁGIL ESTÁ EXPIRADA - TENTATIVAS EXCEDIDAS - GERE OUTRA"
         enviaResposta(resposta, c) 
         conn.close()
-        return    
+        return               
     
     zeraTentativas(row[0], conn) #como a chave está correta, zera o nº de tentativas
         
@@ -660,14 +710,18 @@ def trataMsgRecebida(msgRecebida, c, addr): #c é o socket estabelecido com o cl
     comando = "Select Fiscais.Codigo From Fiscais Where Fiscais.CPF=%s"          
     cursor.execute(comando, (cpf,))
     rowFiscal = cursor.fetchone()
-    if not rowFiscal:
-        resposta = "97CPF DO FISCAL NÃO FOI LOCALIZADO"
+    if (not rowFiscal or len(rowFiscal)==0) and not codigo in [13, 24, 25, 28, 29]: #estes códigos podem ser utilizados por usuários Cofis ou Difis
+        resposta = "97CPF NÃO FOI LOCALIZADO NA TABELA DE FISCAIS/SUPERVISORES"
         enviaResposta(resposta, c)  
         conn.close()
         return 
-    chaveFiscal = rowFiscal[0] #<---
+    elif rowFiscal!=None:
+        chaveFiscal = rowFiscal[0] #<---
+    else:
+        chaveFiscal = 0
 
-    if codigo in [2, 3, 4, 5, 14, 15, 16, 17, 18, 19, 20, 21, 23, 24, 27, 28]: #verificações COMUNS relativas ao TDPF - TDPF existe, em andamento (p/ alguns), cpf está alocado nele
+    if codigo in [2, 3, 4, 5, 14, 15, 16, 17, 18, 19, 20, 21, 23, 24, 27, 28, 30, 31, 33, 34, 35, 36]: 
+    #verificações COMUNS relativas ao TDPF - TDPF existe, em andamento (p/ alguns), cpf está alocado nele
         if len(msgRecebida)<(29+tamChave):
             resposta = "99REQUISIÇÃO INVÁLIDA (D)"
             enviaResposta(resposta, c)  
@@ -679,7 +733,7 @@ def trataMsgRecebida(msgRecebida, c, addr): #c é o socket estabelecido com o cl
             enviaResposta(resposta, c)  
             conn.close()
             return            
-        comando = "Select Codigo, Encerramento, Nome, Emissao from TDPFS Where Numero=%s"        
+        comando = "Select Codigo, Encerramento, Nome, Emissao, Vencimento, Grupo, NI, DCC, Porte, Acompanhamento, TrimestrePrevisto from TDPFS Where Numero=%s"        
         cursor.execute(comando, (tdpf,))
         row = cursor.fetchone()
         if row:
@@ -690,29 +744,62 @@ def trataMsgRecebida(msgRecebida, c, addr): #c é o socket estabelecido com o cl
             if nome==None or nome=="":
                 nome = "NOME INDISPONÍVEL"
             nome = nome[:tamNome].ljust(tamNome)
-            if encerramento!=None and not codigo in [4, 15, 19, 23, 24, 27, 28]: #nestes códigos podemos listar ciências, atividades, entradas do diário, 
-                                                                                 #incluir/listar pontuação de TDPFs encerrados, incluir trimestre de encerramento previsto
-                                                                                 #ou mostrar fiscais alocados
+            if encerramento!=None and not codigo in [4, 15, 19, 21, 23, 24, 27, 28, 30, 31, 34]: #nestes códigos podemos listar ciências, atividades, entradas do diário, informar DCC,
+                                                                                 #incluir/listar pontuação de TDPFs encerrados, incluir trimestre de encerramento previsto,
+                                                                                 # mostrar fiscais alocados ou informar se é supervisor do tdpf (mesmo encerrado), dados do TDPF tb
+                                                                                 #listar prorrogações
                 msg = "TDPF encerrado"
                 msg = msg.ljust(tamMsg)
                 resposta = codigoStr+(("N"+msg+nome) if (2<=codigo<=5) else msg) #o código 27 estava aqui antes de colocar na lista acima
+                if codigo in [33, 35, 36]:
+                    resposta = str(codigo)+"E"
                 enviaResposta(resposta, c) 
                 conn.close()
                 return               
         else: 
             msg = "TDPF NÃO foi localizado ou foi encerrado há muito tempo e não colocado na base deste serviço"
             msg = msg.ljust(tamMsg)          
-            resposta = codigoStr+(("I"+msg) if (2<=codigo<=5 or codigo in [23, 24, 27, 28]) else msg)
+            if codigo in [30, 31, 33, 35, 36]:
+                resposta = str(codigo)+"I"
+            else:
+                resposta = codigoStr+(("I"+msg) if (2<=codigo<=5 or codigo in [23, 24, 27, 28]) else msg)
             enviaResposta(resposta, c) 
             conn.close()
-            return              
+            return  
+        rowTdpf = row #para utilizarmos na requisição 31            
         comando = "Select Alocacoes.Desalocacao from Alocacoes Where Alocacoes.Fiscal=%s and Alocacoes.TDPF=%s"
         cursor.execute(comando, (chaveFiscal, chaveTdpf))
         row = cursor.fetchone()    
         bSupervisor = False 
-        if codigo in [4, 15, 21, 23, 24, 27, 28]: #supervisor pode relacionar ciências (4), atividades (15) de TDPF, incluir ou lista pontuação (23, 24),
-                                                  #incluir DCC (21), informar trimestre da meta (27) ou listar fiscais alocados (28)
-            bSupervisor, _ = verificaSupervisao(conn, cpf, tdpf)    
+        if codigo in [4, 15, 21, 23, 24, 27, 28, 31, 35, 36]: #supervisor pode relacionar ciências (4), atividades (15) de TDPF, incluir ou lista pontuação (23, 24),
+                                                  #incluir DCC (21), informar trimestre da meta (27) ou listar fiscais alocados (28) ou dados do TDPF (31) e apagar/assinar prorrogação
+            if tipoOrgaoUsuario=="N" and codigo in [24, 28, 31]: #nestes códigos, usuário Cofis pode fazer consulta (#para os fins destas requisições, é supervisor)
+                bSupervisor = True
+            elif tipoOrgaoUsuario=="R" and codigo in [24, 28, 31]: #nestes códigos, usuário Difis pode fazer consulta (#para os fins destas requisições, é supervisor)
+                comando = "Select TDPFS.Numero from TDPFS Where TDPFS.Codigo=%s and TDPFS.Grupo in (Select Equipe from Jurisdicao Where Orgao=%s)"
+                cursor.execute(comando, (chaveTdpf, orgaoUsuario))
+                rowSuperv = cursor.fetchone()
+                if rowSuperv:
+                    bSupervisor = True
+            if not bSupervisor:
+                bSupervisor, _ = verificaSupervisao(conn, cpf, tdpf)   
+        if codigo==30: #a requisição é uma pergunta se o cpf é do supervisor do tdpf ou está alocado nele    
+            bSupervisor, _ = verificaSupervisao(conn, cpf, tdpf)       
+            if row!=None: #fiscal esteve ou está alocado do tdpf
+                if row[0]==None: #fiscal está ainda alocado ao tdpf
+                    alocado = "S"
+                else:
+                    alocado = "N"                    
+            else:
+                alocado = "N"
+            if bSupervisor:
+                supervisor = "S"
+            else:
+                supervisor = "N"           
+            resposta = "30"+alocado+supervisor
+            enviaResposta(resposta, c)   
+            conn.close()
+            return  
         if not bSupervisor and codigo==27: #só supervisor pode incluir trimestre da meta 
             msg = "Usuário NÃO é supervisor do TDPF"
             resposta = "27"+msg.ljust(tamMsg)            
@@ -722,7 +809,7 @@ def trataMsgRecebida(msgRecebida, c, addr): #c é o socket estabelecido com o cl
         achou = False
         if row and not bSupervisor:
             achou = True
-            if row[0]!=None and codigo!=28: #fiscal desalocado pode consultar TDPFs em que participou (28 - lista fiscais alocados no TDPF; no script não terá como num primeiro momento)
+            if row[0]!=None and not codigo in [28, 31]: #fiscal desalocado pode consultar TDPFs em que participou (28 - lista fiscais alocados no TDPF; 31 - dados do TDPF; no script não terá como num primeiro momento)
                 msg = "CPF NÃO está mais alocado ao TDPF ou não é supervisor, em requisições em que isso seria relevante"
                 msg = msg.ljust(tamMsg)                
                 resposta = codigoStr+(("N"+msg+nome) if (2<=codigo<=5 or codigo==23) else msg)
@@ -731,12 +818,72 @@ def trataMsgRecebida(msgRecebida, c, addr): #c é o socket estabelecido com o cl
                 return                         
         if not achou and not bSupervisor:
             msg = "CPF NÃO está alocado ao TDPF ou não é supervisor, em requisições em que isso seria relevante"
-            msg = msg.ljust(tamMsg)            
-            resposta = codigoStr+(("N"+msg+nome) if (2<=codigo<=5 or codigo in [23, 24]) else msg)     
+            msg = msg.ljust(tamMsg)   
+            if codigo==31:
+                resposta = "31N"
+            else:
+                resposta = codigoStr+(("N"+msg+nome) if (2<=codigo<=5 or codigo in [23, 24]) else msg)     
             enviaResposta(resposta, c)   
             conn.close()
-            return            
-    
+            return    
+
+    if codigo==31: #pediu as informações do registro do tdpf na tabela TDPFS - todas as verificações foram feitas acima e o resultado está em rowTdpf
+        grupo = rowTdpf[5]
+        if grupo==None:
+            grupo = ""
+        grupo = grupo.ljust(25)
+        emissao = rowTdpf[3]
+        if emissao==None:
+            emissao="00/00/0000"
+        else:
+            emissao = emissao.strftime("%d/%m/%Y")
+        encerramento = rowTdpf[1]
+        if encerramento==None:
+            encerramento = "00/00/0000"
+        else:
+            encerramento = encerramento.strftime("%d/%m/%Y") 
+        nome = rowTdpf[2]
+        if nome==None:
+            nome = ""
+        nome = nome.ljust(150)
+        niFiscalizado = rowTdpf[6]
+        if niFiscalizado==None:
+            niFiscalizado = ""
+        niFiscalizado = niFiscalizado.ljust(18)  
+        vencimento = rowTdpf[4]
+        if vencimento==None:
+            vencimento = "00/00/0000"
+        else:
+            vencimento = vencimento.strftime("%d/%m/%Y")
+        dcc = rowTdpf[7]
+        if dcc==None:
+            dcc = ""
+        dcc = dcc.ljust(17)
+        porte = rowTdpf[8]
+        if porte==None:
+            porte = ""
+        porte = porte.ljust(3)
+        acompanhamento = rowTdpf[9]
+        if acompanhamento==None:
+            acompanhamento = " "
+        trimestrePrevisto = rowTdpf[10]
+        if trimestrePrevisto==None:
+            trimestrePrevisto = "      "
+        #procuramos o supervisor atual do grupo do TDPF
+        comando = "Select Fiscais.CPF, Fiscais.Nome from Fiscais, Supervisores Where Supervisores.Fiscal=Fiscais.Codigo and Supervisores.Fim Is Null and Supervisores.Equipe=%s"
+        cursor.execute(comando, (grupo.strip(),))
+        row = cursor.fetchone()
+        if not row:
+            cpfSuperv = "".ljust(11)
+            nomeSuperv = "".ljust(100)
+        else:
+            cpfSuperv = row[0]
+            nomeSuperv = row[1][:100].ljust(100)
+        resposta = "31S"+ grupo+emissao+encerramento+nome+niFiscalizado+vencimento+dcc+vencimento+porte+acompanhamento+trimestrePrevisto+cpfSuperv+nomeSuperv
+        enviaResposta(resposta, c)   
+        conn.close()
+        return
+           
     if codigo==2: #informa data de ciência relativa a TDPF 
         try:   #deve enviar imediatamente a descrição do documento que efetivou a ciência (sem criptografia)
             mensagemRec = c.recv(1024) #.decode('utf-8') #chegou a requisicao
@@ -797,7 +944,7 @@ def trataMsgRecebida(msgRecebida, c, addr): #c é o socket estabelecido com o cl
         codReq = ""
         if len(requisicao)>=2:
             codReq = requisicao[:2]
-        if len(requisicao)!=52 or codReq!="31":
+        if len(requisicao)!=72 or codReq!="02":
             msg = "Documento não foi informado ou requisição inválida."
             msg = msg.ljust(tamMsg)             
             resposta = "02N"+msg+nome
@@ -812,8 +959,8 @@ def trataMsgRecebida(msgRecebida, c, addr): #c é o socket estabelecido com o cl
             enviaResposta(resposta, c)  
             conn.close()
             return   
-        if len(documento)>50:
-            msg = "Documento tem mais de 50 caracteres."
+        if len(documento)>70: #isso aqui é só uma garantia extrema
+            msg = "Documento tem mais de 70 caracteres."
             msg = msg.ljust(tamMsg)             
             resposta = "02N"+msg+nome
             enviaResposta(resposta, c)  
@@ -847,13 +994,14 @@ def trataMsgRecebida(msgRecebida, c, addr): #c é o socket estabelecido com o cl
         comando = "Select Codigo, TDPF, Data from Ciencias Where TDPF=%s Order by Data DESC"
         cursor.execute(comando, (chaveTdpf,))
         rows = cursor.fetchall()
-        if rows==None:
+        if rows==None or len(rows)==0:
             msg  = "Não há data de ciência informada para o TDPF" #Não havia data de ciência para o TDPF
             msg = msg.ljust(tamMsg)             
             resposta = "03N"+msg+nome
             enviaResposta(resposta, c)     
             conn.close()
-            return            
+            return   
+        print(rows)         
         if len(rows)==1:
             dataAnt = "Nenhuma Data Vigente" #não haverá data anterior
         else: #2 ou mais linhas
@@ -901,7 +1049,7 @@ def trataMsgRecebida(msgRecebida, c, addr): #c é o socket estabelecido com o cl
             documento = row[1]
             if not documento:
                 documento = ""
-            documento = documento.ljust(50)
+            documento = documento.ljust(70)
             datas = datas + row[0].strftime('%d/%m/%Y')+documento
             i+=1
             if i>=30: #limite de 30 datas/documentos
@@ -942,7 +1090,7 @@ def trataMsgRecebida(msgRecebida, c, addr): #c é o socket estabelecido com o cl
                      and TDPFS.Encerramento Is Null"""       
         cursor.execute(comando, (chaveFiscal,))
         rows = cursor.fetchall()
-        if rows==None:
+        if rows==None or len(rows)==0:
             tam = 0
         else:    
             tam = len(rows)
@@ -981,10 +1129,10 @@ def trataMsgRecebida(msgRecebida, c, addr): #c é o socket estabelecido com o cl
             cursor.execute(comando, (chaveTdpf,))
             cienciaReg = cursor.fetchone() #busca a data de ciência mais recente (DESC acima)
             documento = ""
-            documento = documento.ljust(50)             
+            documento = documento.ljust(70)             
             if cienciaReg: 
                 if cienciaReg[1]!=None:
-                    documento = cienciaReg[1].ljust(50)               
+                    documento = cienciaReg[1].ljust(70)               
                 ciencia = cienciaReg[0] #obtem a data de ciência mais recente
                 if ciencia!=None:
                     cienciaStr = ciencia.strftime('%d/%m/%Y')                    
@@ -1272,20 +1420,20 @@ def trataMsgRecebida(msgRecebida, c, addr): #c é o socket estabelecido com o cl
                         logging.info("Erro de time out 12 - provavelmente cliente não respondeu no prazo. Abandonando operação.")
                         return 
 
-    if codigo==13: #mostra lista de tdpfs ativos e últimas ciências sob supervisão do CPF - semelhante ao código 6
+    if codigo==13: #mostra lista de tdpfs ativos e últimas ciências sob supervisão do CPF (tipo Orgao R ou N contam como supervisores) - semelhante ao código 6
         qtdeRegistros = 25 #qtde de registros de tdpfs que enviamos por vez
-        if len(msgRecebida)!=(18+tamChave):
+        if len(msgRecebida)!=(19+tamChave):
             resposta = "99REQUISIÇÃO INVÁLIDA (13A)"
             enviaResposta(resposta, c) 
             conn.close()
             return 
-        encerrados = msgRecebida[-5:-4]
+        encerrados = msgRecebida[-6:-5]
         if not encerrados in ["S", "N"]:
             resposta = "99INDICADOR DE ENCERRAMENTO INVÁLIDO (13B)"
             enviaResposta(resposta, c) 
             conn.close()
             return                   
-        regInicial = msgRecebida[-4:]
+        regInicial = msgRecebida[-5:]
         if not regInicial.isdigit():
             resposta = "99REQUISIÇÃO INVÁLIDA (13C)"
             enviaResposta(resposta, c) 
@@ -1303,27 +1451,99 @@ def trataMsgRecebida(msgRecebida, c, addr): #c é o socket estabelecido com o cl
             offsetReg = "Limit "+str(qtdeRegistros)+" Offset "+str(regInicial-1)             
         else: #caso contrário, buscamos todos para informar a quantidade total que existe, mas só enviamos 5 (conforme if ao final do for abaixo)
              offsetReg = "Limit "+str(qtdeRegistros)+" Offset 0"
-        logging.info("Offset: "+offsetReg)     
-        if encerrados=="N": 
-            comando = """Select TDPFS.Numero, TDPFS.Nome, TDPFS.Vencimento, TDPFS.Emissao, TDPFS.Codigo, TDPFS.DCC, TDPFS.Encerramento, TDPFS.Porte, 
-                         TDPFS.Acompanhamento, TDPFS.TrimestrePrevisto
-                         from TDPFS, Supervisores 
-                         Where Supervisores.Fiscal=%s and Supervisores.Fim Is Null and Supervisores.Equipe=TDPFS.Grupo and TDPFS.Encerramento Is Null Order by TDPFS.Numero """+offsetReg
-            if regInicial==0: #contamos a quantidade de registros para informar na primeira consulta
-                consulta = """Select Count(TDPFS.Numero)
-                              from TDPFS, Supervisores 
-                              Where Supervisores.Fiscal=%s and Supervisores.Fim Is Null and Supervisores.Equipe=TDPFS.Grupo and TDPFS.Encerramento Is Null"""
-        else:
-            comando = """Select TDPFS.Numero, TDPFS.Nome, TDPFS.Vencimento, TDPFS.Emissao, TDPFS.Codigo, TDPFS.DCC, TDPFS.Encerramento, TDPFS.Porte, 
-                         TDPFS.Acompanhamento, TDPFS.TrimestrePrevisto
-                         from TDPFS, Supervisores 
-                         Where Supervisores.Fiscal=%s and Supervisores.Fim Is Null and Supervisores.Equipe=TDPFS.Grupo and TDPFS.Encerramento Is Not Null Order by TDPFS.Encerramento DESC, TDPFS.Numero ASC """+offsetReg            
-            if regInicial==0: #contamos a quantidade de registros para informar na primeira consulta
-                consulta = """Select Count(TDPFS.Numero)
-                              from TDPFS, Supervisores 
-                              Where Supervisores.Fiscal=%s and Supervisores.Fim Is Null and Supervisores.Equipe=TDPFS.Grupo and TDPFS.Encerramento Is Not Null"""
+        logging.info("Offset: "+offsetReg) 
+        comando = """Select TDPFS.Numero, TDPFS.Nome, TDPFS.Vencimento, TDPFS.Emissao, TDPFS.Codigo, TDPFS.DCC, TDPFS.Encerramento, TDPFS.Porte, 
+                     TDPFS.Acompanhamento, TDPFS.TrimestrePrevisto, TDPFS.Grupo """
+        if tipoOrgaoUsuario=="L": #esta variável e orgaoUsuario vem de rotina comum de validação do usuário
+            if encerrados=="N": 
+                comando = comando + """from TDPFS, Supervisores 
+                                       Where Supervisores.Fiscal=%s and Supervisores.Fim Is Null and Supervisores.Equipe=TDPFS.Grupo and TDPFS.Encerramento Is Null 
+                                       Order by TDPFS.Numero """+offsetReg
+                if regInicial==0: #contamos a quantidade de registros para informar na primeira consulta
+                    consulta = """Select Count(TDPFS.Numero)
+                                  from TDPFS, Supervisores 
+                                  Where Supervisores.Fiscal=%s and Supervisores.Fim Is Null and Supervisores.Equipe=TDPFS.Grupo and TDPFS.Encerramento Is Null"""
+            else:
+                comando = comando + """from TDPFS, Supervisores 
+                                       Where Supervisores.Fiscal=%s and Supervisores.Fim Is Null and Supervisores.Equipe=TDPFS.Grupo and TDPFS.Encerramento Is Not Null 
+                                       Order by TDPFS.Encerramento DESC, TDPFS.Numero ASC """+offsetReg            
+                if regInicial==0: #contamos a quantidade de registros para informar na primeira consulta
+                    consulta = """Select Count(TDPFS.Numero)
+                                  from TDPFS, Supervisores 
+                                  Where Supervisores.Fiscal=%s and Supervisores.Fim Is Null and Supervisores.Equipe=TDPFS.Grupo and TDPFS.Encerramento Is Not Null"""
+        elif tipoOrgaoUsuario=="R":
+            if encerrados=="N": 
+                if chaveFiscal==None or chaveFiscal==0: 
+                    comando = comando + """from TDPFS
+                                           Where TDPFS.Encerramento Is Null and TDPFS.Grupo in (Select Equipe from Jurisdicao Where Orgao=%s)
+                                           Order by TDPFS.Numero """+offsetReg
+                else:
+                    comando = comando + """from TDPFS
+                                           Where TDPFS.Encerramento Is Null and 
+                                           (TDPFS.Grupo in (Select Equipe from Jurisdicao Where Orgao=%s) or 
+                                           TDPFS.Grupo in (Select Equipe from Supervisores Where Supervisores.Fiscal=%s and Supervisores.Fim Is Null))
+                                           Order by TDPFS.Numero """+offsetReg
+
+                if regInicial==0: #contamos a quantidade de registros para informar na primeira consulta
+                    if chaveFiscal==None or chaveFiscal==0: 
+                        consulta = """Select Count(TDPFS.Numero)
+                                      from TDPFS
+                                      Where TDPFS.Encerramento Is Null and TDPFS.Grupo in (Select Equipe from Jurisdicao Where Orgao=%s) """
+                    else:
+                        consulta = """Select Count(TDPFS.Numero)
+                                      from TDPFS
+                                      Where TDPFS.Encerramento Is Null and (TDPFS.Grupo in (Select Equipe from Jurisdicao Where Orgao=%s) or 
+                                      TDPFS.Grupo in (Select Equipe from Supervisores Where Supervisores.Fiscal=%s and Supervisores.Fim Is Null)) """                        
+            else: #encerrados
+                if chaveFiscal==None or chaveFiscal==0: 
+                    comando = comando + """from TDPFS
+                                           Where TDPFS.Encerramento Is Not Null and TDPFS.Grupo in (Select Equipe from Jurisdicao Where Orgao=%s)
+                                           Order by TDPFS.Encerramento DESC, TDPFS.Numero """+offsetReg
+                else:
+                    comando = comando + """from TDPFS
+                                           Where TDPFS.Encerramento Is Not Null and 
+                                           (TDPFS.Grupo in (Select Equipe from Jurisdicao Where Orgao=%s) or 
+                                           TDPFS.Grupo in (Select Equipe from Supervisores Where Supervisores.Fiscal=%s and Supervisores.Fim Is Null))
+                                           Order by TDPFS.Encerramento DESC, TDPFS.Numero """+offsetReg
+
+                if regInicial==0: #contamos a quantidade de registros para informar na primeira consulta
+                    if chaveFiscal==None or chaveFiscal==0: 
+                        consulta = """Select Count(TDPFS.Numero)
+                                      from TDPFS
+                                      Where TDPFS.Encerramento Is Not Null and TDPFS.Grupo in (Select Equipe from Jurisdicao Where Orgao=%s) """
+                    else:
+                        consulta = """Select Count(TDPFS.Numero)
+                                      from TDPFS
+                                      Where TDPFS.Encerramento Is Not Null and (TDPFS.Grupo in (Select Equipe from Jurisdicao Where Orgao=%s) or 
+                                      TDPFS.Grupo in (Select Equipe from Supervisores Where Supervisores.Fiscal=%s and Supervisores.Fim Is Null)) """             
+        elif tipoOrgaoUsuario=="N":
+            if encerrados=="N": 
+                comando = comando + """from TDPFS
+                                       Where TDPFS.Encerramento Is Null  
+                                       Order by TDPFS.Numero """+offsetReg
+                if regInicial==0: #contamos a quantidade de registros para informar na primeira consulta
+                    consulta = """Select Count(TDPFS.Numero)
+                                  from TDPFS
+                                  Where TDPFS.Encerramento Is Null """
+            else:
+                comando = comando + """from TDPFS
+                                       Where TDPFS.Encerramento Is Not Null  
+                                       Order by TDPFS.Encerramento DESC, TDPFS.Numero ASC """+offsetReg            
+                if regInicial==0: #contamos a quantidade de registros para informar na primeira consulta
+                    consulta = """Select Count(TDPFS.Numero)
+                                from TDPFS
+                                Where TDPFS.Encerramento Is Not Null """             
+
         if regInicial==0:
-            cursor.execute(consulta, (chaveFiscal,))
+            if tipoOrgaoUsuario=="L": 
+                cursor.execute(consulta, (chaveFiscal,))
+            elif tipoOrgaoUsuario=="R":
+                if chaveFiscal==None or chaveFiscal==0:
+                    cursor.execute(consulta, (orgaoUsuario,))
+                else:
+                    cursor.execute(consulta, (orgaoUsuario, chaveFiscal))
+            else:
+                cursor.execute(consulta)
             totalReg = cursor.fetchone()
             #print(str(totalReg[0]))
             if totalReg:
@@ -1331,19 +1551,27 @@ def trataMsgRecebida(msgRecebida, c, addr): #c é o socket estabelecido com o cl
             else:
                 tam = 0
             if tam==0:
-                resposta = "1300040000"
+                resposta = "13000500000"
                 enviaResposta(resposta, c) 
                 conn.close()
                 return             
-            if tam>((qtdeRegistros-1)*1000): #limite de  tdpfs
-                nnnn = str((qtdeRegistros-1)*1000)
-                tam = (qtdeRegistros-1)*1000
+            if tam>=100000: #limite de  tdpfs
+                nnnnn = "99999"
+                tam = 99999
             else:
-                nnnn = str(tam).rjust(4, "0")
+                nnnnn = str(tam).rjust(5, "0")
             #resposta = "13"+nnnn #código da resposta e qtde de TDPFs que serão retornados
         #else:
         #    resposta = "13"
-        cursor.execute(comando, (chaveFiscal,))
+        if tipoOrgaoUsuario=="L":
+            cursor.execute(comando, (chaveFiscal,))
+        elif tipoOrgaoUsuario=="R":
+            if chaveFiscal==None or chaveFiscal==0:
+                cursor.execute(comando, (orgaoUsuario,))  
+            else:
+                cursor.execute(comando, (orgaoUsuario, chaveFiscal))  
+        else:
+            cursor.execute(comando)                      
         rows = cursor.fetchall()   
         if regInicial>0:
             tam = len(rows)     
@@ -1379,6 +1607,10 @@ def trataMsgRecebida(msgRecebida, c, addr): #c é o socket estabelecido com o cl
                 porte = "ND "
             if acompanhamento==None or acompanhamento=="":
                 acompanhamento = "N"
+            equipe = row[10]
+            if equipe==None:
+                equipe =""
+            equipe = equipe.ljust(25)
             #busca a primeira ciência e a última
             comando = "Select Data, Documento from Ciencias Where TDPF=%s order by Data"
             cursor.execute(comando, (chaveTdpf,))
@@ -1389,10 +1621,10 @@ def trataMsgRecebida(msgRecebida, c, addr): #c é o socket estabelecido com o cl
                 documento = cienciaRegs[len(cienciaRegs)-1][1] #documento da última data de ciência
                 if documento==None:
                     documento = ""
-                documento = documento.ljust(50)                                   
+                documento = documento.ljust(70)                                   
                 registro = registro + tdpf + nome + emissao + vencimento + dcc + primCiencia + ultCiencia + documento 
             else:
-                registro = registro + tdpf + nome + emissao + vencimento + dcc + "00/00/0000" + "00/00/0000" + " ".ljust(50) #provavelmente nenhum fiscal iniciou monitoramento
+                registro = registro + tdpf + nome + emissao + vencimento + dcc + "00/00/0000" + "00/00/0000" + " ".ljust(70) #provavelmente nenhum fiscal iniciou monitoramento
             #verifica se o TDPF está sendo monitorado 
             if encerrados=="N":
                 comando = "Select * from CadastroTDPFs Where TDPF=%s and Fim Is Null"   
@@ -1415,15 +1647,15 @@ def trataMsgRecebida(msgRecebida, c, addr): #c é o socket estabelecido com o cl
             else:
                 nomeFiscal = "NÃO ENCONTRADO"
             nomeFiscal = nomeFiscal[:100].ljust(100)   
-            registro = registro+nomeFiscal+porte+acompanhamento+trimestre
+            registro = registro+nomeFiscal+porte+acompanhamento+trimestre+equipe
             registro = registro + ("" if encerrados=="N" else encerramento)
             #logging.info(registro)
             total+=1
             i+=1
-            if i%qtdeRegistros==0 or total==tam: #de QUINZE em QUINZE ou no último registro enviamos a mensagem
+            if i%qtdeRegistros==0 or total==tam: #de qtdeRegistros em qtdeRegistros ou no último registro enviamos a mensagem
                 if regInicial==0:
-                    tamanhoReg = str(len(nnnn+registro)).rjust(4, "0")
-                    resposta = "13"+tamanhoReg+nnnn                    
+                    tamanhoReg = str(len(nnnnn+registro)).rjust(4, "0")
+                    resposta = "13"+tamanhoReg+nnnnn                  
                 else:
                     tamanhoReg = str(len(registro)).rjust(4, "0")
                     resposta = "13"+tamanhoReg 
@@ -1547,7 +1779,9 @@ def trataMsgRecebida(msgRecebida, c, addr): #c é o socket estabelecido com o cl
             elif not tdpfMonitorado: #tdpf não estava sendo monitorado - inclui ele
                 comando = "Insert into CadastroTDPFs (Fiscal, TDPF, Inicio) Values (%s, %s, %s)"
                 cursor.execute(comando, (chaveFiscal, chaveTdpf, datetime.today().date())) #chaveFiscal vem para todas as funções; chaveTdpf vem da rotina comum às requisições 2-5 e 14-17
-                resposta = resposta + " - MONITORAMENTO INICIADO"                    
+                resposta = resposta + " - MONITORAMENTO INICIADO"  
+            else:
+                resposta = resposta + " - TDPF MONITORADO"                  
             conn.commit()
         except:
             conn.rollback()
@@ -2076,7 +2310,7 @@ def trataMsgRecebida(msgRecebida, c, addr): #c é o socket estabelecido com o cl
                 enviaResposta(resposta, c) 
                 conn.close()
                 return
-        if len(dcc)==17:  #verificamos se OUTRO tdpf utilizou o número do DCC
+            #verificamos se OUTRO tdpf utilizou o número do DCC
             consulta = "Select TDPFS.Codigo, TDPFS.Numero From TDPFS Where DCC=%s"       
             cursor.execute(consulta, (dcc,))
             rows = cursor.fetchall()
@@ -2091,10 +2325,23 @@ def trataMsgRecebida(msgRecebida, c, addr): #c é o socket estabelecido com o cl
                 conn.close()
                 return         
         #chaveTdpf vêm da rotina comum às requisições 2-5 e 14-21, onde tb foi verifica se o usuário está alocado ou é supervisor
+        tdpfMonitorado, monitoramentoAtivo, chave = tdpfMonitoradoCPF(conn, tdpf, cpf)
         try:
+            if dcc=="":
+                dcc = None
             comando = "Update TDPFS Set DCC=%s Where TDPFS.Codigo=%s"           
             cursor.execute(comando, (dcc, chaveTdpf)) 
-            resposta = "21INFORMAÇÃO REGISTRADA"                               
+            if tdpfMonitorado and monitoramentoAtivo==False: #monitoramento do tdpf estava desativado - ativa
+                comando = "Update CadastroTDPFs Set Fim=Null Where Codigo=%s"
+                cursor.execute(comando, (chave,)) 
+                msgMonitoramento = "MONITORAMENTO DO TDPF REATIVADO"                        
+            elif not tdpfMonitorado: #tdpf não estava sendo monitorado - inclui ele
+                comando = "Insert into CadastroTDPFs (Fiscal, TDPF, Inicio) Values (%s, %s, %s)"
+                cursor.execute(comando, (chaveFiscal, chaveTdpf, datetime.today().date()))  
+                msgMonitoramento = "MONITORAMENTO DO TDPF INICIADO" 
+            else:
+                msgMonitoramento = "TDPF MONITORADO"                       
+            resposta = "21INFORMAÇÃO REGISTRADA - "+msgMonitoramento                               
             conn.commit()
         except:
             conn.rollback()
@@ -2369,10 +2616,10 @@ def trataMsgRecebida(msgRecebida, c, addr): #c é o socket estabelecido com o cl
 
     if codigo==24: #recupera parâmetros de pontuação do TDPF informados pelo usuário, calcula e informa a quantidade de PONTOS dele; ou recupera apenas os parâmetros internos utilizados para cálculo
         #pontuação de cada tributo (código) por porte [p, m, g]
-        pontosTribPJ = {2141: [111, 131, 176], 2096: [111, 131, 176], 694: [118, 210, 223], 1167: [131, 155, 155], 1011: [130, 148, 159],
-                        221: [132, 174, 247], 238: [87, 87, 151], 8103: [67, 101, 148], 3880: [137, 177, 210], 6121: [137, 177, 210], 3333: [122, 122, 122]} 
-        pontosTribPF = {2141: [40, 40, 40], 2096: [40, 40, 40], 210: [75, 75, 105]}
+        pontosTribPJ = {2141: [111, 131, 176], 2096: [111, 131, 176], 694: [132, 174, 247], 1167: [131, 155, 155], 1011: [130, 148, 159],
+                        221: [132, 174, 247], 238: [87, 87, 151], 8103: [67, 101, 148], 3880: [137, 177, 210], 6121: [137, 177, 210], 3333: [122, 122, 122]} #alterado Portaria 06/2021 - igualou pontos IRPJ/CSLL
 
+        pontosTribPF = {2141: [40, 40, 40], 2096: [40, 40, 40], 210: [75, 75, 105]} 
         #para PJ, se não estiver na relação de pontosTrib, pega essa aí como pontuação e sempre como base do multiplicado para cada porte [p, m, g]
         pontosOutrosPJ = [118, 158, 194]
 
@@ -2380,7 +2627,7 @@ def trataMsgRecebida(msgRecebida, c, addr): #c é o socket estabelecido com o cl
         pontosOutrosPF = [68, 68, 85]  #preenchi a posição do meio com o mesmo valor da primeira (demais) para não correr riscos
 
         #acréscimos (percentuais) na pontuação base (pontosTrib ou, subsidiariamente, pontosOutrosPF/PJ) de acordo com algum tributo a mais programado (art. 10, par. 2º)
-        acrescimos = {2141: 0.4, 2096: 0.4, 1011: 0.4, 210: 0.4, 221: 0.4, 8103: 0.4,  3880: 0.4, 6121: 0.4, 1167: 0.1, 238: 0.1}
+        acrescimos = {2141: 0.4, 2096: 0.4, 1011: 0.4, 210: 0.4, 221: 0.4, 694: 0.4, 8103: 0.4,  3880: 0.4, 6121: 0.4, 1167: 0.1, 238: 0.1, 9984: 0.1, 9985: 0.1} #alterado Portaria 06/2021 (694, 9984, 9985)
 
         if len(msgRecebida)!=(29+tamChave) and len(msgRecebida)!=(32+tamChave):
             resposta = "99REQUISIÇÃO INVÁLIDA (24A)"
@@ -2398,7 +2645,7 @@ def trataMsgRecebida(msgRecebida, c, addr): #c é o socket estabelecido com o cl
         comando = "Select Porte, Encerramento, NI, Acompanhamento from TDPFS Where TDPFS.Codigo=%s"
         cursor.execute(comando, (chaveTdpf,))
         row = cursor.fetchone()
-        if not row: #o TDPF não existe (??)
+        if not row or len(row)==0: #o TDPF não existe (??)
             resposta = "99REQUISIÇÃO INVÁLIDA - TDPF NÃO FOI LOCALIZADO (24B)"
             enviaResposta(resposta, c) 
             conn.close()
@@ -2420,13 +2667,13 @@ def trataMsgRecebida(msgRecebida, c, addr): #c é o socket estabelecido com o cl
         comando = "Select Count(Distinct Operacao) from Operacoes Where TDPF=%s"
         cursor.execute(comando, (chaveTdpf,))
         row = cursor.fetchone()
-        if not row:
+        if not row or len(row)==0:
             qtdeOperacoes = 0
         else:
             qtdeOperacoes = row[0]   
         #temos que ver se há operações de PIS/Cofins programados e diminuir, da quantidade obtida acima, a quantidade de programação de um tributo destes que for menor
         comando = """Select Count(Distinct Operacoes.Operacao) from Operacoes, OperacoesFiscais, Tributos 
-                     Where TDPF=%s and Operacoes.Operacao=OperacoesFiscais.Codigo and OperacoesFiscais.Tributo=Tributos.Codigo and Tributos.Tributo=%s"""
+                     Where TDPF=%s and Operacoes.Operacao=OperacoesFiscais.Codigo and Operacoes.Tributo=Tributos.Codigo and Tributos.Tributo=%s"""
         cursor.execute(comando, (chaveTdpf, 3880)) #PIS
         row = cursor.fetchone()
         qtdePis = 0
@@ -2442,7 +2689,7 @@ def trataMsgRecebida(msgRecebida, c, addr): #c é o socket estabelecido com o cl
         comando = "Select Min(PeriodoInicial), Max(PeriodoFinal) from Operacoes Where TDPF=%s"
         cursor.execute(comando, (chaveTdpf,))
         row = cursor.fetchone()
-        if not row:
+        if not row or len(row)==0:
             qtdeAnos = 0
         else:
             qtdeAnos = int(row[1].strftime("%Y"))-int(row[0].strftime("%Y"))+1    
@@ -2457,7 +2704,7 @@ def trataMsgRecebida(msgRecebida, c, addr): #c é o socket estabelecido com o cl
             posicao = 1
         #buscamos todos os tributos
         comando = """Select Tributos.Tributo, OperacoesFiscais.Operacao From Operacoes, OperacoesFiscais, Tributos 
-                     Where Operacoes.TDPF=%s and Operacoes.Operacao=OperacoesFiscais.Codigo and OperacoesFiscais.Tributo=Tributos.Codigo"""
+                     Where Operacoes.TDPF=%s and Operacoes.Operacao=OperacoesFiscais.Codigo and Operacoes.Tributo=Tributos.Codigo"""
         cursor.execute(comando, (chaveTdpf,))
         rows = cursor.fetchall()
         pontos = float(0)
@@ -2484,7 +2731,9 @@ def trataMsgRecebida(msgRecebida, c, addr): #c é o socket estabelecido com o cl
             pontos = baseMultiplicador #se não achou o tributo em pontosTrib, a pontuação fica sendo a subsidiária que depende do tipo da pessoa (F ou J)
         else:
             for tributo in rows: #se  achou o tributo em pontosTrib, pode haver um acréscimo por outro tributo programado
-                if tributo[0]==tributoPrincipal: #que não seja aquele que utilizamos em pontosTrib
+                if tributo[0]==tributoPrincipal or (tributo[0]==221 and tributoPrincipal==694) or (tributo[0]==694 and tributoPrincipal==221) \
+                    or (tributo[0]==3880 and tributoPrincipal==6121) or (tributo[0]==6121 and tributoPrincipal==3880): 
+                    #desde que não seja aquele que utilizamos em pontosTrib e nem IRPJ (221) com CSLL (694) e vice-versa ou PIS (3880) com Cofins (6121) e vice versa
                     continue
                 acrescimo = max(acrescimo, acrescimos.get(tributo[0],0))
         #print("Pontos Iniciais", pontos)
@@ -2557,26 +2806,26 @@ def trataMsgRecebida(msgRecebida, c, addr): #c é o socket estabelecido com o cl
             multPar = [] #para informar por e-mail os parâmetros e respectivos pontos gerados
             #obtemos o multiplicador com os demais parâmetros
             if 0<arrolamentos<=2:
-                multiplicador = 0.1*arrolamentos
-                multPar.append("Arrolamentos: 0.1")
+                multiplicador = 0.2*arrolamentos
+                multPar.append("Arrolamentos: "+str(multiplicador)) #alterado Portaria 06/2021
             elif arrolamentos>2:
-                multiplicador = 0.1+0.05*arrolamentos  
-                multPar.append("Arrolamentos: "+str(multiplicador))      
+                multiplicador = 0.2+0.1*arrolamentos  
+                multPar.append("Arrolamentos: "+str(multiplicador)) #alterado Portaria 06/2021 
             if medCautelar=="S":
                 multiplicador+=0.5  
                 multPar.append("Med Cautelar: 0.5")      
             multiplicador = multiplicador + 0.1*rffps + (0.05 if inaptidoes>0 else 0) + (0.1 if baixas>0 else 0) + (0.35 if excSimples>0 else 0)   
-            multPar.append("RFFPs: "+str(0.1*rffps))
+            multPar.append("RFFPs/Improbidade: "+str(0.1*rffps))
             multPar.append(("Inaptidões: 0.05" if inaptidoes>0 else "Inaptidões: 0")) 
             multPar.append(("Baixas: 0.1" if baixas>0 else "Baixas: 0"))
             multPar.append(("Exclusão Simples: 0.35" if excSimples>0 else "Exclusão Simples: 0"))
-            if acompanhamento=="S":
-                if len(ni)==18:
-                    multiplicador+=0.4
+            if acompanhamento=="S": #acompanhamento Comac
+                if len(ni)==18: #PJ
+                    multiplicador+=0.4 
                     multPar.append("Acompanhamento: 0.4")
-                else:
-                    multiplicador+=0.3 
-                    multPar.append("Acompanhamento: 0.3")      
+                else: #PF
+                    multiplicador+=1.4 #0.3 #alterado Portaria 06/2021
+                    multPar.append("Acompanhamento: 1.4")      
             if 1<=sujPassivos<=2:
                 multiplicador+=0.15
                 multPar.append("Suj Passivos: 0.15")
@@ -2786,22 +3035,51 @@ def trataMsgRecebida(msgRecebida, c, addr): #c é o socket estabelecido com o cl
             resposta = "99REQUISIÇÃO INVÁLIDA - QTDE DIAS FINAL INVÁLIDA (25C)"
             enviaResposta(resposta, c) 
             conn.close()
-            return   
-        comando = """
-                Select Distinctrow TDPFS.Numero, TDPFS.Nome, TDPFS.Emissao, TDPFS.Vencimento, TDPFS.Codigo
-                From TDPFS, Supervisores
-                Where (Supervisores.Fim Is Null and Supervisores.Equipe=TDPFS.Grupo and Supervisores.Fiscal=%s) 
-                and TDPFS.Emissao<=cast((now() - interval %s day) as date) and TDPFS.Emissao>=cast((now() - interval %s day) as date) 
-                and TDPFS.Encerramento Is Null and TDPFS.Codigo not in (Select TDPF from Ciencias Where Data Is Not Null)
-                Union
-                Select Distinctrow TDPFS.Numero, TDPFS.Nome, TDPFS.Emissao, TDPFS.Vencimento, TDPFS.Codigo
-                From TDPFS, Alocacoes              
-                Where (Alocacoes.Fiscal=%s and Alocacoes.Desalocacao Is Null and Alocacoes.TDPF=TDPFS.Codigo)
-                and TDPFS.Emissao<=cast((now() - interval %s day) as date) and TDPFS.Emissao>=cast((now() - interval %s day) as date) 
-                and TDPFS.Encerramento Is Null and TDPFS.Codigo not in (Select TDPF from Ciencias Where Data Is Not Null)                
-                Order By Numero
-                """                                                       
-        cursor.execute(comando, (chaveFiscal, inicial, final, chaveFiscal, inicial, final))
+            return  
+        if tipoOrgaoUsuario=="L": #considera TDPFs supervisionados e nos quais o fiscal está alocado
+            comando = """
+                      Select Distinctrow TDPFS.Numero, TDPFS.Nome, TDPFS.Emissao, TDPFS.Vencimento, TDPFS.Codigo
+                      From TDPFS, Supervisores
+                      Where (Supervisores.Fim Is Null and Supervisores.Equipe=TDPFS.Grupo and Supervisores.Fiscal=%s) 
+                      and TDPFS.Emissao<=cast((now() - interval %s day) as date) and TDPFS.Emissao>=cast((now() - interval %s day) as date) 
+                      and TDPFS.Encerramento Is Null and TDPFS.Codigo not in (Select TDPF from Ciencias Where Data Is Not Null)
+                      Union
+                      Select Distinctrow TDPFS.Numero, TDPFS.Nome, TDPFS.Emissao, TDPFS.Vencimento, TDPFS.Codigo
+                      From TDPFS, Alocacoes              
+                      Where (Alocacoes.Fiscal=%s and Alocacoes.Desalocacao Is Null and Alocacoes.TDPF=TDPFS.Codigo)
+                      and TDPFS.Emissao<=cast((now() - interval %s day) as date) and TDPFS.Emissao>=cast((now() - interval %s day) as date) 
+                      and TDPFS.Encerramento Is Null and TDPFS.Codigo not in (Select TDPF from Ciencias Where Data Is Not Null)                
+                      Order By Numero
+                      """                                                       
+            cursor.execute(comando, (chaveFiscal, inicial, final, chaveFiscal, inicial, final))
+        elif tipoOrgaoUsuario=="R": #considera TDPFs do órgão e nos quais o fiscal está alocado, se ele estiver na base de fiscais
+            comando = """
+                      Select Distinctrow TDPFS.Numero, TDPFS.Nome, TDPFS.Emissao, TDPFS.Vencimento, TDPFS.Codigo
+                      From TDPFS
+                      Where TDPFS.Emissao<=cast((now() - interval %s day) as date) and TDPFS.Emissao>=cast((now() - interval %s day) as date) 
+                      and TDPFS.Encerramento Is Null and TDPFS.Codigo not in (Select TDPF from Ciencias Where Data Is Not Null)
+                      and TDPFS.Grupo in (Select Equipe from Jurisdicao Where Orgao=%s) """
+
+            if chaveFiscal==0 or chaveFiscal==None:
+                cursor.execute(comando, (inicial, final, orgaoUsuario))  
+            else:
+                comando = comando + """Union
+                                       Select Distinctrow TDPFS.Numero, TDPFS.Nome, TDPFS.Emissao, TDPFS.Vencimento, TDPFS.Codigo
+                                       From TDPFS, Alocacoes              
+                                       Where (Alocacoes.Fiscal=%s and Alocacoes.Desalocacao Is Null and Alocacoes.TDPF=TDPFS.Codigo)
+                                       and TDPFS.Emissao<=cast((now() - interval %s day) as date) and TDPFS.Emissao>=cast((now() - interval %s day) as date) 
+                                       and TDPFS.Encerramento Is Null and TDPFS.Codigo not in (Select TDPF from Ciencias Where Data Is Not Null)                
+                                       Order By Numero                    
+                                    """ 
+                cursor.execute(comando, (inicial, final, orgaoUsuario, chaveFiscal, inicial, final))
+        else: #órgão nacional - seleciona todos os TDPFs
+            comando = """
+                      Select Distinctrow TDPFS.Numero, TDPFS.Nome, TDPFS.Emissao, TDPFS.Vencimento, TDPFS.Codigo
+                      From TDPFS
+                      Where TDPFS.Emissao<=cast((now() - interval %s day) as date) and TDPFS.Emissao>=cast((now() - interval %s day) as date) 
+                      and TDPFS.Encerramento Is Null and TDPFS.Codigo not in (Select TDPF from Ciencias Where Data Is Not Null)                   
+                      """ 
+            cursor.execute(comando, (inicial, final))                       
         rows = cursor.fetchall()
         tam = len(rows)
         if tam==0:
@@ -2918,12 +3196,12 @@ def trataMsgRecebida(msgRecebida, c, addr): #c é o socket estabelecido com o cl
             enviaResposta(resposta, c) 
             conn.close()
             return            
-        comando = """Select TDPFS.Nome, TDPFS.Encerramento, Alocacoes.Alocacao, Alocacoes.Desalocacao, Alocacoes.Horas, Fiscais.Nome 
+        comando = """Select TDPFS.Nome, TDPFS.Encerramento, Alocacoes.Alocacao, Alocacoes.Desalocacao, Alocacoes.Horas, Fiscais.Nome, Fiscais.CPF
                      From TDPFS, Alocacoes, Fiscais
                      Where Alocacoes.TDPF=TDPFS.Codigo and TDPFS.Codigo=%s and Alocacoes.Fiscal=Fiscais.Codigo"""
         cursor.execute(comando, (chaveTdpf,))
         rows = cursor.fetchall()
-        if not rows:
+        if not rows or len(rows)==0:
             comando = "Select TDPFS.Nome, TDPFS.Encerramento from TDPFS Where TDPFS.Codigo=%s"
             cursor.execute(comando, (chaveTdpf,))
             row = cursor.fetchone()
@@ -2950,7 +3228,11 @@ def trataMsgRecebida(msgRecebida, c, addr): #c é o socket estabelecido com o cl
         registro = "" 
         i = 0                  
         for row in rows:
-            alocacao = row[2].strftime("%d/%m/%Y")
+            alocacao = row[2]
+            if alocacao!=None:
+                alocacao = alocacao.strftime("%d/%m/%Y")
+            else:
+                alocacao = "00/00/0000"
             desalocacao = row[3]
             horas = row[4]
             if desalocacao==None:
@@ -2962,7 +3244,8 @@ def trataMsgRecebida(msgRecebida, c, addr): #c é o socket estabelecido com o cl
             horas = str(horas).rjust(4, "0")
             nomeFiscal = row[5][:100]
             nomeFiscal = nomeFiscal.ljust(100)
-            registro = registro + nomeFiscal + alocacao + desalocacao + horas
+            cpfFiscal = row[6]
+            registro = registro + cpfFiscal + nomeFiscal + alocacao + desalocacao + horas
             i+=1
             if i%10==0 or i==len(rows): #de 10 em 10 registros ou no último enviamos
                 resposta = respostaInicio + registro
@@ -3031,15 +3314,30 @@ def trataMsgRecebida(msgRecebida, c, addr): #c é o socket estabelecido com o cl
             resposta = "99REQUISIÇÃO INVÁLIDA -  ANO FINAL NÃO PODE SER FUTURO (29F)"
             enviaResposta(resposta, c) 
             conn.close()
-            return             
-        comando = """Select TDPFS.Codigo, TDPFS.Numero, TDPFS.Encerramento, TDPFS.TrimestrePrevisto, TDPFS.Grupo 
-                     From TDPFS, Supervisores
-                     Where Supervisores.Fiscal=%s and Supervisores.Equipe=TDPFS.Grupo and Supervisores.Fim Is Null 
-                     and ((Encerramento Is Null and TrimestrePrevisto>=%s and TrimestrePrevisto<=%s) or (Encerramento Is Not Null and Encerramento>=%s and Encerramento<=%s))"""
-                     #Order by TDPFS.Grupo, TDPFS.Numero"""
-        cursor.execute(comando, (chaveFiscal, trimInicial, trimFinal, dataInicial, dataFinal))
+            return  
+        if tipoOrgaoUsuario=="L":           
+            comando = """Select TDPFS.Codigo, TDPFS.Numero, TDPFS.Encerramento, TDPFS.TrimestrePrevisto, TDPFS.Grupo 
+                        From TDPFS, Supervisores
+                        Where Supervisores.Fiscal=%s and Supervisores.Equipe=TDPFS.Grupo and Supervisores.Fim Is Null 
+                        and ((Encerramento Is Null and TrimestrePrevisto>=%s and TrimestrePrevisto<=%s) or (Encerramento Is Not Null and Encerramento>=%s and Encerramento<=%s))"""
+                        #Order by TDPFS.Grupo, TDPFS.Numero"""
+            cursor.execute(comando, (chaveFiscal, trimInicial, trimFinal, dataInicial, dataFinal))
+        elif tipoOrgaoUsuario=="R":
+            comando = """Select TDPFS.Codigo, TDPFS.Numero, TDPFS.Encerramento, TDPFS.TrimestrePrevisto, TDPFS.Grupo 
+                        From TDPFS
+                        Where TDPFS.Grupo in (Select Equipe from Jurisdicao Where Orgao=%s)
+                        and ((Encerramento Is Null and TrimestrePrevisto>=%s and TrimestrePrevisto<=%s) or (Encerramento Is Not Null and Encerramento>=%s and Encerramento<=%s))"""
+                        #Order by TDPFS.Grupo, TDPFS.Numero"""
+            cursor.execute(comando, (orgaoUsuario, trimInicial, trimFinal, dataInicial, dataFinal))  
+        else: #órgão nacional
+            comando = """Select TDPFS.Codigo, TDPFS.Numero, TDPFS.Encerramento, TDPFS.TrimestrePrevisto, TDPFS.Grupo 
+                        From TDPFS
+                        Where ((Encerramento Is Null and TrimestrePrevisto>=%s and TrimestrePrevisto<=%s) or 
+                        (Encerramento Is Not Null and Encerramento>=%s and Encerramento<=%s))"""
+                        #Order by TDPFS.Grupo, TDPFS.Numero"""
+            cursor.execute(comando, (trimInicial, trimFinal, dataInicial, dataFinal))                               
         rows = cursor.fetchall()
-        if not rows:
+        if not rows or len(rows)==0:
             resposta = "29"+"000"
             enviaResposta(resposta, c) 
             conn.close()
@@ -3086,9 +3384,525 @@ def trataMsgRecebida(msgRecebida, c, addr): #c é o socket estabelecido com o cl
                     conn.close()
                     logging.info("Erro de time out 29 - provavelmente cliente não respondeu no prazo. Abandonando operação.")
                     return
-                    
+
+    if codigo==32: #envia mensagens da Cofis do dia           
+        if len(msgRecebida)!=(13+tamChave):
+            resposta = "99REQUISIÇÃO INVÁLIDA (32A)"
+            enviaResposta(resposta, c) 
+            conn.close()
+            return             
+        comando = "Select Mensagem from MensagensCofis Where Data=%s"
+        cursor.execute(comando, (datetime.now().date(),))
+        rows = cursor.fetchall()
+        if len(rows)==0 or rows==None:
+            resposta = "32N"
+            enviaResposta(resposta, c) 
+            conn.close()
+            return    
+        i = 0         
+        mensagens = ""
+        for row in rows:
+            i+=1
+            mensagens = mensagens + row[0].ljust(100)
+            if i==9:
+                break
+        resposta = "32S"+str(i)+mensagens
+        enviaResposta(resposta, c) 
+        conn.close()
+        return         
+
+    if codigo==33: #inclui prorrogação de um TDPF
+        requisicao = ""
+        try: #aguarda o restante da mensagem
+            mensagemRec = c.recv(2048)
+            restante = descriptografa(mensagemRec, addr, c)   
+        except:
+            c.close()
+            conn.close()
+            logging.info("Erro de time out 33 - cliente não mandou o complemento da mensagem no prazo. Abandonando operação.")
+            return
+        if restante[:2]!="33" or restante[2:13]!=cpf:
+            resposta = "99REQUISIÇÃO COMPLEMENTAR INVÁLIDA (33A)"
+            enviaResposta(resposta, c) 
+            conn.close()
+            return     
+        enviaRespostaSemFechar("33", c) #indicador para enviar os fundamentos            
+        try: #aguarda o restante da mensagem
+            fundamentos = c.recv(8192).decode("utf-8")  #não há criptografia
+            if fundamentos[:2]!="33" or fundamentos[2:13]!=cpf:
+                resposta = "99REQUISIÇÃO COMPLEMENTAR INVÁLIDA (33A2)"
+                enviaResposta(resposta, c) 
+                conn.close()
+                return 
+            tamanhoFund = int(fundamentos[13:17])
+            fundamentos = fundamentos[17:]
+            while len(fundamentos)<tamanhoFund:
+                fundamentos = fundamentos + c.recv(8192).decode("utf-8")   #não há criptografia
+        except:
+            c.close()
+            conn.close()
+            logging.info("Erro de time out 33 - cliente não mandou o complemento da mensagem no prazo. Abandonando operação.")
+            return                         
+        msgRecebida = msgRecebida + restante[13:]
+        if len(msgRecebida)!=(276+tamChave):
+            resposta = "99REQUISIÇÃO INVÁLIDA (33A1)"
+            enviaResposta(resposta, c) 
+            conn.close()
+            return 
+        cpfSuperv = msgRecebida[29+tamChave:40+tamChave]
+        assunto = msgRecebida[40+tamChave:140+tamChave].strip()
+        documento = msgRecebida[140+tamChave:240+tamChave].strip()
+        tipo = msgRecebida[240+tamChave:242+tamChave]
+        nFiscais = msgRecebida[242+tamChave:243+tamChave]
+        if not validaCPF(cpfSuperv):
+            resposta = "99REQUISIÇÃO INVÁLIDA - CPF SUPERVISOR INVÁLIDO (33B1)"
+            enviaResposta(resposta, c) 
+            conn.close()
+            return  
+        if  cpfSuperv==cpf:  
+            resposta = "99REQUISIÇÃO INVÁLIDA - CPF REQUISITANTE É IGUAL AO DO SUPERVISOR (33B2)"
+            enviaResposta(resposta, c) 
+            conn.close()
+            return                      
+        if len(assunto)<10:
+            resposta = "99REQUISIÇÃO INVÁLIDA - ASSUNTO (33B)"
+            enviaResposta(resposta, c) 
+            conn.close()
+            return 
+        if len(documento)<9:
+            resposta = "99REQUISIÇÃO INVÁLIDA - DOCUMENTO (33C)"
+            enviaResposta(resposta, c) 
+            conn.close()
+            return             
+        if not tipo.isdigit():   
+            resposta = "99REQUISIÇÃO INVÁLIDA - TIPO (33D)"
+            enviaResposta(resposta, c) 
+            conn.close()
+            return  
+        if not nFiscais.isdigit():   
+            resposta = "99REQUISIÇÃO INVÁLIDA - Nº DE FISCAIS (33E)"
+            enviaResposta(resposta, c) 
+            conn.close()
+            return 
+        nFiscais = int(nFiscais)
+        if nFiscais>4:
+            resposta = "99REQUISIÇÃO INVÁLIDA - Nº DE FISCAIS EXCEDIDO (33E1)"
+            enviaResposta(resposta, c) 
+            conn.close()
+            return    
+        fundamentos = fundamentos.strip()
+        tamFund = len(eliminaTags(fundamentos))
+        if tamFund<50 or tamFund>5000:
+            resposta = "99REQUISIÇÃO INVÁLIDA - TAMANHO INVÁLIDO DA FUNDAMENTAÇÃO (33K)"
+            enviaResposta(resposta, c) 
+            conn.close()
+            return                       
+        fiscais = []
+        if nFiscais>1:        
+            regFiscais = msgRecebida[-33:]           
+            for i in range(nFiscais-1):
+                cpfFiscal = regFiscais[i*11:(i*11)+11]
+                if cpfFiscal==cpfSuperv:
+                    resposta = "99REQUISIÇÃO INVÁLIDA - FISCAL ALOCADO NÃO PODE SER SUPERVISOR (33B3)"
+                    enviaResposta(resposta, c) 
+                    conn.close()
+                    return                     
+                if not cpfFiscal in fiscais:
+                    fiscais.append(cpfFiscal)      
+        consulta = "Select Codigo from Prorrogacoes Where TDPF=%s and Data=%s" 
+        cursor.execute(consulta, (chaveTdpf, datetime.now().date())) 
+        row = cursor.fetchone()
+        if row:
+            if row[0]!=None:
+                resposta = "33J"
+                enviaResposta(resposta, c) 
+                conn.close()
+                return
+        comando = """
+                  Select Prorrogacoes.Codigo from Prorrogacoes, AssinaturaFiscal Where TDPF=%s and AssinaturaFiscal.Prorrogacao=Prorrogacoes.Codigo and 
+                  (Prorrogacoes.DataAssinatura Is Null or AssinaturaFiscal.DataAssinatura Is Null)
+                  """
+        cursor.execute(comando, (chaveTdpf,))
+        row = cursor.fetchone()
+        if row: #há assinatura pendente em prorrogação incluída
+            resposta = "33J"
+            enviaResposta(resposta, c) 
+            conn.close()
+            return             
+        #verificamos se o cpfSuperv (supervisor titular ou substituto) é supervisor titular ou pelo menos tem algum TDPF alocado na mesma equipe (substituto)
+        comando = """Select Fiscais.Codigo, Fiscais.CPF, TDPFS.Grupo From Fiscais, TDPFS, Supervisores 
+                      Where TDPFS.Codigo=%s and TDPFS.Grupo=Supervisores.Equipe and Supervisores.Fim Is Null and Supervisores.Fiscal=Fiscais.Codigo"""
+        cursor.execute(comando, (chaveTdpf,))
+        row = cursor.fetchone()
+        supervisor = None
+        if row:
+            if row[0]!=None:
+                supervisor = row[0]
+        if supervisor==None:
+            resposta = "33C"
+            enviaResposta(resposta, c) 
+            conn.close()
+            return   
+        if row[1]!=cpfSuperv: #se o supervisor da equipe não for o titular, vemos se o informado está alocado a pelo menos um TDPF da mesma equipe
+            comando = """Select * from TDPFS, Fiscais, Alocacoes Where TDPFS.Grupo=%s and TDPFS.Codigo=Alocacoes.TDPF and
+                         Alocacoes.Desalocacao Is Null and Alocacoes.Fiscal==Fiscais.Codigo and Fiscais.CPF=%s"""   
+            cursor.execute(comando, (row[2], row[1]))  
+            row = cursor.fetchone() #tem que haver pelo menos um TDPF
+            if not row:
+                resposta = "33C"
+                enviaResposta(resposta, c) 
+                conn.close()
+                return                     
+        comando = "Insert Into Prorrogacoes (TDPF, Assunto, Documento, Tipo, Data, Supervisor, Fundamentos) Values (%s, %s, %s, %s, %s, %s, %s)"
+        cursor.execute(comando, (chaveTdpf, assunto, documento, tipo, datetime.now().date(), supervisor, fundamentos))
+        cursor.execute(consulta, (chaveTdpf, datetime.now().date())) 
+        row = cursor.fetchone()
+        bErro = False
+        if row==None:
+            bErro = True
+        elif len(row)==0:
+            bErro = True
+        if bErro:
+            conn.rollback()
+            resposta = "33F"
+            enviaResposta(resposta, c) 
+            conn.close()
+            return 
+        chaveProrrogacao = row[0]   
+        consulta = "Select Fiscais.Codigo From Fiscais, Alocacoes Where Fiscais.CPF=%s and Alocacoes.Fiscal=Fiscais.Codigo and Alocacoes.TDPF=%s and Alocacoes.Desalocacao Is Null"
+        listaInclusao = [(chaveProrrogacao, chaveFiscal, datetime.now())]
+        bErro = False
+        for cpfFiscal in fiscais:
+            cursor.execute(consulta, (cpfFiscal, chaveTdpf))
+            rowFiscal = cursor.fetchone()
+            if rowFiscal==None:
+                bErro = True
+            elif len(rowFiscal)==0:
+                bErro = True
+            if bErro:
+                conn.rollback()
+                resposta = "33O"
+                enviaResposta(resposta, c) 
+                conn.close()
+                return 
+            listaInclusao.append((chaveProrrogacao, rowFiscal[0], None))         
+        comando = "Insert Into AssinaturaFiscal (Prorrogacao, Fiscal, DataAssinatura) Values (%s, %s, %s)"
+        cursor.executemany(comando, listaInclusao)
+        try:
+            conn.commit()
+            resposta = "33S"
+        except:
+            conn.rollback()
+            resposta = "33F"
+        enviaResposta(resposta, c) 
+        conn.close()
+        return 
+
+    if codigo==34: #consulta prorrogações de um TDPF
+        if len(msgRecebida)!=(29+tamChave):
+            resposta = "99REQUISIÇÃO INVÁLIDA (34A)"
+            enviaResposta(resposta, c) 
+            conn.close()
+            return 
+        comando ="""Select Prorrogacoes.Codigo, Assunto, Documento, Tipo, Data, Fiscais.CPF, Fiscais.Nome, DataAssinatura, Fundamentos from Prorrogacoes, Fiscais 
+                 Where TDPF=%s and Supervisor=Fiscais.Codigo Order by Data"""    
+        cursor.execute(comando, (chaveTdpf,))           
+        prorrogacoes = cursor.fetchall()
+        if prorrogacoes==None:
+            resposta = "34S00"
+            enviaResposta(resposta, c)
+            conn.close()
+            return            
+        elif len(prorrogacoes)==0:
+            resposta = "34S00"
+            enviaResposta(resposta, c)
+            conn.close()
+            return            
+        else:
+            i = 0
+            tam = len(prorrogacoes)
+            if tam>99:
+                tam = 99
+            consulta = "Select Fiscais.CPF, Fiscais.Nome, DataAssinatura from Fiscais, AssinaturaFiscal Where AssinaturaFiscal.Fiscal=Fiscais.Codigo and AssinaturaFiscal.Prorrogacao=%s"
+            for prorrogacao in prorrogacoes:
+                i+=1
+                chaveProrrogacao = prorrogacao[0]
+                assunto = prorrogacao[1].ljust(100)
+                documento = prorrogacao[2].ljust(100)
+                tipo = prorrogacao[3].ljust(2)
+                data = dataTexto(prorrogacao[4])
+                cpfSupervisor = prorrogacao[5]
+                nomeSupervisor = prorrogacao[6][:100].ljust(100)
+                assSupervisor = dataTexto(prorrogacao[7])
+                fundamentos = prorrogacao[8]
+                if fundamentos==None:
+                    fundamentos = "" #não deve acontecer, mas ...
+                cursor.execute(consulta,(chaveProrrogacao,))
+                fiscais = cursor.fetchall()
+                registro = ""
+                j = 0
+                for fiscal in fiscais:
+                    j+=1
+                    registro = registro + fiscal[0] + fiscal[1][:100].ljust(100)+dataTexto(fiscal[2])
+                    if j==4:
+                        break #no máximo 4 fiscais (não deve ter mais, mas prefiro não arriscar)
+                registro = registro.ljust(484)
+                registro = assunto+documento+tipo+data+cpfSupervisor+nomeSupervisor+assSupervisor+registro
+                if i==1:
+                    resposta = "34S"+str(tam).rjust(2, "0") + registro
+                else:
+                    resposta = "34" + registro
+                if i==tam:
+                    enviaRespostaSemFechar(resposta, c)
+                    if not espera34("1", c, conn, addr):
+                        return                       
+                    enviaResposta("34"+fundamentos, c)
+                    conn.close()
+                    return
+                else:
+                    enviaRespostaSemFechar(resposta, c)
+                    if not espera34("2", c, conn, addr):
+                        return                    
+                    enviaRespostaSemFechar("34"+fundamentos, c)
+                    if not espera34("3", c, conn, addr):
+                        return                   
+
+    if codigo==35: #exclui prorrogação (deve ser a última; deve estar com assinatura pendente ou cpf do supervisor)
+        if len(msgRecebida)!=(39+tamChave):
+            resposta = "99REQUISIÇÃO INVÁLIDA (35A)"
+            enviaResposta(resposta, c) 
+            conn.close()
+            return    
+        data = msgRecebida[-10:]
+        if not isDate(data):    
+            resposta = "99REQUISIÇÃO INVÁLIDA - DATA INVÁLIDA (35B)"
+            enviaResposta(resposta, c) 
+            conn.close()
+            return 
+        data = datetime.strptime(data, "%d/%m/%Y")
+        if data.date()>datetime.now().date():
+            resposta = "99REQUISIÇÃO INVÁLIDA - DATA FUTURA (35C)"
+            enviaResposta(resposta, c) 
+            conn.close()
+            return 
+        comando = "Select Codigo, DataAssinatura, Data, Supervisor From Prorrogacoes Where TDPF=%s Order by Data DESC" 
+        cursor.execute(comando, (chaveTdpf,))
+        row = cursor.fetchone()
+        if not row:
+            resposta = "35P"
+            enviaResposta(resposta, c) 
+            conn.close()
+            return 
+        chaveProrrogacao = row[0] 
+        if row[2].date()!=data.date(): #não é a última prorrogação ou não existe a data
+            resposta = "35L"
+            enviaResposta(resposta, c) 
+            conn.close()
+            return                                              
+        if row[3]!=chaveFiscal and not bSupervisor: #usuário não é supervisor do TDPF incluído na prorrogação
+            if row[1]!=None: #só é permitida a exclusão se houver assinatura pendente de alguém (e a do supervisor não está pendente)
+                comando = "Select * from AssinaturaFiscal Where Prorrogacao=%s and DataAssinatura Is Null"
+                cursor.execute(comando, (chaveProrrogacao,))
+                assinaturas = cursor.fetchall()
+                if len(assinaturas)==0: #usuário não é supervisor e não há assinaturas pendentes
+                    resposta = "35U"
+                    enviaResposta(resposta, c) 
+                    conn.close()
+                    return   
+        comando = "Delete From AssinaturaFiscal Where Prorrogacao=%s"
+        cursor.execute(comando, (chaveProrrogacao,))
+        comando = "Delete From Prorrogacoes Where Codigo=%s"
+        cursor.execute(comando, (chaveProrrogacao,))
+        try:
+            conn.commit()
+            resposta = "35S"
+        except:
+            conn.rollback()
+            resposta = "35F"
+        enviaResposta(resposta, c) 
+        conn.close()
+        return         
+
+    if codigo==36: #informa assinatura na prorrogação
+        if len(msgRecebida)!=(39+tamChave):
+            resposta = "99REQUISIÇÃO INVÁLIDA (36A)"
+            enviaResposta(resposta, c) 
+            conn.close()
+            return  
+        dataDoc = msgRecebida[-10:]
+        if not isDate(dataDoc):
+            resposta = "99REQUISIÇÃO INVÁLIDA - DATA INVÁLIDA (36B)"
+            enviaResposta(resposta, c) 
+            conn.close()
+            return                     
+        dataDoc = datetime.strptime(dataDoc, "%d/%m/%Y")
+        if dataDoc.date()>datetime.now().date():
+            resposta = "99REQUISIÇÃO INVÁLIDA - DATA FUTURA (36C)"
+            enviaResposta(resposta, c) 
+            conn.close()
+            return   
+        comando = "Select Codigo, DataAssinatura, Supervisor from Prorrogacoes Where TDPF=%s and Data=%s"
+        cursor.execute(comando, (chaveTdpf, dataDoc))
+        row = cursor.fetchone()
+        if not row:
+            resposta = "36P"
+            enviaResposta(resposta, c) 
+            conn.close()
+            return          
+        chaveProrrogacao = row[0]
+        assSupervisor = row[1]
+        supervisor = row[2]
+        if supervisor==chaveFiscal: #é o supervisor (efetivo ou substituto) - temos que ver se ele é o último a assinar e se sua assinatura está pendente
+            comando = "Select * from AssinaturaFiscal Where DataAssinatura Is Null and Prorrogacao=%s"
+            cursor.execute(comando, (chaveProrrogacao,))
+            rowRestantes = cursor.fetchall()
+            if rowRestantes:
+                if len(rowRestantes)>0: #há assinaturas pendentes de outros fiscais
+                    print("aqui")
+                    resposta = "36P"
+                    enviaResposta(resposta, c) 
+                    conn.close()
+                    return 
+            comando = "Update Prorrogacoes Set DataAssinatura=%s Where Codigo=%s"
+            cursor.execute(comando, (datetime.now(), chaveProrrogacao))
+        else:
+            comando = "Select Codigo, DataAssinatura from AssinaturaFiscal Where Fiscal=%s and Prorrogacao=%s"
+            cursor.execute(comando, (chaveFiscal, chaveProrrogacao))   
+            row = cursor.fetchone()
+            if row:
+                chaveRegistro = row[0]
+                if row[1]!=None: #fiscal já assinou
+                    resposta = "36P"
+                    enviaResposta(resposta, c) 
+                    conn.close()
+                    return
+                comando = "Update AssinaturaFiscal Set DataAssinatura=%s Where Codigo=%s"  
+                cursor.execute(comando, (datetime.now(), chaveRegistro))
+            else:
+                resposta = "36P"
+                enviaResposta(resposta, c) 
+                conn.close()
+                return
+        try:
+            conn.commit()
+            resposta = "36S"
+        except:
+            conn.rollback()
+            resposta = "36F"
+        enviaResposta(resposta, c) 
+        conn.close()
+        return  
+
+    if codigo==37: #retorna lista de TDPFs pendentes de assinatura pelo cpf do usuário
+        #assinatura do supervisor deve ser a última
+        comando = """
+                  Select TDPFS.Numero, Data from TDPFS, Prorrogacoes, AssinaturaFiscal 
+                  Where TDPFS.Codigo=Prorrogacoes.TDPF and Prorrogacoes.Supervisor=%s and Prorrogacoes.DataAssinatura Is Null and
+                  AssinaturaFiscal.Prorrogacao=Prorrogacoes.Codigo and AssinaturaFiscal.DataAssinatura Is Not Null
+                  Union
+                  Select TDPFS.Numero, Data from TDPFS, Prorrogacoes, AssinaturaFiscal 
+                  Where TDPFS.Codigo=Prorrogacoes.TDPF and AssinaturaFiscal.Prorrogacao=Prorrogacoes.Codigo and
+                  AssinaturaFiscal.Fiscal=%s and AssinaturaFiscal.DataAssinatura Is Null
+                  """                 
+        listaTdpfs = []
+        cursor.execute(comando, (chaveFiscal, chaveFiscal))   
+        rows = cursor.fetchall()
+        for row in rows:
+            if not [row[0], row[1]] in listaTdpfs:
+                listaTdpfs.append([row[0], row[1]]) 
+        tam = len(listaTdpfs)
+        if tam==0:
+            resposta = "3700"
+            enviaResposta(resposta, c) 
+            conn.close()
+            return 
+        if tam>99:
+            tam = 99
+        registro = ""
+        for i in range(tam):
+            registro = registro + listaTdpfs[i][0]+listaTdpfs[i][1].strftime("%d/%m/%Y")
+        resposta = "37"+str(tam).rjust(2,"0")+registro
+        enviaResposta(resposta, c) 
+        conn.close()
+        return         
+                     
+    if codigo==60:
+        if len(msgRecebida)!=(23+tamChave):
+            resposta = "99REQUISIÇÃO INVÁLIDA (60A)"
+            enviaResposta(resposta, c) 
+            conn.close()
+            return 
+        hora = datetime.now().hour
+        if 8<hora<10:
+            resposta = "60H"
+            enviaResposta(resposta, c) 
+            conn.close()
+            return         
+        if not cpf in [CPF1, CPF2, CPF3]:
+            resposta = "60N"
+            enviaResposta(resposta, c) 
+            conn.close()
+            return
+        senha = msgRecebida[-10:]
+        horaSenha = str(int(int(datetime.now().strftime('%H%M'))/10))
+        if senha[-10:-3]!=SENHADCCS or senha[-3:]!=horaSenha or SENHADCCS==None: #senha é DIS@V71 seguida da hora e a dezena dos minutos (ex.: são 11:35, a senha é DIS@V71113)
+            resposta = "60N"
+            enviaResposta(resposta, c) 
+            conn.close()
+            return
+        comando = "Select DCC from TDPFS Where DCC Is Not Null and DCC<>'' and Encerramento Is Null"
+        cursor.execute(comando)
+        rows = cursor.fetchall()
+        tam = len(rows)
+        tamStr = str(tam).rjust(5,"0")
+        resposta = "60S"+tamStr
+        if tam==0:
+            enviaResposta(resposta, c) 
+            conn.close()
+            return            
+        i = 0
+        for row in rows:
+            resposta = resposta + row[0]
+            i+=1
+            if i%50==0 or i==tam:
+                if i==tam:
+                    enviaResposta(resposta, c) 
+                    conn.close()
+                    return 
+                enviaRespostaSemFechar(resposta, c) 
+                resposta = "60"  
+                try:
+                    mensagemRec = c.recv(256)
+                    requisicao = descriptografa(mensagemRec, addr, c)
+                    if requisicao!="60"+cpf:
+                        resposta = "99REQUISIÇÃO INVÁLIDA (60B)"
+                        enviaResposta(resposta, c) 
+                        conn.close()
+                        return
+                except:
+                    c.close()
+                    conn.close()
+                    logging.info("Erro de time out 60 - provavelmente cliente não respondeu no prazo. Abandonando operação.")
+                    return                            
+                   
     return #não chega aqui, mas ...
       
+def espera34(n, c, conn, addr):
+    try:
+        mensagemRec = c.recv(512)
+        requisicao = descriptografa(mensagemRec, addr, c)
+        if requisicao!="3412345678909":
+            resposta = "99REQUISIÇÃO INVÁLIDA (34B)"
+            enviaResposta(resposta, c) 
+            conn.close()
+            return False
+        else:
+            return True
+    except:
+        c.close()
+        conn.close()
+        logging.info("Erro de time out 34 "+n+" - provavelmente cliente não respondeu no prazo. Abandonando operação.")
+        return False    
 
 def servidor(): 
     global  threads, s, pubKey
@@ -3163,6 +3977,10 @@ MYSQL_ROOT_PASSWORD = os.getenv("MYSQL_ROOT_PASSWORD", "EXAMPLE")
 MYSQL_DATABASE = os.getenv("MYSQL_DATABASE", "databasenormal")
 MYSQL_USER = os.getenv("MYSQL_USER", "my_user")
 MYSQL_PASSWORD = os.getenv("MYSQL_PASSWORD", "mypass1234")
+CPF1 = os.getenv("CPF1", None)
+SENHADCCS = os.getenv("SENHADCCS", None)
+CPF2 = os.getenv("CPF2", None)
+CPF3 = os.getenv("CPF3", None)
 token = os.getenv("TOKEN", "ERRO")
 ambiente = os.getenv("AMBIENTE", "TESTE")
 

@@ -63,14 +63,15 @@ def servidorArquivo():
             else:
                 continue #nem responde (primeira requisição tem que ser da chave)
             msgRecebida = c.recv(2048)
-            tamanho = int(msgRecebida[:4].decode('utf-8'))
-            msgRecebida = msgRecebida[4:]
+            tamanho = int(msgRecebida[:5].decode('utf-8'))
+            msgRecebida = msgRecebida[5:]
             if len(msgRecebida)<tamanho:
                 msgRecebida = msgRecebida+c.recv(2048)
             sucesso, msgDescripto = descriptografa(msgRecebida)
             if sucesso:
                 msgRecebida = msgDescripto.decode('utf-8')
-                horaSenha = str(int(int(datetime.now().strftime('%H%M'))/10)) #da hhmm, pega a hhm para complementar a senha
+                horaSenha = str(int(int(datetime.now().strftime('%H%M'))/10)).rjust(3, "0") #da hhmm, pega a hhm para complementar a senha
+                print(SENHAIMPORTACAO+horaSenha)
                 if msgRecebida!="ENVIAARQUIVOS"+SENHAIMPORTACAO+horaSenha and SENHAIMPORTACAO!=None:
                     print(msgRecebida)
                     print("Senha inválida ou requisição estranha")
@@ -91,17 +92,18 @@ def servidorArquivo():
             texto = b""
             nomeArq = ""
             bPrim = False
+            buffer = 20480 #tamanho máximo de cada mensagem (a inicial, criptografada, só tem 400)           
             while True:
                 if chaveCripto[2]<datetime.now():
                     print("Chave venceu ...")
                     break #chave venceu
                 tam = 4
-                msgRecebida = c.recv(8192) 
-                tam = int(msgRecebida[:4].decode("utf-8"))
-                msgRecebida = msgRecebida[4:]
+                msgRecebida = c.recv(buffer) 
+                tam = int(msgRecebida[:5].decode("utf-8"))
+                msgRecebida = msgRecebida[5:]
                 tamEfetivo = len(msgRecebida)
                 while tamEfetivo<tam:
-                    msgRecebida = msgRecebida+c.recv(8192) 
+                    msgRecebida = msgRecebida+c.recv(buffer) 
                     tamEfetivo = len(msgRecebida)
                 if bPrim: #primeiro pedaço do arquivo vem criptografado
                     bPrim = False
@@ -127,7 +129,7 @@ def servidorArquivo():
                         #print(msgUtf)
                         if msgUtf[:25]=="ARQUIVONOME1234509876MAPB":
                             nomeArq = msgUtf[25:].strip()
-                            if nomeArq in ["TDPFS", "ALOCACOES", "OPERACOES", "DCCS"]:
+                            if nomeArq in ["TDPFS", "ALOCACOES", "OPERACOES", "DCCS", "CIENCIASPENDENTES", "INDICADORES"]:
                                 nomeArq = nomeArq+".xlsx"
                             else:
                                 print("Nome de arquivo inválido ...")

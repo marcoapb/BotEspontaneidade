@@ -19,7 +19,6 @@ from mysql.connector import errorcode
 from telegram.ext import Updater
 from telegram.ext import CommandHandler, Filters, MessageHandler #,CallbackQueryHandler
 from telegram import ReplyKeyboardMarkup #,InlineKeyboardButton, InlineKeyboardMarkup, KeyboardButton 
-from calendar import weekday
 
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
@@ -118,7 +117,7 @@ def getParametros(msg): #monta uma lista com os parâmetros a partir da msg do u
 
 def eliminaPendencia(userId):
     global pendencias, atividadeTxt
-    #apaga todas as pendencias (usuário retornou ao menu, acionou alguma opção dele ou prestou todas as informações requeridas por uma funcionalidade)
+    #apaga todas as pendencias (usuário retornou ao menu, acionou alguma opçaõ dele ou prestou todas as informações requeridas por uma funcionalidade)
     #logging.info(pendencias)
     if pendencias==None:
         return
@@ -138,11 +137,11 @@ def eliminaPendencia(userId):
     return      
 
 #transforma uma data string de dd/mm/yyyy para yyyy/mm/dd para fins de consulta, inclusão ou atualização no BD SQL
-#se o BD esperar a data em outro formato, basta alterarmos aqui - caiu em desuso depois do mysql.connector
-#def converteAMD(data):
-#    return data[6:]+"/"+data[3:5]+"/"+data[:2] 
+#se o BD esperar a data em outro formato, basta alterarmos aqui
+def converteAMD(data):
+    return data[6:]+"/"+data[3:5]+"/"+data[:2] 
 
-def enviaEmail(email, texto, assunto, arquivo=None): #envia email, conforme parâmetros - se passar o arquivo (caminho e nome), ele vai como anexo 
+def enviaEmail(email, texto, assunto, arquivo=None):
     try:
         #server = smtplib.SMTP('INETRFOC.RFOC.SRF: 25') #servidor de email Notes
         server = smtplib.SMTP('exchangerfoc.rfoc.srf: 25')
@@ -968,7 +967,7 @@ def terminoAtividade(update, context): #registra data de término de atividade c
     mostraMenuPrincipal(update, context)
     return
             
-def efetivaCiencia(userId, tdpf, data, vencimento, documento): #tenta efetivar a ciência de um tdpf no BD
+def efetivaCiencia(userId, tdpf, data, documento): #tenta efetivar a ciência de um tdpf no BD
     conn = conecta()
     if not conn: 
         return False, "Erro na conexão - efetivaCiencia"
@@ -983,7 +982,7 @@ def efetivaCiencia(userId, tdpf, data, vencimento, documento): #tenta efetivar a
             conn.close()
             return False, msg      
         comando = "Select Data from Ciencias Where TDPF=%s and Data>=%s Order by Data DESC"
-        cursor.execute(comando, (chaveTdpf, data)) #datetime.strptime(data, "%d/%m/%Y")))
+        cursor.execute(comando, (chaveTdpf, datetime.strptime(data, "%d/%m/%Y")))
         row = cursor.fetchone()
         if row:
             conn.close()
@@ -1002,8 +1001,8 @@ def efetivaCiencia(userId, tdpf, data, vencimento, documento): #tenta efetivar a
         conn.close()
         return False, "Erro na consulta (3)."
     try:
-        comando = "Insert into Ciencias (TDPF, Data, Documento, Vencimento) Values (%s, %s, %s, %s)"
-        cursor.execute(comando, (chaveTdpf, data, documento, vencimento)) #datetime.strptime(data, "%d/%m/%Y"), documento))
+        comando = "Insert into Ciencias (TDPF, Data, Documento) Values (%s, %s, %s)"
+        cursor.execute(comando, (chaveTdpf, datetime.strptime(data, "%d/%m/%Y"), documento))
         msg = ""
         if fim!=None:
             msg = " Monitoramento deste TDPF foi reativado."
@@ -1040,7 +1039,7 @@ def cienciaTexto(update, context): #obtém a descrição da atividade e chama a 
         if documento=="CANCELA":
             mostraMenuPrincipal(update, context)
             return     
-        efetivou, msgEfetivaCiencia= efetivaCiencia(userId, cienciaTxt[userId][0], cienciaTxt[userId][1], cienciaTxt[userId][2], documento)
+        efetivou, msgEfetivaCiencia= efetivaCiencia(userId, cienciaTxt[userId][0], cienciaTxt[userId][1], documento)
         if efetivou:
             response_message = "Data de ciência registrada para o TDPF."
             if msgEfetivaCiencia!=None and msgEfetivaCiencia!="":
@@ -1049,69 +1048,21 @@ def cienciaTexto(update, context): #obtém a descrição da atividade e chama a 
             response_message = msgEfetivaCiencia         
         bot.send_message(userId, text=response_message) 
         mostraMenuPrincipal(update, context)
-    return   
+    return            
 
-def calculaVencimento(prazo, data): #prazo: int (dias); data (ciência - início do prazo): datetime
-    data = data + timedelta(days=1)
-    while weekday(data.year, data.month, data.day)>=5: #contagem do prazo não inicia em sábado ou domingo
-        data = data + timedelta(days=1)
-    vencimento = data + timedelta(days=prazo-1)
-    while weekday(vencimento.year, vencimento.month, vencimento.day)>=5: #contagem do prazo não termina em sábado ou domingo
-        vencimento = vencimento + timedelta(days=1)
-    return vencimento
-    
 def ciencia(update, context): #critica e tenta efetivar a ciência de um TDPF (registrar data)
     global pendencias, textoRetorno, cienciaTxt
-    msgCiencia = "Envie novamente o TDPF, a data de ciência (dd/mm/aaaa) e, opcionalmente, o vencimento da intimação - data ou dias corridos (separados por espaço)."
+    msgCiencia = "Envie novamente o TDPF e a data de ciência (dd/mm/aaaa) (separados por espaço)."
     userId = update.message.from_user.id   
     bot = update.effective_user.bot
     msg = update.message.text    
     parametros = getParametros(msg)
-    if not len(parametros) in [2, 3]:
-        response_message = "Número de informações (parâmetros) inválido. Envie somente o nº do TDPF, a última data de ciência relativa a ele e, opcionalmente, o vencimento da intimação (data ou dias corridos)."
+    if len(parametros)!=2:
+        response_message = "Número de informações (parâmetros) inválido. Envie somente o nº do TDPF e a última data de ciência relativa a ele."
         response_message = response_message+textoRetorno
     else:
         tdpf = getAlgarismos(parametros[0])
         data = parametros[1]
-        prazo = None        
-        vencimentoObj = None        
-        if len(parametros)==3:
-            vencimento = parametros[2]
-            if vencimento.isdigit() and len(vencimento)==8:
-                vencimento = vencimento[:2]+"/"+vencimento[2:4]+"/"+vencimento[4:]
-            if len(vencimento)!=10:
-                if not vencimento.isdigit():
-                    response_message = "Vencimento inválido. "+msgCiencia
-                    response_message = response_message+textoRetorno 
-                    bot.send_message(userId, text=response_message)  
-                    return                
-                else:
-                    try:
-                        prazo = int(vencimento)
-                        if prazo<1 or prazo>60:
-                            response_message = "Vencimento (prazo) inválido - deve estar entre 1 e 60 dias "+msgCiencia
-                            response_message = response_message+textoRetorno   
-                            bot.send_message(userId, text=response_message)  
-                            return                                              
-                    except:
-                        response_message = "Vencimento (prazo) inválido. "+msgCiencia
-                        response_message = response_message+textoRetorno   
-                        bot.send_message(userId, text=response_message)  
-                        return                                               
-            elif isDate(vencimento):
-                try:
-                    vencimentoObj = datetime.strptime(vencimento, '%d/%m/%Y')
-                except: #não deveria acontecer após o isDate, mas fazemos assim para não correr riscos
-                    logging.info("Erro na conversão do vencimento "+vencimento+" - UserId "+str(userId))
-                    response_message = "Erro na conversão do vencimento. "+msgCiencia
-                    response_message = response_message+textoRetorno   
-                    bot.send_message(userId, text=response_message)  
-                    return
-            else:
-                response_message = "Vencimento inválido. "+msgCiencia
-                response_message = response_message+textoRetorno   
-                bot.send_message(userId, text=response_message)  
-                return                
         if data.isdigit() and len(data)==8:
             data = data[:2]+"/"+data[2:4]+"/"+data[4:]
         if len(tdpf)!=16 or not tdpf.isdigit():
@@ -1136,16 +1087,10 @@ def ciencia(update, context): #critica e tenta efetivar a ciência de um TDPF (r
                 response_message = "Data de ciência já está vencida para fins de recuperação da espontaneidade tributária. "+msgCiencia
                 response_message = response_message+textoRetorno
             else:  
-                if prazo!=None: #vemos qual vai ser o prazo em função do prazo em dias
-                    vencimentoObj = calculaVencimento(prazo, dateTimeObj)
-                if vencimentoObj.date()<=dateTimeObj.date():
-                    response_message = "Vencimento deve ser posterior à data de ciência. "+msgCiencia
-                    response_message = response_message+textoRetorno   
-                else: 
-                    eliminaPendencia(userId)
-                    pendencias[userId] = 'cienciaTexto'
-                    cienciaTxt[userId] = [tdpf, dateTimeObj, vencimentoObj]
-                    response_message = "Informe a descrição do documento que efetivou a ciência (ex.: TIPF) (máximo de 50 caracteres):"                                                
+                eliminaPendencia(userId)
+                pendencias[userId] = 'cienciaTexto'
+                cienciaTxt[userId] = [tdpf, data]
+                response_message = "Informe a descrição do documento que efetivou a ciência (ex.: TIPF) (máximo de 50 caracteres):"                                                
     bot.send_message(userId, text=response_message)  
     return 
 
@@ -1482,15 +1427,14 @@ def start(update, context): #comandos /start /menu /retorna acionam esta opção
     if update.effective_user.is_bot:
         return #não atendemos bots     
     eliminaPendencia(userId)
-    msg1 = 'Este serviço controla, dentre outros, os prazos p/ recuperação da espontaneidade, p/ vencimento do TDPF, vencimento de prazo de intimação e de atividades cadastradas:\n'
+    msg1 = 'Este serviço controla os prazos p/ recuperação da espontaneidade, p/ vencimento do TDPF e de atividades cadastradas:\n'
     msg2 = '- Alertas sobre a possível recuperação da espontaneidade de contribuintes, em prazos customizáveis (d1 [maior], d2 e d3 [menor] dias antes).\n'
     msg3 = '- Alertas sobre o vencimento do TDPF em duas datas distintas (separadas por não menos do que 8 dias e quando o vencimento se der em até 15 dias).\n'
-    msg4 = '- Alertas sobre o vencimento do prazo para atendimento de intimação, se informado - no dia do vencimento.\n'
-    msg5 = '- Alertas sobre o vencimento de atividades cadastradas - em d3 e no dia do vencimento.\n\n'
-    msg6 = 'Atualmente, o vencimento do TDPF informado por este serviço poderá ocorrer com alguma antecedência devido ao cálculo baseado apenas na data de distribuição. '
-    msg7 = 'Isto será corrigido futuramente.\n\n'
-    msg8 = '*Digite a qualquer momento /menu para ver o menu principal e estas observações*, inclusive no caso de ocorrer alguma interrupção do serviço.'
-    response_message = msg1+msg2+msg3+msg4+msg5+msg6+msg7+msg8
+    msg4 = '- Alertas sobre o vencimento de atividades cadastradas - em d3 e no dia do vencimento.\n\n'
+    msg5 = 'Atualmente, o vencimento do TDPF informado por este serviço poderá ocorrer com alguma antecedência devido ao cálculo baseado apenas na data de distribuição. '
+    msg6 = 'Isto será corrigido futuramente.\n\n'
+    msg7 = '*Digite a qualquer momento /menu para ver o menu principal e estas observações*, inclusive no caso de ocorrer alguma interrupção do serviço.'
+    response_message = msg1+msg2+msg3+msg4+msg5+msg6+msg7
     bot.send_message(userId, text=limpaMarkdown(response_message), parse_mode= 'MarkdownV2')
     mostraMenuPrincipal(update, context)
     return
@@ -1876,10 +1820,9 @@ def opcaoEnviaCienciasAtividades(update, context): #Envia para o e-mail do usuá
     sheet2.cell(row=1, column=2).value = "Data Emissão"
     sheet2.cell(row=1, column=3).value = "Nome Fiscalizado"
     sheet2.cell(row=1, column=4).value = "Data de Ciência"
-    sheet2.cell(row=1, column=5).value = "Documento"     
-    sheet2.cell(row=1, column=6).value = "Vencimento da Intimação"             
-    sheet2.cell(row=1, column=7).value = "60 dias da Ciência"  
-    larguras = [19, 13, 32, 14, 25, 18, 16]
+    sheet2.cell(row=1, column=5).value = "Documento"            
+    sheet2.cell(row=1, column=6).value = "60 dias da Ciência"  
+    larguras = [19, 13, 32, 14, 25, 16]
     for col in range(len(larguras)):
         sheet2.column_dimensions[get_column_letter(col+1)].width = larguras[col]  
         currentCell = sheet2.cell(row=1, column=col+1)
@@ -1933,7 +1876,7 @@ def opcaoEnviaCienciasAtividades(update, context): #Envia para o e-mail do usuá
                     for col in range(9):
                         sheet1.cell(row=i+1, column=col+1).font = cor
             i+=1  
-        consulta = "Select Data, Documento, Vencimento from Ciencias Where TDPF=%s and Data Is Not Null Order By Data"
+        consulta = "Select Data, Documento from Ciencias Where TDPF=%s and Data Is Not Null Order By Data"
         cursor.execute(consulta,(chaveTdpf,))
         rows = cursor.fetchall()      
         totalRows = len(rows) 
@@ -1947,16 +1890,12 @@ def opcaoEnviaCienciasAtividades(update, context): #Envia para o e-mail do usuá
             currentCell.alignment = Alignment(horizontal='center')             
             sheet2.cell(row=j+1, column=3).value = fiscalizado                           
             currentCell = sheet2.cell(row=j+1, column=4)
-            currentCell.value = row[0].date() #data da ciência
+            currentCell.value = row[0].date()
             currentCell.alignment = Alignment(horizontal='center')             
-            if row[1]!=None: #documento
-                sheet2.cell(row=j+1, column=5).value = row[1]                
-            if row[2]!=None: #vencimento da intimação
-                sheet2.cell(row=j+1, column=6).value = row[2].date()
-                currentCell = sheet2.cell(row=j+1, column=6)                
-                currentCell.alignment = Alignment(horizontal='center')                             
+            if row[1]!=None:
+                sheet2.cell(row=j+1, column=5).value = row[1] 
             diaEspont = (row[0]+timedelta(days=60)).date()
-            sheet2.cell(row=j+1, column=7).value = diaEspont #dia que recupera a espontaneidade
+            sheet2.cell(row=j+1, column=6).value = diaEspont
             cor = None
             if diaEspont<=(datetime.now()+timedelta(days=15)).date() and rowAtual==totalRows: #se faltar 15 dias ou menos para recuperar a espontaneidade, 
                                                                                               #a linha fica azul, mas só se for na última ciência
@@ -1968,7 +1907,7 @@ def opcaoEnviaCienciasAtividades(update, context): #Envia para o e-mail do usuá
                 if (rows[rowAtual][0]-row[0]).days>60: #entre a ciência atual e a subsequente, decorreram mais de 60 dias
                     cor = Font(color="800080")
             if cor!=None:
-                for col in range(7):
+                for col in range(6):
                     sheet2.cell(row=j+1, column=col+1).font = cor   
             rowAtual+=1         
             j+=1
@@ -2000,7 +1939,7 @@ def opcaoInformaCiencia(update, context): #Informa ciência de TDPF
     achou = verificaUsuario(userId, bot)       
     if achou:                      
         pendencias[userId] = 'ciencia' #usuário agora tem uma pendência de informação (ciência)
-        response_message = "Envie /menu para ver o menu principal.\nEnvie agora, numa única mensagem, *o nº do TDPF (16 dígitos), a data de ciência (dd/mm/aaaa) e, opcionalmente, a data de vencimento da intimação (ou prazo em dias corridos*; será aplicada a regra de que não começa nem termina em sábado/domingo) válida para fins de perda da espontaneidade tributária relativa ao respectivo procedimento fiscal - separe as informações com espaço:"  
+        response_message = "Envie /menu para ver o menu principal.\nEnvie agora, numa única mensagem, *o nº do TDPF (16 dígitos) e a data de ciência (dd/mm/aaaa)* válida para fins de perda da espontaneidade tributária relativa ao respectivo procedimento fiscal - separe as informações com espaço:"  
         bot.send_message(userId, text=limpaMarkdown(response_message), parse_mode= 'MarkdownV2')
     else:
         mostraMenuPrincipal(update, context) 
@@ -2096,7 +2035,7 @@ def opcaoAcompanhaTDPFs(update, context): #acompanha um TDPF ou todos os TDPFs e
         mostraMenuPrincipal(update, context)         
     return
         
-def montaListaTDPFs(userId, tipo=1): #monta lista de TDPFs com diversas informações que dependem se é fiscal alocado (tipo=1) ou supervisor (tipo=2)
+def montaListaTDPFs(userId, tipo=1):
     conn = conecta()
     if not conn:
         return  ["Erro na conexão"]
@@ -2147,7 +2086,7 @@ def montaListaTDPFs(userId, tipo=1): #monta lista de TDPFs com diversas informa�
                     vctoTDPF = vctoTDPF + " (vencido)"
             else:
                 vctoTDPF = "ND"
-            comando = "Select Data, Documento, Vencimento from Ciencias Where TDPF=%s order by Data DESC"
+            comando = "Select Data, Documento from Ciencias Where TDPF=%s order by Data DESC"
             #logging.info(comando)
             cursor.execute(comando, (chaveTdpf,))            
             cienciaReg = cursor.fetchone() #busca a data de ciência mais recente (DESC acima)
@@ -2161,17 +2100,15 @@ def montaListaTDPFs(userId, tipo=1): #monta lista de TDPFs com diversas informa�
                     monitorado = "NÃO"       
             tdpfForm = formataTDPF(tdpf)
             documento = ""
-            vencimentoCiencia = None
             if cienciaReg:
                 if len(cienciaReg)>0: 
                     ciencia = cienciaReg[0] #obtem a data de ciência mais recente
                     documento = cienciaReg[1]
-                    vencimentoCiencia = cienciaReg[2]
                 else:
                     ciencia = None    
             else:
                 ciencia = None
-            if tipo==1: #fiscal alocado
+            if tipo==1:
                 atividades = []
                 comando = "Select Codigo, Atividade, Inicio, Vencimento, Horas from Atividades Where TDPF=%s and Termino Is Null order by Inicio"   #somente as atividade em andamento
                 cursor.execute(comando, (chaveTdpf,))
@@ -2184,8 +2121,8 @@ def montaListaTDPFs(userId, tipo=1): #monta lista de TDPFs com diversas informa�
                     lista.append(regAtividade[3])
                     lista.append(regAtividade[4])
                     atividades.append(lista)            
-                registro = [tdpfForm, linha[3], ciencia, documento, vencimentoCiencia, vctoTDPF, atividades]
-            else: #supervisor
+                registro = [tdpfForm, linha[3], ciencia, documento, vctoTDPF, atividades]
+            else:
                 registro = [tdpfForm, monitorado, ciencia, documento, vctoTDPF]
             result.append(registro)       
         if len(result)>0:
@@ -2230,35 +2167,24 @@ def opcaoMostraTDPFs(update, context): #Relação de TDPFs monitorados, prazos e
                 supervisor = "SIM"
             ciencia = item[2]
             documento = item[3]
-            vencimentoCiencia = item[4]
-            vctoTDPF = item[5]
+            vctoTDPF = item[4]
             if documento==None:
                 documento = "ND"
             if vctoTDPF==None:
                 vctoTDPF = "ND"    
-            atividades.append([tdpf, item[6]]) #item[6] é uma lista de atividades
+            atividades.append([tdpf, item[5]]) #item[5] é uma lista de atividades
             if ciencia:
                 delta = ciencia.date() + timedelta(days=60)-datetime.today().date()
                 dias = delta.days
-                if vencimentoCiencia==None:
-                    parteF = "; f) ND"
-                else:
-                    vencimentoTxt = vencimentoCiencia.strftime("%d/%m/%Y")
-                    if vencimentoCiencia.date()>datetime.now().date():
-                        parteF = "; f) "+vencimentoTxt
-                    elif vencimentoCiencia.date()==datetime.now().date():
-                        parteF = "; f) "+vencimentoTxt +" (HOJE)"
-                    else:
-                        parteF = "; f) "+vencimentoTxt +" (EXPIRADO)"
                 if dias<0:
-                    dias = "d) "+str(dias)+" (recuperada); e) "+documento+parteF+"; g) "+vctoTDPF
+                    dias = "d) "+str(dias)+" (recuperada); e) "+documento+"; f) "+vctoTDPF
                 else:
-                    dias = "d) "+ str(dias) + "; e) "+documento+parteF+"; g) "+vctoTDPF    
+                    dias = "d) "+ str(dias) + "; e) "+documento+"; f) "+vctoTDPF    
                 msg = msg+"\n\n"+str(i)+"a) *"+tdpf+"*; b) "+supervisor+";\nc) "+ciencia.strftime('%d/%m/%Y')+"; "+dias
             else:
-                msg = msg+"\n\n"+str(i)+"a) *"+tdpf+"*; b) "+supervisor+"\nc) ND; d) ND; e) ND; f) ND; g) "+vctoTDPF  
+                msg = msg+"\n\n"+str(i)+"a) *"+tdpf+"*; b) "+supervisor+"\nc) ND; d) ND; e) ND; f) "+vctoTDPF  
             if i%15==0:   #há limite de tamanho de msg - enviamos 15 TDPFs por vez, no máximo
-                response_message = "TDPFs Monitorados Por Você:\na) TDPF; b) Supervisor; c) Data da última ciência; d) Dias restantes p/ recuperação da espontaneidade; e) Documento; f) Vencimento do Prazo da Intimação; g) Dias restantes para o vencto. do TDPF:"
+                response_message = "TDPFs Monitorados Por Você:\na) TDPF; b) Supervisor; c) Data da última ciência; d) Dias restantes p/ recuperação da espontaneidade; e) Documento; f) Dias restantes para o vencto. do TDPF:"
                 response_message = response_message+msg  
                 if ambiente=="TESTE":
                     response_message = response_message+"\n\nAmbiente: "+ambiente   
@@ -2266,7 +2192,7 @@ def opcaoMostraTDPFs(update, context): #Relação de TDPFs monitorados, prazos e
                 msg = ""                       
             i+=1                 
         if msg!="":
-            response_message = "TDPFs Monitorados Por Você:\na) TDPF; b) Supervisor; c) Data da última ciência; d) Dias restantes p/ recuperação da espontaneidade; e) Documento; f) Vencimento do Prazo da Intimação; g) Dias restantes para o vencto. do TDPF:"
+            response_message = "TDPFs Monitorados Por Você:\na) TDPF; b) Supervisor; c) Data da última ciência; d) Dias restantes p/ recuperação da espontaneidade; e) Documento; f) Dias restantes para o vencto. do TDPF:"
             response_message = response_message+msg
             response_message = response_message + "\n\nVencimento do TDPF pode ser inferior ao do Ação Fiscal, pois as informações do serviço se baseiam"
             response_message = response_message + " na data de distribuição, que pode ter ocorrido antes da emissão do TDPF."             
@@ -2844,7 +2770,7 @@ def botTelegram():
     #updater.idle()    #não é necessário pq o programa vai ficar rodando em loop infinito
 ################################################################################
 
-def disparaAvisoUrgente(update, context): #avisos urgentes da Cofis disparados por comando no Bot (exige comando especifico e senha - DisparaAvisoUrgente + senhaAvisoUrgente)
+def disparaAvisoUrgente(update, context): #avisos urgentes da Cofis disparados por comando no Bot (exige comando especifico e senha)
     global updater, ambiente
     if update.effective_user.is_bot:
         return #não atendemos bots    
@@ -2935,7 +2861,6 @@ def disparaMensagens(): #avisos diários (produção) ou de hora em hora (teste)
     msgDisparadas = 0
     tdpfsAvisadosUpdate = set()
     tdpfsAvisadosInsert = set()
-    tdpfsCienciasPendentes = set() #guarda os registros de tdpfs com ciências pendentes há 30 dias (aviso se repete de 15 em 15 dias) para avisar o supervisor
     cabecalho = "Alertas do dia (TDPF | Dias Restantes):" 
     for usuario in usuarios: #percorremos os usuários ativos Telegram
         if termina: #programa foi informado de que é para encerrar (quit)
@@ -2967,7 +2892,7 @@ def disparaMensagens(): #avisos diários (produção) ou de hora em hora (teste)
                 """
         cursor.execute(comando, (cpf,))        
         fiscalizacoes = cursor.fetchall()
-        comandoCiencias = "Select Data, Vencimento from Ciencias Where TDPF=%s Order By Data DESC"
+        comandoCiencias = "Select Data from Ciencias Where TDPF=%s Order By Data DESC"
         comandoAtividades = "Select Atividade, Vencimento, Inicio from Atividades Where TDPF=%s and Vencimento>=%s and Termino Is Null Order by Inicio, Vencimento"
         if fiscalizacoes:
             for fiscalizacao in fiscalizacoes: #percorremos os TDPFs MONITORADOS do usuário
@@ -2979,11 +2904,9 @@ def disparaMensagens(): #avisos diários (produção) ou de hora em hora (teste)
                 supervisor = fiscalizacao[1]
                 cursor.execute(comandoCiencias, (chaveTdpf,)) #buscamos as ciências do TDPF
                 ciencias = cursor.fetchall() #buscamos todas por questões técnicas do mysqlconnector
-                if len(ciencias)>0:   
-                    cienciaReg = ciencias[0]    
-                    dataCiencia = cienciaReg[0].date()  #só é necessária a última (selecionamos por ordem descendente)      
-                    prazoRestante = (dataCiencia+timedelta(days=60)-dataAtual).days   
-                    bPrazo = False          
+                if len(ciencias)>0:       
+                    dataCiencia = ciencias[0][0].date()  #só é necessária a última (selecionamos por ordem descendente)      
+                    prazoRestante = (dataCiencia+timedelta(days=60)-dataAtual).days                
                     if prazoRestante==d1 or prazoRestante==d2 or prazoRestante==d3:
                         if len(listaUsuario)==0:
                             listaUsuario = cabecalho                       
@@ -2992,20 +2915,6 @@ def disparaMensagens(): #avisos diários (produção) ou de hora em hora (teste)
                         else:
                             tdpfFormatado2 = tdpfFormatado + '*'
                         listaUsuario = listaUsuario+"\n\n*"+tdpfFormatado2+ " | "+str(prazoRestante)+" (a)"
-                        bPrazo = True
-                    vencimentoIntimacao = cienciaReg[1]
-                    if vencimentoIntimacao!=None:
-                        if vencimentoIntimacao.date()==datetime.now().date(): #a intimação vence hoje
-                            if not bPrazo: #não há aviso de prazo da recuperação da espontaneidade
-                                if len(listaUsuario)==0:
-                                    listaUsuario = cabecalho                                  
-                                if supervisor=='S':    
-                                    tdpfFormatado2 = tdpfFormatado + '* (S)'
-                                else:
-                                    tdpfFormatado2 = tdpfFormatado + '*'
-                                listaUsuario = listaUsuario+"\n\n*"+tdpfFormatado2+" (d)"    
-                            else: #há aviso de prazo da recuperação da espontaneidade (bastante improvável, mas posssível)
-                                listaUsuario = listaUsuario+" (d)"                        
            
                 #buscamos as atividades do TDPF    
                 cursor.execute(comandoAtividades, (chaveTdpf, dataAtual))
@@ -3070,9 +2979,8 @@ def disparaMensagens(): #avisos diários (produção) ou de hora em hora (teste)
             if len(listaUsuario)>0:
                 listaUsuario = listaUsuario+"\n\n(a) P/ recuperação da espontaneidade tributária."
                 listaUsuario = listaUsuario+"\n(b) P/ vencimento da atividade."            
-                listaUsuario = listaUsuario+"\n(c) P/ vencimento do TDPF no Ação Fiscal - pode ser inferior ao verificado no Ação Fiscal, pois as informações do serviço se baseiam"
+                listaUsuario = listaUsuario+"\n(c) P/ vencimento do TDPF no Ação Fiscal - pode ser inferior à data do Ação Fiscal, pois as informações do serviço se baseiam"
                 listaUsuario = listaUsuario+" na data de distribuição, que pode ter ocorrido antes da emissão do TDPF."
-                listaUsuario = listaUsuario+"\n(d) Vence HOJE o prazo do contribuinte para atendimento da última intimação."
             if msgCofis!="":
                 if len(listaUsuario)>0:
                     listaUsuario = listaUsuario+"\n\n"
@@ -3104,47 +3012,10 @@ def disparaMensagens(): #avisos diários (produção) ou de hora em hora (teste)
             if msgDisparadas>=30:
                 msgDisparadas = 0
                 time.sleep(1) #a cada 30 mensagens, dormimos um segundo (limitação do Bot é 30 por seg - TESTE) 
-                
-        #verificamos se o usuário possui TDPF com processo integrado sem ciência informada há 30 dias - avisamos ele e o supervisor (independe de monitoramento) 
-        #  (não vai e-mail)
-        #o aviso é repetido a cada 15 dias
-        consulta = """
-                    Select TDPFS.Numero, AvisosCiencia.Processo, AvisosCiencia.Integracao, AvisosCiencia.Codigo
-                    From TDPFS, Alocacoes, AvisosCiencia, Fiscais
-                    Where TDPFS.Codigo=AvisosCiencia.TDPF and TDPFS.Codigo=Alocacoes.TDPF and Alocacoes.Desalocacao Is Null 
-                    and Alocacoes.Fiscal=Fiscais.Codigo and Fiscais.CPF=%s and AvisosCiencia.Finalizado Is Null and
-                    (AvisosCiencia.Integracao=cast((now() - interval 30 day) as date) or cast(AvisosCiencia.Aviso as date)=cast((now() - interval 15 day) as date) or 
-                    (AvisosCiencia.Aviso Is Null and AvisosCiencia.Integracao<cast((now() - interval 30 day) as date)))
-                    """
-        cursor.execute(consulta, (cpf,))
-        rowsCienciasPendentes = cursor.fetchall()
-        listaCienciasPendentes = ""
-        i = 0
-        for cienciaPendente in rowsCienciasPendentes:
-            i+=1
-            tdpf = cienciaPendente[0]
-            processo = cienciaPendente[1]
-            integracao = cienciaPendente[2].date().strftime("%d/%m/%Y")
-            tdpfsCienciasPendentes.add(cienciaPendente[3])
-            listaCienciasPendentes = listaCienciasPendentes+"\n"+str(i)+"*"+formataTDPF(tdpf)+"* | "+formataDCC(processo)+" | "+integracao+"\n"
 
-        if i>0:
-            listaCienciasPendentes = "Processos sem registro de ciência há mais de 30 dias da integração.\nTDPF | Processo | Data da Integração:\n"+listaCienciasPendentes
-            if ambiente=="TESTE":
-                listaCienciasPendentes = listaCienciasPendentes+"\nAmbiente: "+ambiente
-            logging.info("Disparando mensagem para "+cpf+" - Ciências Pendentes")
-            updater.bot.send_message(usuario[0], text=limpaMarkdown(listaCienciasPendentes), parse_mode= 'MarkdownV2')  
-            totalMsg+=1
-            msgDisparadas+=1
-            if msgDisparadas>=30:
-                msgDisparadas = 0
-                time.sleep(1) #a cada 30 mensagens, dormimos um segundo (limitação do Bot é 30 por seg - TESTE)                         
-
-
-    logging.info("Total de mensagens disparadas: "+str(totalMsg))    
-
+    logging.info("Total de mensagens disparadas: "+str(totalMsg))        
     #se avisamos do vencimento do TDPF, colocamos a data na tabela para não avisarmos novamente
-    #todo dia (espera 7 dias)
+    #todo dia (espera 7 dias)    
     lista = []
     for tdpfCpf in tdpfsAvisadosInsert:
         tupla = (int(tdpfCpf[:15]), int(tdpfCpf[15:]), dataAtual) #ao adicionar, o código do TDPF ocupou 15 posições e a chave do fiscal, 12
@@ -3177,7 +3048,7 @@ def disparaMensagens(): #avisos diários (produção) ou de hora em hora (teste)
         server.quit()  
 
     #buscamos todos os TDPFs para os quais não foram registradas nenhuma data de ciência após 30 dias (exatos) de sua distribuição
-    # e avisamos o supervisor (não vai e-mail)
+    # e avisamos o supervisor
     comando = """
               Select Distinctrow Fiscais.CPF, TDPFS.Numero, Usuarios.idTelegram, Supervisores.Equipe, TDPFS.Codigo
               From TDPFS, Usuarios, Supervisores, Fiscais
@@ -3217,80 +3088,14 @@ def disparaMensagens(): #avisos diários (produção) ou de hora em hora (teste)
         else:
             nomeFiscal = fiscal[0].strip()
         msg = msg + "\n  *"+formataTDPF(linha[1])+"* ("+nomeFiscal.split()[0]+")"+"\n"
-        userId = linha[2]   
-        
-    if msg!="": #envia a mensagem para o último usuário
+        userId = linha[2]    
+    if msg!="":
         msg = cabecalho+msg
         if ambiente=="TESTE":
             msg = msg+"\n"+"Ambiente: "+ambiente        
         updater.bot.send_message(userId, text=limpaMarkdown(msg), parse_mode= 'MarkdownV2')
 
-    #avisamos os supervisores dos processos integrados e sem registro de ciência há mais de 30 dias (o aviso se repete a cada 15 dias)  (não vai e-mail)
-    consulta = """
-                Select Distinctrow TDPFS.Numero, AvisosCiencia.Processo, AvisosCiencia.Integracao, Supervisores.Equipe, Usuarios.idTelegram, AvisosCiencia.Codigo, TDPFS.Codigo
-                From TDPFS, AvisosCiencia, Fiscais, Supervisores, Usuarios
-                Where TDPFS.Codigo=AvisosCiencia.TDPF and TDPFS.Grupo=Supervisores.Equipe and Supervisores.Fim Is Null 
-                and Supervisores.Fiscal=Fiscais.Codigo and AvisosCiencia.Finalizado Is Null and Usuarios.CPF=Fiscais.CPF and 
-                Usuarios.idTelegram Is Not Null and Usuarios.idTelegram<>0 and Usuarios.Adesao Is Not Null and
-                (AvisosCiencia.Integracao=cast((now() - interval 30 day) as date) or cast(AvisosCiencia.Aviso as date)=cast((now() - interval 15 day) as date) or 
-                (AvisosCiencia.Aviso Is Null and AvisosCiencia.Integracao<cast((now() - interval 30 day) as date)))
-                Order By Supervisores.Equipe, Usuarios.idTelegram, TDPFS.Numero, AvisosCiencia.Processo            
-                """   
-    cursor.execute(consulta)
-    linhas = cursor.fetchall()
-    msg = ""  
-    cpfAnt = "" 
-    userId = 0 
-    cabecalho = "Processos sem registro de ciência há mais de 30 dias da integração(\*).\nTDPF | Processo | Data da Integração:\n"
-    equipe = ""    
-    for linha in linhas:
-        if userId==0:
-            userId = linha[4]
-        if linha[4]!=userId:
-            if msg!="":
-                msg = cabecalho+msg
-                if ambiente=="TESTE":
-                    msg = msg+"\n"+"Ambiente: "+ambiente                
-                updater.bot.send_message(userId, text=limpaMarkdown(msg), parse_mode= 'MarkdownV2')
-                msg = ""
-            equipe = ""    
-            userId = linha[4]    
-        if linha[3]!=equipe:
-            equipe = linha[3]
-            msg = msg+"\nEquipe " + equipe[:7]+"."+equipe[7:11]+"."+equipe[11:] + ":"    
-        chaveTdpf = linha[6]    
-        cursor.execute(consultaFiscal, (chaveTdpf,))              
-        fiscal = cursor.fetchone()
-        if fiscal==None:
-            nomeFiscal = "ND"
-        else:
-            nomeFiscal = fiscal[0].strip()
-        processo = linha[1]
-        integracao = linha[2].strftime("%d/%m/%Y")
-        tdpfsCienciasPendentes.add(linha[5]) 
-        msg = msg + "\n *"+formataTDPF(linha[0])+"* ("+nomeFiscal.split()[0]+") | "+formataDCC(processo)+" | "+integracao+"\n"
-
-    if msg!="": #envia a mensagem para o último usuário
-        msg = cabecalho+msg
-        if ambiente=="TESTE":
-            msg = msg+"\n"+"Ambiente: "+ambiente        
-        updater.bot.send_message(userId, text=limpaMarkdown(msg), parse_mode= 'MarkdownV2')  
-
-    agora = datetime.now()
-    lista = []
-    for codigo in tdpfsCienciasPendentes:
-        tupla = (agora, codigo)
-        lista.append(tupla)
-    #atualiza a data de aviso para todos os tdpfs/processos para os quais foram enviados avisos (30 dias da integração ou 15 dias do último aviso e não finalizados)
-    atualiza = "Update AvisosCiencia Set Aviso=%s Where Codigo=%s"
-    cursor.executemany(atualiza, lista)
-    try:
-        conn.commit()
-    except:
-        conn.rollback()
-        logging.info("Erro ao tentar atualizar as datas de aviso na tabela AvisosCiencia.")       
-
-    #buscamos todos os TDPFs que estão recuperando a espontaneidade em 15 dias exatos e avisamos o supervisor  (não vai e-mail)
+    #buscamos todos os TDPFs que estão recuperando a espontaneidade em 15 dias exatos e avisamos o supervisor
     comando = """
               Select Distinctrow Fiscais.CPF, TDPFS.Numero, Usuarios.idTelegram, Supervisores.Equipe, TDPFS.Codigo
               From TDPFS, Usuarios, Supervisores, Fiscais 
@@ -3533,8 +3338,7 @@ diaAtual = datetime.now().date() #será utilizado para criar um arquivo de Log p
 botTelegram()
 threadDisparador = threading.Thread(target=disparador, daemon=True) #encerra thread quando sair do programa sem esperá-la
 threadDisparador.start()
-print("Serviço iniciado [", datetime.now(), "]")
-disparaMensagens()
+print("Serviço iniciado - ", datetime.now())
 while not termina:
     entrada = input("Digite QUIT para terminar o serviço BOT: ")
     if entrada:
