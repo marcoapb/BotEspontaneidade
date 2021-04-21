@@ -88,6 +88,16 @@ def getAlgarismos(texto): #retorna apenas os algarismos de uma string
             limpo = limpo + car
     return limpo 
 
+def formataTDPF(tdpf):
+    if tdpf==None:
+        return None
+    tipo = str(type(tdpf)).upper()
+    if not 'STR' in tipo and not 'UNICODE' in tipo:
+        return None
+    if len(tdpf)<16:
+        return tdpf
+    return tdpf[:7]+"."+tdpf[7:11]+"."+tdpf[11:]    
+
 #verifica se um CPF é válido
 def validaCPF(cpfPar):
 #The MIT License (MIT) Copyright (c) 2015 Derek Willian Stavis
@@ -3036,50 +3046,50 @@ def trataMsgRecebida(msgRecebida, c, addr): #c é o socket estabelecido com o cl
             enviaResposta(resposta, c) 
             conn.close()
             return  
-        if tipoOrgaoUsuario=="L": #considera TDPFs supervisionados e nos quais o fiscal está alocado
-            comando = """
-                      Select Distinctrow TDPFS.Numero, TDPFS.Nome, TDPFS.Emissao, TDPFS.Vencimento, TDPFS.Codigo
-                      From TDPFS, Supervisores
-                      Where (Supervisores.Fim Is Null and Supervisores.Equipe=TDPFS.Grupo and Supervisores.Fiscal=%s) 
-                      and TDPFS.Emissao<=cast((now() - interval %s day) as date) and TDPFS.Emissao>=cast((now() - interval %s day) as date) 
-                      and TDPFS.Encerramento Is Null and TDPFS.Codigo not in (Select TDPF from Ciencias Where Data Is Not Null)
-                      Union
-                      Select Distinctrow TDPFS.Numero, TDPFS.Nome, TDPFS.Emissao, TDPFS.Vencimento, TDPFS.Codigo
-                      From TDPFS, Alocacoes              
-                      Where (Alocacoes.Fiscal=%s and Alocacoes.Desalocacao Is Null and Alocacoes.TDPF=TDPFS.Codigo)
-                      and TDPFS.Emissao<=cast((now() - interval %s day) as date) and TDPFS.Emissao>=cast((now() - interval %s day) as date) 
-                      and TDPFS.Encerramento Is Null and TDPFS.Codigo not in (Select TDPF from Ciencias Where Data Is Not Null)                
-                      Order By Numero
-                      """                                                       
-            cursor.execute(comando, (chaveFiscal, inicial, final, chaveFiscal, inicial, final))
-        elif tipoOrgaoUsuario=="R": #considera TDPFs do órgão e nos quais o fiscal está alocado, se ele estiver na base de fiscais
-            comando = """
-                      Select Distinctrow TDPFS.Numero, TDPFS.Nome, TDPFS.Emissao, TDPFS.Vencimento, TDPFS.Codigo
-                      From TDPFS
-                      Where TDPFS.Emissao<=cast((now() - interval %s day) as date) and TDPFS.Emissao>=cast((now() - interval %s day) as date) 
-                      and TDPFS.Encerramento Is Null and TDPFS.Codigo not in (Select TDPF from Ciencias Where Data Is Not Null)
-                      and TDPFS.Grupo in (Select Equipe from Jurisdicao Where Orgao=%s) """
+        #if tipoOrgaoUsuario=="L": #considera TDPFs supervisionados e nos quais o fiscal está alocado
+        comando = """
+                    Select Distinctrow TDPFS.Numero, TDPFS.Nome, TDPFS.Emissao, TDPFS.Vencimento, TDPFS.Codigo
+                    From TDPFS, Supervisores
+                    Where (Supervisores.Fim Is Null and Supervisores.Equipe=TDPFS.Grupo and Supervisores.Fiscal=%s) 
+                    and TDPFS.Emissao<=cast((now() - interval %s day) as date) and TDPFS.Emissao>=cast((now() - interval %s day) as date) 
+                    and TDPFS.Encerramento Is Null and TDPFS.Codigo not in (Select TDPF from Ciencias Where Data Is Not Null)
+                    Union
+                    Select Distinctrow TDPFS.Numero, TDPFS.Nome, TDPFS.Emissao, TDPFS.Vencimento, TDPFS.Codigo
+                    From TDPFS, Alocacoes              
+                    Where (Alocacoes.Fiscal=%s and Alocacoes.Desalocacao Is Null and Alocacoes.TDPF=TDPFS.Codigo)
+                    and TDPFS.Emissao<=cast((now() - interval %s day) as date) and TDPFS.Emissao>=cast((now() - interval %s day) as date) 
+                    and TDPFS.Encerramento Is Null and TDPFS.Codigo not in (Select TDPF from Ciencias Where Data Is Not Null)                
+                    Order By Numero
+                    """                                                       
+        cursor.execute(comando, (chaveFiscal, inicial, final, chaveFiscal, inicial, final))
+        #elif tipoOrgaoUsuario=="R": #considera TDPFs do órgão e nos quais o fiscal está alocado, se ele estiver na base de fiscais
+        #    comando = """
+        #              Select Distinctrow TDPFS.Numero, TDPFS.Nome, TDPFS.Emissao, TDPFS.Vencimento, TDPFS.Codigo
+        #              From TDPFS
+        #              Where TDPFS.Emissao<=cast((now() - interval %s day) as date) and TDPFS.Emissao>=cast((now() - interval %s day) as date) 
+        #              and TDPFS.Encerramento Is Null and TDPFS.Codigo not in (Select TDPF from Ciencias Where Data Is Not Null)
+        #              and TDPFS.Grupo in (Select Equipe from Jurisdicao Where Orgao=%s) """
 
-            if chaveFiscal==0 or chaveFiscal==None:
-                cursor.execute(comando, (inicial, final, orgaoUsuario))  
-            else:
-                comando = comando + """Union
-                                       Select Distinctrow TDPFS.Numero, TDPFS.Nome, TDPFS.Emissao, TDPFS.Vencimento, TDPFS.Codigo
-                                       From TDPFS, Alocacoes              
-                                       Where (Alocacoes.Fiscal=%s and Alocacoes.Desalocacao Is Null and Alocacoes.TDPF=TDPFS.Codigo)
-                                       and TDPFS.Emissao<=cast((now() - interval %s day) as date) and TDPFS.Emissao>=cast((now() - interval %s day) as date) 
-                                       and TDPFS.Encerramento Is Null and TDPFS.Codigo not in (Select TDPF from Ciencias Where Data Is Not Null)                
-                                       Order By Numero                    
-                                    """ 
-                cursor.execute(comando, (inicial, final, orgaoUsuario, chaveFiscal, inicial, final))
-        else: #órgão nacional - seleciona todos os TDPFs
-            comando = """
-                      Select Distinctrow TDPFS.Numero, TDPFS.Nome, TDPFS.Emissao, TDPFS.Vencimento, TDPFS.Codigo
-                      From TDPFS
-                      Where TDPFS.Emissao<=cast((now() - interval %s day) as date) and TDPFS.Emissao>=cast((now() - interval %s day) as date) 
-                      and TDPFS.Encerramento Is Null and TDPFS.Codigo not in (Select TDPF from Ciencias Where Data Is Not Null)                   
-                      """ 
-            cursor.execute(comando, (inicial, final))                       
+        #    if chaveFiscal==0 or chaveFiscal==None:
+        #        cursor.execute(comando, (inicial, final, orgaoUsuario))  
+        #    else:
+        #        comando = comando + """Union
+        #                               Select Distinctrow TDPFS.Numero, TDPFS.Nome, TDPFS.Emissao, TDPFS.Vencimento, TDPFS.Codigo
+        #                               From TDPFS, Alocacoes              
+        #                               Where (Alocacoes.Fiscal=%s and Alocacoes.Desalocacao Is Null and Alocacoes.TDPF=TDPFS.Codigo)
+        #                               and TDPFS.Emissao<=cast((now() - interval %s day) as date) and TDPFS.Emissao>=cast((now() - interval %s day) as date) 
+        #                               and TDPFS.Encerramento Is Null and TDPFS.Codigo not in (Select TDPF from Ciencias Where Data Is Not Null)                
+        #                               Order By Numero                    
+        #                            """ 
+        #        cursor.execute(comando, (inicial, final, orgaoUsuario, chaveFiscal, inicial, final))
+        #else: #órgão nacional - seleciona todos os TDPFs
+        #    comando = """
+        #              Select Distinctrow TDPFS.Numero, TDPFS.Nome, TDPFS.Emissao, TDPFS.Vencimento, TDPFS.Codigo
+        #              From TDPFS
+        #              Where TDPFS.Emissao<=cast((now() - interval %s day) as date) and TDPFS.Emissao>=cast((now() - interval %s day) as date) 
+        #              and TDPFS.Encerramento Is Null and TDPFS.Codigo not in (Select TDPF from Ciencias Where Data Is Not Null)                   
+        #              """ 
+        #    cursor.execute(comando, (inicial, final))                       
         rows = cursor.fetchall()
         tam = len(rows)
         if tam==0:
@@ -3626,7 +3636,7 @@ def trataMsgRecebida(msgRecebida, c, addr): #c é o socket estabelecido com o cl
             return 
         chaveProrrogacao = row[0]   
         consulta = "Select Fiscais.Codigo From Fiscais, Alocacoes Where Fiscais.CPF=%s and Alocacoes.Fiscal=Fiscais.Codigo and Alocacoes.TDPF=%s and Alocacoes.Desalocacao Is Null"
-        listaInclusao = [(chaveProrrogacao, chaveFiscal, datetime.now())]
+        listaInclusao = [(chaveProrrogacao, chaveFiscal, datetime.now())] #incluímos o fiscal requisitante
         bErro = False
         for cpfFiscal in fiscais:
             cursor.execute(consulta, (cpfFiscal, chaveTdpf))
@@ -3641,7 +3651,7 @@ def trataMsgRecebida(msgRecebida, c, addr): #c é o socket estabelecido com o cl
                 enviaResposta(resposta, c) 
                 conn.close()
                 return 
-            listaInclusao.append((chaveProrrogacao, rowFiscal[0], None))         
+            listaInclusao.append((chaveProrrogacao, rowFiscal[0], None))     #incluímos os demais fiscais que assinarão     
         comando = "Insert Into AssinaturaFiscal (Prorrogacao, Fiscal, DataAssinatura) Values (%s, %s, %s)"
         cursor.executemany(comando, listaInclusao)
         try:
@@ -3651,6 +3661,18 @@ def trataMsgRecebida(msgRecebida, c, addr): #c é o socket estabelecido com o cl
             conn.rollback()
             resposta = "33F"
         enviaResposta(resposta, c) 
+        if len(fiscais)==0: #só há o fiscal e o supervisor, então só falta o supervisor p/ assinar - mandamos um e-mail para ele avisando
+            comando = "Select email from Fiscais, Usuarios Where Fiscais.CPF=Usuarios.CPF and Fiscais.Codigo=%s"
+            cursor.execute(comando, (supervisor, )) #pesquisamos o e-mail
+            row = cursor.fetchone()
+            if row:
+                email = row[0]
+                tdpfFormatado = formataTDPF(tdpf)
+                texto = "Sr. Chefe de Equipe,\n\nInformamos que a Prorrogação nº "+str(numero)+" do TDPF nº "+tdpfFormatado+" está pendente de sua assinatura no script Alertas Fiscalização do ContÁgil.\n\nAtenciosamente,\n\nCofis/Disav"
+                resultado = enviaEmail(email, texto, "Prorrogação Pendente de Assinatura - TDPF nº "+tdpfFormatado)
+                if resultado!=3:
+                    print("Falhou o envio do e-mail avisando da prorrogação pendente para o supervisor "+email+" - "+str(resultado))
+                    logging.info("Falhou o envio do e-mail avisando da prorrogação pendente para o supervisor "+email+" - "+str(resultado))    
         conn.close()
         return 
 
@@ -3802,7 +3824,7 @@ def trataMsgRecebida(msgRecebida, c, addr): #c é o socket estabelecido com o cl
             enviaResposta(resposta, c) 
             conn.close()
             return   
-        comando = "Select Codigo, DataAssinatura, Supervisor from Prorrogacoes Where TDPF=%s and Data=%s"
+        comando = "Select Codigo, DataAssinatura, Supervisor, Numero from Prorrogacoes Where TDPF=%s and Data=%s"
         cursor.execute(comando, (chaveTdpf, dataDoc))
         row = cursor.fetchone()
         if not row:
@@ -3813,6 +3835,7 @@ def trataMsgRecebida(msgRecebida, c, addr): #c é o socket estabelecido com o cl
         chaveProrrogacao = row[0]
         assSupervisor = row[1]
         supervisor = row[2]
+        numero = row[3]
         if supervisor==chaveFiscal: #é o supervisor (efetivo ou substituto) - temos que ver se ele é o último a assinar e se sua assinatura está pendente
             comando = "Select * from AssinaturaFiscal Where DataAssinatura Is Null and Prorrogacao=%s"
             cursor.execute(comando, (chaveProrrogacao,))
@@ -3823,9 +3846,14 @@ def trataMsgRecebida(msgRecebida, c, addr): #c é o socket estabelecido com o cl
                     enviaResposta(resposta, c) 
                     conn.close()
                     return 
+            if assSupervisor!=None: #supervisor já assinou
+                resposta = "36P"
+                enviaResposta(resposta, c) 
+                conn.close()
+                return                     
             comando = "Update Prorrogacoes Set DataAssinatura=%s Where Codigo=%s"
             cursor.execute(comando, (datetime.now(), chaveProrrogacao))
-        else:
+        else: #é um dos fiscais responsáveis
             comando = "Select Codigo, DataAssinatura from AssinaturaFiscal Where Fiscal=%s and Prorrogacao=%s"
             cursor.execute(comando, (chaveFiscal, chaveProrrogacao))   
             row = cursor.fetchone()
@@ -3838,6 +3866,22 @@ def trataMsgRecebida(msgRecebida, c, addr): #c é o socket estabelecido com o cl
                     return
                 comando = "Update AssinaturaFiscal Set DataAssinatura=%s Where Codigo=%s"  
                 cursor.execute(comando, (datetime.now(), chaveRegistro))
+                #verificamos se só falta o supervisor assinar e, caso afirmativo, mandamos um e-mail para ele
+                comando = "Select Codigo from AssinaturaFiscal Where Prorrogacao=%s and DataAssinatura Is Null"
+                cursor.execute(comando, (chaveProrrogacao, ))   
+                row = cursor.fetchone()        
+                if row==None: #todos os fiscais assinaram
+                    comando = "Select email from Fiscais, Usuarios Where Fiscais.CPF=Usuarios.CPF and Fiscais.Codigo=%s"
+                    cursor.execute(comando, (supervisor, ))
+                    row = cursor.fetchone()
+                    if row:
+                        email = row[0]
+                        tdpfFormatado = formataTDPF(tdpf)
+                        texto = "Sr. Chefe de Equipe,\n\nInformamos que a Prorrogação nº "+str(numero)+" do TDPF nº "+tdpfFormatado+" está pendente de sua assinatura no script Alertas Fiscalização do ContÁgil.\n\nAtenciosamente,\n\nCofis/Disav"
+                        resultado = enviaEmail(email, texto, "Prorrogação Pendente de Assinatura - TDPF nº "+tdpfFormatado)
+                        if resultado!=3:
+                            print("Falhou o envio do e-mail avisando da prorrogação pendente para o supervisor "+email+" - "+str(resultado))
+                            logging.info("Falhou o envio do e-mail avisando da prorrogação pendente para o supervisor "+email+" - "+str(resultado))
             else:
                 resposta = "36P"
                 enviaResposta(resposta, c) 
@@ -3856,11 +3900,11 @@ def trataMsgRecebida(msgRecebida, c, addr): #c é o socket estabelecido com o cl
     if codigo==37: #retorna lista de TDPFs pendentes de assinatura pelo cpf do usuário
         #assinatura do supervisor deve ser a última
         comando = """
-                  Select TDPFS.Numero, Data, Prorrogacoes.Numero from TDPFS, Prorrogacoes, AssinaturaFiscal
+                  Select TDPFS.Numero, TDPFS.Nome, Prorrogacoes.Numero, Data from TDPFS, Prorrogacoes, AssinaturaFiscal
                   Where TDPFS.Codigo=Prorrogacoes.TDPF and Prorrogacoes.Supervisor=%s and Prorrogacoes.DataAssinatura Is Null and
                   AssinaturaFiscal.Prorrogacao=Prorrogacoes.Codigo and AssinaturaFiscal.DataAssinatura Is Not Null
                   Union
-                  Select TDPFS.Numero, Data, Prorrogacoes.Numero from TDPFS, Prorrogacoes, AssinaturaFiscal
+                  Select TDPFS.Numero, TDPFS.Nome, Prorrogacoes.Numero, Data from TDPFS, Prorrogacoes, AssinaturaFiscal
                   Where TDPFS.Codigo=Prorrogacoes.TDPF and AssinaturaFiscal.Prorrogacao=Prorrogacoes.Codigo and
                   AssinaturaFiscal.Fiscal=%s and AssinaturaFiscal.DataAssinatura Is Null
                   """                 
@@ -3868,8 +3912,8 @@ def trataMsgRecebida(msgRecebida, c, addr): #c é o socket estabelecido com o cl
         cursor.execute(comando, (chaveFiscal, chaveFiscal))   
         rows = cursor.fetchall()
         for row in rows:
-            if not [row[0], row[1]] in listaTdpfs:
-                listaTdpfs.append([row[0], row[1], row[2]]) 
+            if not [row[0], row[1], row[2], row[3]] in listaTdpfs:
+                listaTdpfs.append([row[0], row[1], row[2], row[3]]) 
         tam = len(listaTdpfs)
         if tam==0:
             resposta = "3700"
@@ -3880,7 +3924,7 @@ def trataMsgRecebida(msgRecebida, c, addr): #c é o socket estabelecido com o cl
             tam = 99
         registro = ""
         for i in range(tam):
-            registro = registro + listaTdpfs[i][0]+listaTdpfs[i][1].strftime("%d/%m/%Y")+str(listaTdpfs[i][2]).rjust(2, "0")
+            registro = registro + listaTdpfs[i][0]+listaTdpfs[i][1][:100].ljust(100)+str(listaTdpfs[i][2]).rjust(2, "0")+listaTdpfs[i][3].strftime("%d/%m/%Y")
         resposta = "37"+str(tam).rjust(2,"0")+registro
         enviaResposta(resposta, c) 
         conn.close()

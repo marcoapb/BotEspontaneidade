@@ -3107,13 +3107,14 @@ def disparaMensagens(): #avisos diários (produção) ou de hora em hora (teste)
                 
         #verificamos se o usuário possui TDPF com processo integrado sem ciência informada há 30 dias - avisamos ele e o supervisor (independe de monitoramento) 
         #  (não vai e-mail)
-        #o aviso é repetido a cada 15 dias
+        #o aviso é repetido a cada 15 dias, mas limitado a 60 dias após a integração
         consulta = """
                     Select TDPFS.Numero, AvisosCiencia.Processo, AvisosCiencia.Integracao, AvisosCiencia.Codigo
                     From TDPFS, Alocacoes, AvisosCiencia, Fiscais
                     Where TDPFS.Codigo=AvisosCiencia.TDPF and TDPFS.Codigo=Alocacoes.TDPF and Alocacoes.Desalocacao Is Null 
                     and Alocacoes.Fiscal=Fiscais.Codigo and Fiscais.CPF=%s and AvisosCiencia.Finalizado Is Null and
-                    (AvisosCiencia.Integracao=cast((now() - interval 30 day) as date) or cast(AvisosCiencia.Aviso as date)=cast((now() - interval 15 day) as date) or 
+                    (AvisosCiencia.Integracao=cast((now() - interval 30 day) as date) or 
+                    (cast(AvisosCiencia.Aviso as date)=cast((now() - interval 15 day) as date) and AvisosCiencia.Integracao<=cast((now() - interval 60 day) as date)) or 
                     (AvisosCiencia.Aviso Is Null and AvisosCiencia.Integracao<cast((now() - interval 30 day) as date)))
                     """
         cursor.execute(consulta, (cpf,))
@@ -3225,15 +3226,17 @@ def disparaMensagens(): #avisos diários (produção) ou de hora em hora (teste)
             msg = msg+"\n"+"Ambiente: "+ambiente        
         updater.bot.send_message(userId, text=limpaMarkdown(msg), parse_mode= 'MarkdownV2')
 
-    #avisamos os supervisores dos processos integrados e sem registro de ciência há mais de 30 dias (o aviso se repete a cada 15 dias)  (não vai e-mail)
+    #avisamos os supervisores dos processos integrados e sem registro de ciência há mais de 30 dias (o aviso se repete a cada 15 dias, limitado a 60 dias da integração)  
+    #(não vai e-mail)
     consulta = """
                 Select Distinctrow TDPFS.Numero, AvisosCiencia.Processo, AvisosCiencia.Integracao, Supervisores.Equipe, Usuarios.idTelegram, AvisosCiencia.Codigo, TDPFS.Codigo
                 From TDPFS, AvisosCiencia, Fiscais, Supervisores, Usuarios
                 Where TDPFS.Codigo=AvisosCiencia.TDPF and TDPFS.Grupo=Supervisores.Equipe and Supervisores.Fim Is Null 
                 and Supervisores.Fiscal=Fiscais.Codigo and AvisosCiencia.Finalizado Is Null and Usuarios.CPF=Fiscais.CPF and 
                 Usuarios.idTelegram Is Not Null and Usuarios.idTelegram<>0 and Usuarios.Adesao Is Not Null and
-                (AvisosCiencia.Integracao=cast((now() - interval 30 day) as date) or cast(AvisosCiencia.Aviso as date)=cast((now() - interval 15 day) as date) or 
-                (AvisosCiencia.Aviso Is Null and AvisosCiencia.Integracao<cast((now() - interval 30 day) as date)))
+                (AvisosCiencia.Integracao=cast((now() - interval 30 day) as date) or 
+                (cast(AvisosCiencia.Aviso as date)=cast((now() - interval 15 day) as date) and AvisosCiencia.Integracao<=cast((now() - interval 60 day) as date))
+                or (AvisosCiencia.Aviso Is Null and AvisosCiencia.Integracao<cast((now() - interval 30 day) as date)))
                 Order By Supervisores.Equipe, Usuarios.idTelegram, TDPFS.Numero, AvisosCiencia.Processo            
                 """   
     cursor.execute(consulta)

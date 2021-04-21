@@ -19,6 +19,45 @@ import threading
 import time
 from datetime import datetime, timedelta
 
+#bibliotecas necessárias para envio de e-mail
+from email.mime.multipart import MIMEMultipart
+from email.mime.text import MIMEText
+from email.mime.base import MIMEBase
+from email.utils import formatdate
+from email import encoders
+import smtplib
+
+
+#rotina para envio de e-mail - retirado de Bot_Telegram.py
+def enviaEmail(email, texto, assunto, arquivo=None): #envia email, conforme parâmetros - se passar o arquivo (caminho e nome), ele vai como anexo 
+    try:
+        #server = smtplib.SMTP('INETRFOC.RFOC.SRF: 25') #servidor de email Notes
+        server = smtplib.SMTP('exchangerfoc.rfoc.srf: 25')
+        #pass
+    except:
+        return 1	
+    # create message object instance
+    msg = MIMEMultipart()
+    # setup the parameters of the message
+    msg['From'] = "botespontaneidade@rfb.gov.br"
+    msg['To'] = email
+    msg['Subject'] = assunto
+    # add in the message body
+    msg.attach(MIMEText(texto, 'plain'))  
+    if arquivo!=None and arquivo!="":  
+        part = MIMEBase('application', "octet-stream")
+        part.set_payload(open(arquivo, "rb").read())
+        encoders.encode_base64(part)
+        part.add_header('Content-Disposition', 'attachment; filename='+arquivo)
+        msg.attach(part)                 
+    # send the message via the server.
+    try:
+        server.sendmail(msg['From'], msg['To'], msg.as_string())
+        pass
+    except:
+        return 2
+    server.quit()  
+    return 3 #sucesso
 
 def getAlgarismos(texto): #retorna apenas os algarismos de uma string
     algarismos = ""
@@ -508,10 +547,31 @@ def realizaCargaDados():
     if tabGrupos>0 or tabGruposAtu>0 or atualizouSuperv or atualizou:
         try:
             conn.commit()  
+            logging.info("Registros Incluídos:")  
+            logging.info(f"TDPFs: {tabTdpfs}")
+            logging.info(f"Fiscais: {tabFiscais}")
+            logging.info(f"Ciencias: {tabCiencias}")
+            logging.info(f"Alocacoes: {tabAloc}")
+            logging.info(f"Usuarios: {tabUsuarios}")  
+            logging.info(f"Equipes: {tabGrupos}")   
+
+            logging.info("Registros Atualizados:")
+            logging.info(f"TDPFs: {tabTdpfsAtu}")
+            logging.info(f"Grupos(TDPFs)/Vencimentos: {gruposAtu}")
+            logging.info(f"Alocacoes: {tabAlocAtu}")
+            logging.info(f"Usuarios: {tabUsuariosAtu}")
+            logging.info(f"Equipes: {tabGruposAtu}")   
+            textoUNacionais = "Carga de dados (TDPFs, Alocações e Operações) efetuada na base de dados - "+datetime.now().strftime("%d/%m/%Y %H:%M") +"\nRegistros Incluídos:\n" 
+            textoUNacionais += f"TDPFs: {tabTdpfs}\n" + f"Fiscais: {tabFiscais}\n" + f"Ciencias: {tabCiencias}\n" + f"Alocacoes: {tabAloc}\n"
+            textoUNacionais += f"Usuarios: {tabUsuarios}\n"
+            textoUNacionais += f"Equipes: {tabGrupos}\nRegistros Atualizados:\n"
+            textoUNacionais += f"TDPFs: {tabTdpfsAtu}\n" + f"Grupos(TDPFs)/Vencimentos: {gruposAtu}\n" + f"Usuarios: {tabUsuariosAtu}\n" + f"Equipes: {tabGruposAtu}\n"
             print("TDPFs, Alocacoes, Ciências e Supervisores/Equipes foram atualizados")          
         except:
+            textoUNacionais = "Sr. Usuário,\n\nA tentativa de realizar a carga de dados (TDPFs, Alocações e Operações) FALHOU - "+datetime.now().strftime("%d/%m/%Y %H:%M") + "\n\nAtenciosamente,\n\nCofis/Disav"
             print("Erro ao tentar efetivar as atualizações no Banco de Dados - É necessário verificar o erro e tentar fazer novamente a carga.")
             logging.info("Erro ao tentar efetivar as atualizações no Banco de Dados - Nenhum dado foi atualizado")
+            avisaUsuariosNacionais(textoUNacionais, cursor)
             conn.rollback()
             conn.close()
             return 
@@ -536,39 +596,116 @@ def realizaCargaDados():
         #fiscal desalocado não é supervisor
         #cursor.execute(comando)
         try:
-            conn.commit()
-            logging.info("Registros Incluídos:")  
-            logging.info(f"TDPFs: {tabTdpfs}")
-            logging.info(f"Fiscais: {tabFiscais}")
-            logging.info(f"Ciencias: {tabCiencias}")
-            logging.info(f"Alocacoes: {tabAloc}")
-            logging.info(f"Usuarios: {tabUsuarios}")  
-            logging.info(f"Equipes: {tabGrupos}")   
-
-            logging.info("Registros Atualizados:")
-            logging.info(f"TDPFs: {tabTdpfsAtu}")
-            logging.info(f"Grupos(TDPFs)/Vencimentos: {gruposAtu}")
-            logging.info(f"Alocacoes: {tabAlocAtu}")
-            logging.info(f"Usuarios: {tabUsuariosAtu}")
-            logging.info(f"Equipes: {tabGruposAtu}")     
-        
-            print("Supervisores não alocados a TDPFs e incluídos: "+str(superv))
-            try:
-                os.rename(dirExcel+"TDPFS.xlsx", dirExcel+"TDPFS_Processado_"+datetime.now().strftime('%Y-%m-%d')+".xlsx")
-                os.rename(dirExcel+"ALOCACOES.xlsx", dirExcel+"ALOCACOES_Processado_"+datetime.now().strftime('%Y-%m-%d')+".xlsx")
-                logging.info("Arquivos renomeados")
-            except:
-                print("Erro ao tentar renomear os arquivos")            
-                logging.error("Erro ao tentar renomear os arquivos")            
+            conn.commit()           
+            print("Supervisores não alocados a TDPFs e incluídos: "+str(superv))                      
         except:
             print("Erro ao tentar efetivar as atualização do indicador de supervisor dos TDPFs - É necessário verificar o erro e tentar fazer novamente a carga.")
             logging.info("Erro ao tentar efetivar as atualização do indicador de supervisor dos TDPFs")
             conn.rollback()        
             logging.error(mysql.connector.Error)
-            print(mysql.connector.Error)                   
+            print(mysql.connector.Error)      
+    try:
+        os.rename(dirExcel+"TDPFS.xlsx", dirExcel+"TDPFS_Processado_"+datetime.now().strftime('%Y-%m-%d')+".xlsx")
+        os.rename(dirExcel+"ALOCACOES.xlsx", dirExcel+"ALOCACOES_Processado_"+datetime.now().strftime('%Y-%m-%d')+".xlsx")
+        logging.info("Arquivos renomeados")
+        textoUNacionais += "Arquivos foram renomeados."
+    except:
+        print("Erro ao tentar renomear os arquivos")            
+        logging.error("Erro ao tentar renomear os arquivos")   
+        textoUNacionais += "Houve um erro ao tentar renomear os arquivos."                       
     print("Carga finalizada")
+    textoUNacionais = "Sr. Usuário,\n\n" + textoUNacionais + "\n\nAtenciosamente,\n\nCofis/Disav"
+    avisaUsuariosNacionais(textoUNacionais, cursor) #avisamos os usuários nacionais da realização da carga
+    avisaUsuariosRegionais(conn) #avisamos usuários regionais dos TDPFs vincendos em curto prazo (pedido da Débora Difis07)
     cursor.close()
     conn.close() 
+    return
+
+def avisaUsuariosNacionais(texto, cursor): #avisamos os usuários nacionais do resultado da carga
+    AMBIENTE = os.getenv("AMBIENTE", "TESTE") 
+    texto = texto + "\n\nAmbiente: "+AMBIENTE
+    consultaUNacionais = "Select email from Usuarios Inner Join Orgaos On Usuarios.Orgao=Orgaos.Codigo Where Usuarios.Orgao Is Not Null and Orgaos.Tipo='N'" 
+    cursor.execute(consultaUNacionais)   
+    rows = cursor.fetchall()
+    #avisamos todos os usuários nacionais que houve uma carga de dados
+    for row in rows:
+        if enviaEmail(row[0], texto,"Carga de Dados Alertas Fiscalização")!=3: #se der erro
+            logging.info("Erro no envio do e-mail para usuário NACIONAL "+row[0])   
+            print("Erro no envio do e-mail para usuário NACIONAL "+row[0]) 
+    return
+
+def avisaUsuariosRegionais(conn): #avisamos usuários regionais dos TDPFs vincendos em curto prazo (4 a 10 dias - vai apenas um aviso, portanto, pois a carga é semanal)
+    AMBIENTE = os.getenv("AMBIENTE", "TESTE") 
+    if AMBIENTE!="PRODUÇÃO":
+        return
+    cursor = conn.cursor(buffered=True)
+    consultaULocais = """Select email, Usuarios.Orgao from Usuarios, Orgaos 
+                         Where Usuarios.Orgao Is Not Null and Usuarios.Orgao<>0 and Usuarios.Orgao=Orgaos.Codigo and email Is Not Null and Orgaos.Tipo='R' Order by email"""
+    cursor.execute(consultaULocais)
+    rows = cursor.fetchall()
+    consultaTdpfs = """
+                  Select Distinctrow TDPFS.Codigo, TDPFS.Numero, TDPFS.Grupo, Fiscais.Nome, TDPFS.Vencimento from Orgaos, TDPFS, Jurisdicao, Supervisores, Fiscais
+                  Where TDPFS.Encerramento Is Null and Jurisdicao.Orgao=%s and Jurisdicao.Equipe=TDPFS.Grupo and Supervisores.Equipe=Jurisdicao.Equipe 
+                  and Supervisores.Fim Is Null and Fiscais.Codigo=Supervisores.Fiscal and 
+                  (TDPFS.Vencimento>=cast((now() + interval 4 day) as date) and TDPFS.Vencimento<=cast((now() + interval 10 day) as date)) 
+                  Order by TDPFS.Grupo, TDPFS.Numero"""  #TDPFs que vencem de 4 a 10 dias (avisamos apenas uma vez, pois na próxima carga estará vencido, faltará menos de 4 dias ou terá sido renovado)
+    consultaAviso = "Select Codigo, Data from AvisosVencimentoDifis Where TDPF=%s"    
+    insere = set()
+    atualiza = set()              
+    for row in rows:
+        total = 0
+        email = row[0]
+        cursor.execute(consultaTdpfs, (row[1], ))
+        tdpfs = cursor.fetchall()
+        equipeAnt = ""
+        texto = ""
+        i = 0
+        for tdpf in tdpfs:
+            chaveTdpf = tdpf[0]
+            numero = tdpf[1]            
+            cursor.execute(consultaAviso, (chaveTdpf,))
+            aviso = cursor.fetchone()
+            if aviso:
+                if (aviso[1].date()+timedelta(days=6))>=datetime.now().date(): #não se passaram 7 dias desde o último aviso
+                    continue #desprezamos este TDPF, pois já foi avisado há menos de uma semana
+                else:
+                    atualiza.add(aviso[0])
+            else:
+                insere.add(chaveTdpf)
+            equipe = tdpf[2].strip()
+            nome = tdpf[3]
+            vencimento = tdpf[4]
+            if equipeAnt!=equipe:
+                equipeAnt = equipe
+                if texto!="":
+                    texto += "\n"
+                texto += "Equipe: "+equipe[:7]+"."+equipe[7:11]+equipe[11:]+" - Supervisor: "+nome+"\n"
+                i = 0
+            total+=1
+            i+=1
+            texto = texto +"  "+str(i)+") "+numero[:7]+"."+numero[7:11]+"."+numero[11:]+" - "+vencimento.strftime("%d/%m/%Y")+"\n"
+        if texto!="":
+            texto = "Sr. Usuário Regional,\n\nEstamos enviando abaixo a relação de TDPFs de sua região com vencimento entre 4 e 10 dias:\n\n" + texto
+            texto += "\nTotal de TDPFs: "+str(total)+"\n"
+            texto += "\nDevido a restrições do DW, o vencimento no Ação Fiscal pode estar um pouco mais distante. Ressaltamos também que a carga de dados neste serviço ocorre semanalmente."
+            texto += "\n\nAtenciosamente,\n\nCofis/Disav"
+            if enviaEmail(email, texto, "TDPFs Vincendos Entre 4 e 10 Dias - Região")!=3:
+                print("Erro no envio do e-mail para usuário REGIONAL "+email)
+                logging.info("Erro no envio do e-mail para usuário REGIONAL "+email) 
+    insereTuplas = []
+    atualizaTuplas = []
+    for chaveTdpf in insere:
+        insereTuplas.append((chaveTdpf, datetime.now().date()))
+    for codigo in atualiza:
+        atualizaTuplas.append((datetime.now().date(), codigo))
+    try:        
+        cursor.executemany("Update AvisosVencimentoDifis Set Data=%s Where Codigo=%s", atualizaTuplas)
+        cursor.executemany("Insert Into AvisosVencimentoDifis (TDPF, Data) Values (%s, %s)", insereTuplas)
+        conn.commit()
+        logging.info("Tabela AvisosVencimentoDifis foi atualizada com sucesso.")
+    except:
+        conn.rollback()
+        logging.info("Atualização da tabela AvisosVencimentoDifis FALHOU!")
     return
 
 
@@ -744,7 +881,7 @@ def realizaCargaCienciasPendentes():
     row = cursor.fetchone() #buscamos a maior data de extração registrada na tabela
     if row:
         extracao = row[0]
-        print("Extração (Max): ", extracao)
+        #print("Extração (Max): ", extracao)
         #finalizamos todos os registros cuja extração se deu em data anterior à última extração (não foram atualizados acima)
         cursor.execute("Update AvisosCiencia Set Finalizado=%s Where Extracao<%s", (datetime.now(), extracao.date()))
     try:
@@ -901,7 +1038,7 @@ threadDisparador.start()
 realizaCargaDados() #faz a primeira tentativa de carga das planilhas logo no acionamento do programa
 realizaCargaDCCs() #idem para os DCCs
 realizaCargaCienciasPendentes() #ciencias pendentes de AI 
-realizaCargaIndicadores()
+realizaCargaIndicadores() #carga de indicadores (parâmetros) dos TDPFs encerrados
 while not termina:
     entrada = input("Digite QUIT para terminar o serviço Carga BOT: ")
     if entrada:

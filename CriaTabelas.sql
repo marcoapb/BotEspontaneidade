@@ -326,3 +326,13 @@ CREATE TABLE `AvisosCiencia` (
   UNIQUE (`TDPF`, `Processo`), 
   UNIQUE (`Processo`) 
 ) ENGINE=innodb DEFAULT CHARSET=utf8;
+
+DROP TABLE IF EXISTS `AvisosVencimentoDifis`;
+
+CREATE TABLE `AvisosVencimentoDifis` (
+  `Codigo` BIGINT NOT NULL AUTO_INCREMENT, 
+  `TDPF` BIGINT, 
+  `Data` DATETIME, 
+  PRIMARY KEY (`Codigo`), 
+  UNIQUE (`TDPF`)
+) ENGINE=innodb DEFAULT CHARSET=utf8;
