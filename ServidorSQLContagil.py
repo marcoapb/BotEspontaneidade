@@ -18,7 +18,6 @@ import socket
 import threading
 from Crypto.PublicKey import RSA
 from Crypto.Cipher import PKCS1_OAEP
-import os
 from random import randint
 import calendar
 
@@ -801,6 +800,9 @@ def trataMsgRecebida(msgRecebida, c, addr): #c é o socket estabelecido com o cl
                         resposta = "ERRO AO ATUALIZAR A TABELA DE USUÁRIOS - A CHAVE ENVIADA PARA O E-MAIL NÃO É VALIDA"
                 else:
                     resposta = "ERRO AO TENTAR ENVIAR O E-MAIL"
+                    if ambiente!="PRODUÇÃO":
+                        print(email)                    
+                        print(message)
                 enviaResposta("26"+resposta, c) 
                 return                     
     except:
@@ -3577,11 +3579,11 @@ def trataMsgRecebida(msgRecebida, c, addr): #c é o socket estabelecido com o cl
                 return
         comando = """
                   Select Prorrogacoes.Codigo from Prorrogacoes, AssinaturaFiscal Where TDPF=%s and AssinaturaFiscal.Prorrogacao=Prorrogacoes.Codigo and 
-                  (Prorrogacoes.DataAssinatura Is Null or AssinaturaFiscal.DataAssinatura Is Null)
+                  (Prorrogacoes.DataAssinatura Is Null or AssinaturaFiscal.DataAssinatura Is Null or Prorrogacoes.RegistroRHAF Is Null)
                   """
         cursor.execute(comando, (chaveTdpf,))
         row = cursor.fetchone()
-        if row: #há assinatura pendente em prorrogação incluída
+        if row: #há assinatura ou registro no RHAF pendente em prorrogação já incluída
             resposta = "33J"
             enviaResposta(resposta, c) 
             conn.close()
@@ -3610,11 +3612,11 @@ def trataMsgRecebida(msgRecebida, c, addr): #c é o socket estabelecido com o cl
                 enviaResposta(resposta, c) 
                 conn.close()
                 return   
-        comando = "Select Codigo from Prorrogacoes Where TDPF=%s Order by Numero DESC"                  
+        comando = "Select Codigo, Numero from Prorrogacoes Where TDPF=%s Order by Numero DESC"                  
         cursor.execute(comando, (chaveTdpf, ))
         row = cursor.fetchone()
         if row:
-            if row[0]>=numero: #número da prorrogação que recebemos deve ser maior do que o último registrado para o TDPF
+            if row[1]>=numero: #número da prorrogação que recebemos deve ser maior do que o último registrado para o TDPF
                 resposta = "33X"
                 enviaResposta(resposta, c) 
                 conn.close()
@@ -3669,10 +3671,14 @@ def trataMsgRecebida(msgRecebida, c, addr): #c é o socket estabelecido com o cl
                 email = row[0]
                 tdpfFormatado = formataTDPF(tdpf)
                 texto = "Sr. Chefe de Equipe,\n\nInformamos que a Prorrogação nº "+str(numero)+" do TDPF nº "+tdpfFormatado+" está pendente de sua assinatura no script Alertas Fiscalização do ContÁgil.\n\nAtenciosamente,\n\nCofis/Disav"
+                if ambiente!="PRODUÇÃO":
+                    texto = texto + "\n\nAmbiente: "+ambiente
                 resultado = enviaEmail(email, texto, "Prorrogação Pendente de Assinatura - TDPF nº "+tdpfFormatado)
                 if resultado!=3:
                     print("Falhou o envio do e-mail avisando da prorrogação pendente para o supervisor "+email+" - "+str(resultado))
                     logging.info("Falhou o envio do e-mail avisando da prorrogação pendente para o supervisor "+email+" - "+str(resultado))    
+                    if ambiente!="PRODUÇÃO":
+                        print(texto)                    
         conn.close()
         return 
 
@@ -3878,10 +3884,14 @@ def trataMsgRecebida(msgRecebida, c, addr): #c é o socket estabelecido com o cl
                         email = row[0]
                         tdpfFormatado = formataTDPF(tdpf)
                         texto = "Sr. Chefe de Equipe,\n\nInformamos que a Prorrogação nº "+str(numero)+" do TDPF nº "+tdpfFormatado+" está pendente de sua assinatura no script Alertas Fiscalização do ContÁgil.\n\nAtenciosamente,\n\nCofis/Disav"
+                        if ambiente!="PRODUÇÃO":
+                            texto = texto + "\n\nAmbiente: "+ambiente                        
                         resultado = enviaEmail(email, texto, "Prorrogação Pendente de Assinatura - TDPF nº "+tdpfFormatado)
                         if resultado!=3:
                             print("Falhou o envio do e-mail avisando da prorrogação pendente para o supervisor "+email+" - "+str(resultado))
                             logging.info("Falhou o envio do e-mail avisando da prorrogação pendente para o supervisor "+email+" - "+str(resultado))
+                            if ambiente!="PRODUÇÃO":
+                                print(texto)
             else:
                 resposta = "36P"
                 enviaResposta(resposta, c) 
@@ -3931,13 +3941,17 @@ def trataMsgRecebida(msgRecebida, c, addr): #c é o socket estabelecido com o cl
         return 
 
     if codigo==38: #solicita próximo número de prorrogação para numerar o termo
-        consulta = "Select Numero from Prorrogacoes Where TDPF=%s order by Numero DESC"        
+        consulta = "Select Numero, DataAssinatura, RegistroRHAF from Prorrogacoes Where TDPF=%s order by Numero DESC"        
         cursor.execute(consulta, (chaveTdpf,))
         row = cursor.fetchone()
         if not row:
             resposta = "38S01"
         else:
             resposta = "38S"+str(row[0]+1).rjust(2, "0")
+            if row[1] == None:
+                resposta = resposta + "P" #a última prorrogação está pendente de assinatura
+            elif row[2] == None:
+                resposta = resposta + "R" #a última prorrogação está pendente de registro no RHAF
         enviaResposta(resposta, c) 
         conn.close()
         return  

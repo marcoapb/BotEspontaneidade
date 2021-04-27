@@ -220,6 +220,21 @@ def verificaAlocacao(conn, cpf, tdpf): #verifica se o usuário está alocado ao 
     chaveFiscal = row[2]
     return True, chaveTdpf, chaveFiscal, ""
 
+def enviaMsgBot(bot, userId, text, parse_mode=None): #função intermediária para tratar erros
+    try:
+        bot.send_message(userId, text=text, parse_mode= parse_mode)
+    except Exception as e:
+        logging.info("Ocorreu um erro (1) ao enviar a mensagem para o userId "+str(userId)+" - "+str(e))
+    return
+
+def enviaMsgUpdater(userId, text, parse_mode=None): #função intermediária para tratar erros
+    global updater
+    try:
+        updater.bot.send_message(userId, text, parse_mode=parse_mode)
+    except Exception as e:
+        logging.info("Ocorreu um erro (2) ao enviar a mensagem para o userId "+str(userId)+" - "+str(e))
+    return        
+
 def registra(update, context): #registra usuário no serviço
     global pendencias, textoRetorno, d1padrao, d2padrao, d3padrao #, cpfRegistro   
     response_message = ""
@@ -247,11 +262,11 @@ def registra(update, context): #registra usuário no serviço
                 response_message = "Código de registro inválido. Envie novamente CPF e o código de registro (chave)."
                 response_message = response_message+textoRetorno          
         if response_message!="":
-            bot.send_message(userId, text=response_message)
+            enviaMsgBot(bot, userId, text=response_message)
             return 
         conn = conecta()
         if not conn:   
-            bot.send_message(userId, text="Erro na conexão - registra")  
+            enviaMsgBot(bot, userId, text="Erro na conexão - registra")  
             eliminaPendencia(userId)
             mostraMenuPrincipal(update, context)                    
             return
@@ -268,13 +283,13 @@ def registra(update, context): #registra usuário no serviço
                 validade = datetime.strptime("31/12/2050", "%d/%m/%Y")                    
             if validade.date()<datetime.today().date():
                 eliminaPendencia(userId)                
-                bot.send_message(userId, text="Validade da chave está expirada.") 
+                enviaMsgBot(bot, userId, text="Validade da chave está expirada.") 
                 mostraMenuPrincipal(update, context)  
                 conn.close()  
                 return   
             if tentativas>3:
                 eliminaPendencia(userId)                               
-                bot.send_message(userId, text="Número de tentativas excedida.") 
+                enviaMsgBot(bot, userId, text="Número de tentativas excedida.") 
                 mostraMenuPrincipal(update, context)  
                 conn.close()  
                 return                                   
@@ -292,7 +307,7 @@ def registra(update, context): #registra usuário no serviço
                 except:
                     conn.rollback()
                     response_message = "Erro ao registrar o usuário no serviço. Tente novamente mais tarde. Se o erro persistir, contacte o suporte."  
-                bot.send_message(userId, text=response_message) 
+                enviaMsgBot(bot, userId, text=response_message) 
                 mostraMenuPrincipal(update, context)  
                 conn.close()  
                 return
@@ -309,11 +324,11 @@ def registra(update, context): #registra usuário no serviço
         else:
             eliminaPendencia(userId) #apaga a pendência de informação do usuário            
             response_message = "Usuário (CPF) não foi cadastrado para registro no serviço."
-            bot.send_message(userId, text=response_message) 
+            enviaMsgBot(bot, userId, text=response_message) 
             mostraMenuPrincipal(update, context)   
             conn.close() 
             return            
-    bot.send_message(userId, text=response_message)
+    enviaMsgBot(bot, userId, text=response_message)
     return
 
 def envioChave(update, context): #envia a chave de registro para o e-mail do usuário
@@ -326,19 +341,19 @@ def envioChave(update, context): #envia a chave de registro para o e-mail do usu
     if len(parametros)!=1:
         response_message = "Número de informações (parâmetros) inválido. Envie somente o CPF do usuário."
         response_message = response_message+textoRetorno
-        bot.send_message(userId, text=response_message)        
+        enviaMsgBot(bot, userId, text=response_message)        
     else:
         cpf = getAlgarismos(parametros[0])                   
         logging.info('Envio chave '+cpf)
         if not validaCPF(cpf):
             response_message = "CPF inválido. Envie novamente o CPF do usuário."
             response_message = response_message+textoRetorno
-            bot.send_message(userId, text=response_message)
+            enviaMsgBot(bot, userId, text=response_message)
             return 
         eliminaPendencia(userId)             
         conn = conecta()                       
         if not conn:   
-            bot.send_message(userId, text="Erro na conexão - envioChave")  
+            enviaMsgBot(bot, userId, text="Erro na conexão - envioChave")  
             mostraMenuPrincipal(update, context)                    
             return
         cursor = conn.cursor(buffered=True)  
@@ -349,13 +364,13 @@ def envioChave(update, context): #envia a chave de registro para o e-mail do usu
             email = row[2]
             erro = False
             if email==None or email=='':
-                bot.send_message(userId, text="CPF não tem e-mail associado na base de dados. Contacte o suporte ou cadastre um na opção 'Cadastros -> Cadastra/Exclui e-Mail' se você já estiver registrado no serviço.")  
+                enviaMsgBot(bot, userId, text="CPF não tem e-mail associado na base de dados. Contacte o suporte ou cadastre um na opção 'Cadastros -> Cadastra/Exclui e-Mail' se você já estiver registrado no serviço.")  
                 erro = True             
             elif not verificaEMail(email):
-                bot.send_message(userId, text="O e-mail do usuário é inválido. Contacte o suporte ou exclua o atual e cadastre um novo na opção 'Cadastros -> Cadastra/Exclui e-Mail' se você já estiver registrado no serviço.")
+                enviaMsgBot(bot, userId, text="O e-mail do usuário é inválido. Contacte o suporte ou exclua o atual e cadastre um novo na opção 'Cadastros -> Cadastra/Exclui e-Mail' se você já estiver registrado no serviço.")
                 erro = True
             elif not ("@rfb.gov.br" in email):
-                bot.send_message(userId, text="O e-mail do usuário não é institucional. Contacte o suporte ou exclua o atual e cadastre um novo na opção 'Cadastros -> Cadastra/Exclui e-Mail' se você já estiver registrado no serviço.")
+                enviaMsgBot(bot, userId, text="O e-mail do usuário não é institucional. Contacte o suporte ou exclua o atual e cadastre um novo na opção 'Cadastros -> Cadastra/Exclui e-Mail' se você já estiver registrado no serviço.")
                 erro = True
             if erro:    
                 conn.close()                 
@@ -376,16 +391,16 @@ def envioChave(update, context): #envia a chave de registro para o e-mail do usu
                     try:
                         cursor.execute(comando, (chave, validade, 0, datetime.today().date(), codigo))
                         conn.commit()
-                        bot.send_message(userId, text="Chave foi enviada para o e-mail institucional do usuário.")                         
+                        enviaMsgBot(bot, userId, text="Chave foi enviada para o e-mail institucional do usuário.")                         
                     except:
                         conn.rollback()    
-                        bot.send_message(userId, text="Erro ao inserir a chave na tabela. A chave enviada não será reconhecida. Tente novamente mais tarde. Se o erro persistir, contacte o suporte.")  
+                        enviaMsgBot(bot, userId, text="Erro ao inserir a chave na tabela. A chave enviada não será reconhecida. Tente novamente mais tarde. Se o erro persistir, contacte o suporte.")  
                 else:
-                    bot.send_message(userId, text="Houve erro no envio do e-mail. Tente novamente mais tarde. Se o erro persistir, contacte o suporte. "+str(sucesso))                                            
+                    enviaMsgBot(bot, userId, text="Houve erro no envio do e-mail. Tente novamente mais tarde. Se o erro persistir, contacte o suporte. "+str(sucesso))                                            
             else:
-                bot.send_message(userId, text="A chave já foi enviada hoje - é vedado o reenvio no mesmo dia.")       
+                enviaMsgBot(bot, userId, text="A chave já foi enviada hoje - é vedado o reenvio no mesmo dia.")       
         else:
-            bot.send_message(userId, text="CPF do usuário não foi encontrado na base de dados.")      
+            enviaMsgBot(bot, userId, text="CPF do usuário não foi encontrado na base de dados.")      
         mostraMenuPrincipal(update, context) 
         conn.close()    
     return
@@ -398,7 +413,7 @@ def acompanha(update, context): #inicia o monitoramente de um ou de TODOS os TDP
     conn = conecta()
     if not conn: 
         response_message = "Erro na conexão - acompanha."
-        bot.send_message(userId, text=response_message)
+        enviaMsgBot(bot, userId, text=response_message)
         eliminaPendencia(userId)
         mostraMenuPrincipal(update, context)
         return    
@@ -408,7 +423,7 @@ def acompanha(update, context): #inicia o monitoramente de um ou de TODOS os TDP
     if len(parametros)!=1:
         response_message = "Número de informações (parâmetros) inválido. Envie somente o nº do TDPF ou a palavra TODOS."
         response_message = response_message+textoRetorno
-        bot.send_message(userId, text=response_message)
+        enviaMsgBot(bot, userId, text=response_message)
         conn.close()
         return        
     else:  
@@ -417,7 +432,7 @@ def acompanha(update, context): #inicia o monitoramente de um ou de TODOS os TDP
         bUsuario, cpf, msg = verificaUsuarioTelegram(conn, userId)
         if not bUsuario:
             response_message = msg
-            bot.send_message(userId, text=response_message) 
+            enviaMsgBot(bot, userId, text=response_message) 
             mostraMenuPrincipal(update, context)
             eliminaPendencia(userId) #apaga a pendência de informação do usuário
             conn.close()
@@ -436,7 +451,7 @@ def acompanha(update, context): #inicia o monitoramente de um ou de TODOS os TDP
             if len(tdpf)!=16 or not tdpf.isdigit():
                 response_message = "TDPF ou comando inválido. Envie novamente o nº do TDPF (16 dígitos) ou a palavra TODOS."
                 response_message = response_message+textoRetorno  
-                bot.send_message(userId, text=response_message) 
+                enviaMsgBot(bot, userId, text=response_message) 
                 conn.close()
                 return
             bAlocacao, chaveTdpf, chaveFiscal, msg = verificaAlocacao(conn, cpf, tdpf)                 
@@ -446,7 +461,7 @@ def acompanha(update, context): #inicia o monitoramente de um ou de TODOS os TDP
                 tdpfs = ([tdpf, chaveTdpf, chaveFiscal],)
         if tdpfs==None:
             eliminaPendencia(userId) #apaga a pendência de informação do usuário            
-            bot.send_message(userId, text=response_message) 
+            enviaMsgBot(bot, userId, text=response_message) 
             mostraMenuPrincipal(update, context)
             conn.close()
             return
@@ -479,7 +494,7 @@ def acompanha(update, context): #inicia o monitoramente de um ou de TODOS os TDP
                 response_message="Erro (1) ao tentar efetivar a operação. Tente novamente mais tarde."
             else:
                 response_message="Erro (2) ao tentar efetivar a operação. Tente novamente mais tarde."                
-        bot.send_message(userId, text=response_message) 
+        enviaMsgBot(bot, userId, text=response_message) 
         eliminaPendencia(userId) #apaga a pendência de informação do usuário        
         mostraMenuPrincipal(update, context)
         conn.close()
@@ -564,10 +579,10 @@ def atividadeTexto(update, context): #obtém a descrição da atividade e chama 
             if msgAtividade==None or msgAtividade=='':
                 msgAtividade = "Erro ao registrar a atividade. Tente novamente mais tarde."
             response_message = msgAtividade  #como são digitadas duas informações, desprezamos e retornamos ao menu pois o erro pode estar na anterior
-        bot.send_message(userId, text=response_message) 
+        enviaMsgBot(bot, userId, text=response_message) 
         mostraMenuPrincipal(update, context)
         return            
-    bot.send_message(userId, text=response_message)  
+    enviaMsgBot(bot, userId, text=response_message)  
     return                
 
 def atividade(update, context): #critica e tenta efetivar a realização de uma atividade com prazo a vencer
@@ -599,7 +614,7 @@ def atividade(update, context): #critica e tenta efetivar a realização de uma 
             response_message = "Data de início da atividade inválida. "+msgAtividade
             response_message = response_message+textoRetorno 
         if len(response_message)>0:           
-            bot.send_message(userId, text=response_message)  
+            enviaMsgBot(bot, userId, text=response_message)  
             return                                            
         prazo = 0
         dateTimeObj = None
@@ -635,7 +650,7 @@ def atividade(update, context): #critica e tenta efetivar a realização de uma 
             pendencias[userId] = 'atividadeTexto'
             atividadeTxt[userId] = [tdpf, data, inicio]
             response_message = "Informe a *descrição da atividade SEM QUALQUER INFORMAÇÃO PROTEGIDA POR SIGILO* (máximo de 50 caracteres):"                    
-    bot.send_message(userId, text=limpaMarkdown(response_message), parse_mode= 'MarkdownV2')
+    enviaMsgBot(bot, userId, text=limpaMarkdown(response_message), parse_mode= 'MarkdownV2')
     return     
 
 def efetivaAnulacaoAtividade(userId, tdpf, codigo): #efetiva a anulação (apaga) de uma atividade de um tdpf (o código é a chave primária da atividade - opcional; se não houver, é o último registro daquele TDPF)
@@ -715,10 +730,10 @@ def anulaAtividade(update, context): #anula (apaga) a última atividade cadastra
                 response_message = "Última atividade ou atividade indicada foi excluída para o TDPF."         
             else:
                 response_message = msgAnulacao
-            bot.send_message(userId, text=response_message) 
+            enviaMsgBot(bot, userId, text=response_message) 
             mostraMenuPrincipal(update, context)
             return
-    bot.send_message(userId, text=response_message)  
+    enviaMsgBot(bot, userId, text=response_message)  
     return 
 
 def efetivaHorasAtividade(userId, codigo, horas):
@@ -788,38 +803,38 @@ def informaHorasAtividade(update, context): #registra horas gastas em uma ativid
     if len(parametros)!=2:
         response_message = msgHorasAtiv
         response_message = response_message+textoRetorno  
-        bot.send_message(userId, text=response_message)  
+        enviaMsgBot(bot, userId, text=response_message)  
         return            
     codigo = parametros[0]
     if not codigo.isdigit():
         response_message = "Código inválido. "+msgHorasAtiv
         response_message = response_message+textoRetorno            
-        bot.send_message(userId, text=response_message)  
+        enviaMsgBot(bot, userId, text=response_message)  
         return
     try:
         codigo = int(codigo)
     except:
         response_message = "Código inválido (2). "+msgHorasAtiv
         response_message = response_message+textoRetorno            
-        bot.send_message(userId, text=response_message)  
+        enviaMsgBot(bot, userId, text=response_message)  
         return                  
     horas = parametros[1] 
     if not horas.isdigit():
         response_message = "Quantidade de horas inválida. "+msgHorasAtiv
         response_message = response_message+textoRetorno            
-        bot.send_message(userId, text=response_message)  
+        enviaMsgBot(bot, userId, text=response_message)  
         return
     if len(horas)>3:
         response_message = "Quantidade de horas inválida (2). "+msgHorasAtiv
         response_message = response_message+textoRetorno            
-        bot.send_message(userId, text=response_message)  
+        enviaMsgBot(bot, userId, text=response_message)  
         return         
     try:
         horas = int(horas)
     except:
         response_message = "Quantidade de horas inválida (3). "+msgHorasAtiv
         response_message = response_message+textoRetorno            
-        bot.send_message(userId, text=response_message)  
+        enviaMsgBot(bot, userId, text=response_message)  
         return    
     efetivou, msgAnulacao = efetivaHorasAtividade(userId, codigo, horas)
     eliminaPendencia(userId) #apaga a pendência de informação do usuário                
@@ -827,7 +842,7 @@ def informaHorasAtividade(update, context): #registra horas gastas em uma ativid
         response_message = "Horas dispendidas na atividade "+msgAnulacao+" foram registradas."         
     else:
         response_message = msgAnulacao
-    bot.send_message(userId, text=response_message) 
+    enviaMsgBot(bot, userId, text=response_message) 
     mostraMenuPrincipal(update, context)
     return
 
@@ -904,20 +919,20 @@ def terminoAtividade(update, context): #registra data de término de atividade c
     if len(parametros)!=3:
         response_message = msgTerminoAtiv
         response_message = response_message+textoRetorno  
-        bot.send_message(userId, text=response_message)  
+        enviaMsgBot(bot, userId, text=response_message)  
         return            
     codigo = parametros[0]
     if not codigo.isdigit():
         response_message = "Código inválido. "+msgTerminoAtiv
         response_message = response_message+textoRetorno            
-        bot.send_message(userId, text=response_message)  
+        enviaMsgBot(bot, userId, text=response_message)  
         return
     try:
         codigo = int(codigo)
     except:
         response_message = "Código inválido (2). "+msgTerminoAtiv
         response_message = response_message+textoRetorno            
-        bot.send_message(userId, text=response_message)  
+        enviaMsgBot(bot, userId, text=response_message)  
         return                
     data = parametros[1] 
     if data.isdigit() and len(data)==8:
@@ -925,7 +940,7 @@ def terminoAtividade(update, context): #registra data de término de atividade c
     if not isDate(data):
         response_message = "Data inválida. "+msgTerminoAtiv
         response_message = response_message+textoRetorno  
-        bot.send_message(userId, text=response_message)  
+        enviaMsgBot(bot, userId, text=response_message)  
         return                             
     dateTimeObj = None
     try:
@@ -933,30 +948,30 @@ def terminoAtividade(update, context): #registra data de término de atividade c
         if dateTimeObj.date()>datetime.now().date():
             response_message = "Data de término não pode ser futura. "+msgTerminoAtiv
             response_message = response_message+textoRetorno   
-            bot.send_message(userId, text=response_message) 
+            enviaMsgBot(bot, userId, text=response_message) 
             return             
     except: #não deveria acontecer após o isDate, mas fazemos assim para não correr riscos
         response_message = "Erro na conversão da data. "+msgTerminoAtiv
         response_message = response_message+textoRetorno   
-        bot.send_message(userId, text=response_message) 
+        enviaMsgBot(bot, userId, text=response_message) 
         return  
     horas = parametros[2] 
     if not horas.isdigit():
         response_message = "Quantidade de horas inválida. "+msgTerminoAtiv
         response_message = response_message+textoRetorno            
-        bot.send_message(userId, text=response_message)  
+        enviaMsgBot(bot, userId, text=response_message)  
         return
     if len(horas)>3:
         response_message = "Quantidade de horas inválida (2). "+msgTerminoAtiv
         response_message = response_message+textoRetorno            
-        bot.send_message(userId, text=response_message)  
+        enviaMsgBot(bot, userId, text=response_message)  
         return        
     try:
         horas = int(horas)
     except:
         response_message = "Quantidade de horas inválida (3). "+msgTerminoAtiv
         response_message = response_message+textoRetorno            
-        bot.send_message(userId, text=response_message)  
+        enviaMsgBot(bot, userId, text=response_message)  
         return    
     efetivou, msgAnulacao = efetivaTerminoAtividade(userId, codigo, dateTimeObj, horas)
     eliminaPendencia(userId) #apaga a pendência de informação do usuário                
@@ -964,7 +979,7 @@ def terminoAtividade(update, context): #registra data de término de atividade c
         response_message = "Término da atividade "+msgAnulacao+" foi registrado."         
     else:
         response_message = msgAnulacao
-    bot.send_message(userId, text=response_message) 
+    enviaMsgBot(bot, userId, text=response_message) 
     mostraMenuPrincipal(update, context)
     return
             
@@ -1029,11 +1044,11 @@ def cienciaTexto(update, context): #obtém a descrição da atividade e chama a 
     if len(msg)<4:
         response_message = "Descrição inválida (menos de 4 caracteres). Envie somente a descrição do texto ou 'cancela'(sem aspas) para cancelar."
         response_message = response_message+textoRetorno
-        bot.send_message(userId, text=response_message)    
+        enviaMsgBot(bot, userId, text=response_message)    
     elif len(msg)>50:
         response_message = "Descrição inválida (mais de 50 caracteres). Envie somente a descrição do texto ou 'cancela'(sem aspas) para cancelar."
         response_message = response_message+textoRetorno
-        bot.send_message(userId, text=response_message)                
+        enviaMsgBot(bot, userId, text=response_message)                
     else:
         eliminaPendencia(userId) #apaga a pendência de informação do usuário        
         documento = msg.upper().strip()
@@ -1047,7 +1062,7 @@ def cienciaTexto(update, context): #obtém a descrição da atividade e chama a 
                 response_message = response_message+msgEfetivaCiencia
         else:
             response_message = msgEfetivaCiencia         
-        bot.send_message(userId, text=response_message) 
+        enviaMsgBot(bot, userId, text=response_message) 
         mostraMenuPrincipal(update, context)
     return   
 
@@ -1083,7 +1098,7 @@ def ciencia(update, context): #critica e tenta efetivar a ciência de um TDPF (r
                 if not vencimento.isdigit():
                     response_message = "Vencimento inválido. "+msgCiencia
                     response_message = response_message+textoRetorno 
-                    bot.send_message(userId, text=response_message)  
+                    enviaMsgBot(bot, userId, text=response_message)  
                     return                
                 else:
                     try:
@@ -1091,12 +1106,12 @@ def ciencia(update, context): #critica e tenta efetivar a ciência de um TDPF (r
                         if prazo<1 or prazo>60:
                             response_message = "Vencimento (prazo) inválido - deve estar entre 1 e 60 dias "+msgCiencia
                             response_message = response_message+textoRetorno   
-                            bot.send_message(userId, text=response_message)  
+                            enviaMsgBot(bot, userId, text=response_message)  
                             return                                              
                     except:
                         response_message = "Vencimento (prazo) inválido. "+msgCiencia
                         response_message = response_message+textoRetorno   
-                        bot.send_message(userId, text=response_message)  
+                        enviaMsgBot(bot, userId, text=response_message)  
                         return                                               
             elif isDate(vencimento):
                 try:
@@ -1105,12 +1120,12 @@ def ciencia(update, context): #critica e tenta efetivar a ciência de um TDPF (r
                     logging.info("Erro na conversão do vencimento "+vencimento+" - UserId "+str(userId))
                     response_message = "Erro na conversão do vencimento. "+msgCiencia
                     response_message = response_message+textoRetorno   
-                    bot.send_message(userId, text=response_message)  
+                    enviaMsgBot(bot, userId, text=response_message)  
                     return
             else:
                 response_message = "Vencimento inválido. "+msgCiencia
                 response_message = response_message+textoRetorno   
-                bot.send_message(userId, text=response_message)  
+                enviaMsgBot(bot, userId, text=response_message)  
                 return                
         if data.isdigit() and len(data)==8:
             data = data[:2]+"/"+data[2:4]+"/"+data[4:]
@@ -1127,7 +1142,7 @@ def ciencia(update, context): #critica e tenta efetivar a ciência de um TDPF (r
                 logging.info("Erro na conversão da data "+data+" - UserId "+str(userId))
                 response_message = "Erro na conversão da data. "+msgCiencia
                 response_message = response_message+textoRetorno   
-                bot.send_message(userId, text=response_message)  
+                enviaMsgBot(bot, userId, text=response_message)  
                 return                
             if dateTimeObj.date()>datetime.now().date():
                 response_message = "Data de ciência não pode ser futura. "+msgCiencia
@@ -1146,7 +1161,7 @@ def ciencia(update, context): #critica e tenta efetivar a ciência de um TDPF (r
                     pendencias[userId] = 'cienciaTexto'
                     cienciaTxt[userId] = [tdpf, dateTimeObj, vencimentoObj]
                     response_message = "Informe a descrição do documento que efetivou a ciência (ex.: TIPF) (máximo de 50 caracteres):"                                                
-    bot.send_message(userId, text=response_message)  
+    enviaMsgBot(bot, userId, text=response_message)  
     return 
 
 def efetivaPrazos(userId, d): #altera no BD os prazos padrão do usuário (d é uma lista)
@@ -1201,7 +1216,7 @@ def prazos(update, context): #critica e tenta alterar os prazos padrão do usuá
                 if efetivou:
                     eliminaPendencia(userId) #apaga a pendência de informação do usuário
                     response_message = "Prazos registrados."
-                    bot.send_message(userId, text=response_message) 
+                    enviaMsgBot(bot, userId, text=response_message) 
                     mostraMenuPrincipal(update, context)
                     return
                 else:
@@ -1209,7 +1224,7 @@ def prazos(update, context): #critica e tenta alterar os prazos padrão do usuá
         else:
             response_message = "Os dias devem ser números inteiros entre 1 e 50. Envie 3 prazos em dias (1 a 50) antes da retomada da espontaneidade em que deseja ser alertado (separe cada um com um espaço)."
             response_message = response_message+textoRetorno
-    bot.send_message(userId, text=response_message)  
+    enviaMsgBot(bot, userId, text=response_message)  
     return
 
 def efetivaAnulacao(userId, tdpf): #efetiva a anulação (apaga) de uma data de ciência de um tdpf - a data anterior, se houver, é que será considerada
@@ -1285,10 +1300,10 @@ def anulaCiencia(update, context): #anula (apaga) a última data de ciência do 
                     response_message = "Este TDPF não estava sendo monitorado pelo serviço para você."
             else:
                 response_message = msgAnulacao
-            bot.send_message(userId, text=response_message) 
+            enviaMsgBot(bot, userId, text=response_message) 
             mostraMenuPrincipal(update, context)
             return
-    bot.send_message(userId, text=response_message)  
+    enviaMsgBot(bot, userId, text=response_message)  
     return          
 
 def efetivaFinalizacao(userId, tdpf=""): #finaliza monitoramento de um tdpf ou de todos do usuário (campo Fim da tabela CadastroTDPFs)
@@ -1368,12 +1383,12 @@ def fim(update, context): #exclui o TDPF do monitoramento (campo Fim da tabela C
                     response_message = "TDPF(s) excluído(s) do monitoramento deste serviço."
                 else:
                     response_message = msgAnulacao
-                bot.send_message(userId, text=response_message) 
+                enviaMsgBot(bot, userId, text=response_message) 
                 mostraMenuPrincipal(update, context)
                 return
             else:
                 response_message = msgAnulacao+textoRetorno            
-    bot.send_message(userId, text=response_message)  
+    enviaMsgBot(bot, userId, text=response_message)  
     return
 
 def verificaEMail(email): #valida o e-mail se o usuário informou um completo
@@ -1423,12 +1438,12 @@ def cadastraEMail(update, context): #cadastra o e-mail institucional
                 row = cursor.fetchone()
             except:
                 response_message = "Erro na consulta (6)."+textoRetorno
-                bot.send_message(userId, text=response_message)  
+                enviaMsgBot(bot, userId, text=response_message)  
                 conn.close()
                 return                
             if not row:
                 response_message = "Usuário não registrado ou inativo no serviço."
-                bot.send_message(userId, text=response_message) 
+                enviaMsgBot(bot, userId, text=response_message) 
                 mostraMenuPrincipal(update, context)
                 conn.close()
                 return                 
@@ -1440,7 +1455,7 @@ def cadastraEMail(update, context): #cadastra o e-mail institucional
                 eliminaPendencia(userId) #apaga a pendência de informação do usuário                 
                 if email.upper()=="NULO" and (emailAnt==None or emailAnt==""):
                     response_message = "Usuário não tinha e-mail cadastrado no serviço."
-                    bot.send_message(userId, text=response_message) 
+                    enviaMsgBot(bot, userId, text=response_message) 
                     mostraMenuPrincipal(update, context)
                     conn.close()
                     return
@@ -1459,17 +1474,17 @@ def cadastraEMail(update, context): #cadastra o e-mail institucional
                             response_message = "Email anteriormente cadastrado ("+emailAnt+") foi substituído.\n"                
                     if email.upper()!="NULO":
                         response_message = response_message+"Email cadastrado com sucesso - {}@rfb.gov.br.".format(email)    
-                    bot.send_message(userId, text=response_message) 
+                    enviaMsgBot(bot, userId, text=response_message) 
                     mostraMenuPrincipal(update, context)
                     conn.close()
                     return 
                 except:
                     conn.close()
                     response_message = "Erro na atualização das tabelas. Tente novamente mais tarde."
-                    bot.send_message(userId, text=response_message) 
+                    enviaMsgBot(bot, userId, text=response_message) 
                     mostraMenuPrincipal(update, context)  
                     return                  
-    bot.send_message(userId, text=response_message)  
+    enviaMsgBot(bot, userId, text=response_message)  
     return
 
 
@@ -1491,7 +1506,7 @@ def start(update, context): #comandos /start /menu /retorna acionam esta opção
     msg7 = 'Isto será corrigido futuramente.\n\n'
     msg8 = '*Digite a qualquer momento /menu para ver o menu principal e estas observações*, inclusive no caso de ocorrer alguma interrupção do serviço.'
     response_message = msg1+msg2+msg3+msg4+msg5+msg6+msg7+msg8
-    bot.send_message(userId, text=limpaMarkdown(response_message), parse_mode= 'MarkdownV2')
+    enviaMsgBot(bot, userId, text=limpaMarkdown(response_message), parse_mode= 'MarkdownV2')
     mostraMenuPrincipal(update, context)
     return
   
@@ -1509,7 +1524,7 @@ def unknown(update, context):
         dispatch[pendencias[userId]](update, context) #encaminha para a função adequada à pendência
     else:            
         response_message = update.message.from_user.first_name+", esta mensagem/comando não significou nada para mim. Mostrarei o menu para lhe auxiliar."  
-        bot.send_message(userId, text=response_message)
+        enviaMsgBot(bot, userId, text=response_message)
         mostraMenuPrincipal(update, context) 
     return
 
@@ -1521,10 +1536,10 @@ def mostraMenuCadastro(update, context):
     opcao1 =  tipoOpcao1(userId) 
     bot = update.effective_user.bot     
     if opcao1[:4] == 'Erro':
-        bot.send_message(userId, text="Erro na consulta ao seu id")
+        enviaMsgBot(bot, userId, text="Erro na consulta ao seu id")
         return
     menu = [[opcao1], ['Solicita Chave de Registro e do ContÁgil'], ['Prazos Para Receber Avisos'], ['Cadastra/Exclui e-Mail'], ['Menu Principal']] 
-    #mensagem = bot.send_message(userId, text="Teste apaga mensagem")
+    #mensagem = enviaMsgBot(bot, userId, text="Teste apaga mensagem")
     #time.sleep(5)
     #bot.delete_message(userId, mensagem.message_id)
     #return              
@@ -1619,12 +1634,12 @@ def opcaoUsuario(update, context): #Cadastra usuário
     if msgOpcao1=="Registra Usuário" or msgOpcao1=="Reativa Usuário":       
         pendencias[userId] = 'registra' #usuário agora tem uma pendência de informação
         response_message = "Envie /menu para ver o menu principal.\nEnvie agora, numa única mensagem, seu *CPF e o código de registro (chave)* (separe as informações com espaço):"  
-        bot.send_message(userId, text=limpaMarkdown(response_message), parse_mode= 'MarkdownV2')
+        enviaMsgBot(bot, userId, text=limpaMarkdown(response_message), parse_mode= 'MarkdownV2')
     else:
         conn = conecta()
         if not conn: 
             response_message = "Erro na conexão (8)."            
-            bot.send_message(userId, text=response_message)      
+            enviaMsgBot(bot, userId, text=response_message)      
             return             
         cursor = conn.cursor(buffered=True)        
         if msgOpcao1=="Desativa Usuário":
@@ -1634,11 +1649,11 @@ def opcaoUsuario(update, context): #Cadastra usuário
                 cursor.execute(comando, (dataAtual, userId))
                 conn.commit()
                 response_message = "Usuário desativado."  
-                bot.send_message(userId, text=response_message)                                 
+                enviaMsgBot(bot, userId, text=response_message)                                 
             except:
                 conn.rollback()
                 response_message = "Erro ao atualizar tabelas(8). Tente novamente mais tarde."            
-                bot.send_message(userId, text=response_message)
+                enviaMsgBot(bot, userId, text=response_message)
             mostraMenuPrincipal(update, context)  
     if conn:
         conn.close()                                                    
@@ -1653,7 +1668,7 @@ def solicitaChaveRegistro(update, context): #envia chave de registro para o e-ma
     eliminaPendencia(userId)                          
     pendencias[userId] = 'envioChave' #usuário agora tem uma pendência de informação (atividade)
     response_message = "Envie /menu para ver o menu principal.\nEnvie agora, numa única mensagem, o *nº do CPF (11 dígitos)* do usuário (fiscal) p/ o qual a chave será enviada:"  
-    bot.send_message(userId, text=limpaMarkdown(response_message), parse_mode= 'MarkdownV2')
+    enviaMsgBot(bot, userId, text=limpaMarkdown(response_message), parse_mode= 'MarkdownV2')
     return    
 
 def verificaUsuario(userId, bot): #verifica se o usuário está cadastrado e ativo no serviço
@@ -1661,7 +1676,7 @@ def verificaUsuario(userId, bot): #verifica se o usuário está cadastrado e ati
     conn = conecta()
     if not conn:
         response_message = "Erro na conexão (7)"
-        bot.send_message(userId, text=response_message)
+        enviaMsgBot(bot, userId, text=response_message)
         return False
     cursor = conn.cursor(buffered=True)
     comando = "Select CPF from Usuarios Where Saida Is Null and idTelegram=%s"
@@ -1670,7 +1685,7 @@ def verificaUsuario(userId, bot): #verifica se o usuário está cadastrado e ati
         row = cursor.fetchone()
         conn.close()
         if not row:
-            bot.send_message(userId, text="Usuário não está registrado no serviço ou está inativo. "+textoRetorno)  
+            enviaMsgBot(bot, userId, text="Usuário não está registrado no serviço ou está inativo. "+textoRetorno)  
             return False
         else:
             return True
@@ -1679,7 +1694,7 @@ def verificaUsuario(userId, bot): #verifica se o usuário está cadastrado e ati
             conn.close()
         except:
             pass    
-        bot.send_message(userId, text="Erro na consulta (8).")        
+        enviaMsgBot(bot, userId, text="Erro na consulta (8).")        
         return False                
 
 def opcaoInformaAtividade(update, context): #informa atividade relativa a TDPF e data de vencimento ou prazo em dias
@@ -1693,7 +1708,7 @@ def opcaoInformaAtividade(update, context): #informa atividade relativa a TDPF e
     if achou:                      
         pendencias[userId] = 'atividade' #usuário agora tem uma pendência de informação (atividade)
         response_message = "Envie /menu para ver o menu principal.\nEnvie agora, numa única mensagem, o *nº do TDPF (16 dígitos), a data de vencimento (dd/mm/aaaa) ou o prazo de vencimento em dias (contados de hoje) e a data de início da atividade (dd/mm/aaaa)* - separe as informações com espaço:"  
-        bot.send_message(userId, text=limpaMarkdown(response_message), parse_mode= 'MarkdownV2')
+        enviaMsgBot(bot, userId, text=limpaMarkdown(response_message), parse_mode= 'MarkdownV2')
     else:
         mostraMenuPrincipal(update, context)
     return    
@@ -1711,7 +1726,7 @@ def exibeAtividadesEmAndamento(bot, userId, conn): #exibe atividades em andament
         cursor.execute(consulta, (userId,))
         linhas = cursor.fetchall()
     except:    
-        bot.send_message(userId, text="Erro na consulta das atividades em andamento")
+        enviaMsgBot(bot, userId, text="Erro na consulta das atividades em andamento")
         return 0 
     i = 0
     msg = ""
@@ -1719,12 +1734,12 @@ def exibeAtividadesEmAndamento(bot, userId, conn): #exibe atividades em andament
         i+=1
         msg = msg+"\n"+str(i)+") Código "+str(linha[0])+"; TDPF "+formataTDPF(linha[1])+"; "+linha[2]+"; Início "+datetime.strftime(linha[3], "%d/%m/%Y")+"; Vencimento "+datetime.strftime(linha[4], "%d/%m/%Y")+"; Horas "+str(linha[5])
         if i%15==0:
-            bot.send_message(userId, text="Atividades em Andamento:"+msg)
+            enviaMsgBot(bot, userId, text="Atividades em Andamento:"+msg)
             msg = ""
     if msg!="":
-        bot.send_message(userId, text="Atividades em Andamento:"+msg)
+        enviaMsgBot(bot, userId, text="Atividades em Andamento:"+msg)
     if i==0:
-        bot.send_message(userId, text="Usuário não possui atividades cadastradas em andamento para seus TDPFs.")            
+        enviaMsgBot(bot, userId, text="Usuário não possui atividades cadastradas em andamento para seus TDPFs.")            
     return i       
 
 def opcaoAnulaAtividade(update, context): #anula informação de atividade
@@ -1738,7 +1753,7 @@ def opcaoAnulaAtividade(update, context): #anula informação de atividade
     if achou:    
         conn = conecta()
         if not conn:
-            bot.send_message(userId, text="Erro ao tentar conectar ao Banco de Dados - opcaoAnulaAtividade")
+            enviaMsgBot(bot, userId, text="Erro ao tentar conectar ao Banco de Dados - opcaoAnulaAtividade")
             mostraMenuPrincipal(update, context)
             return
         if exibeAtividadesEmAndamento(bot, userId, conn)==0:
@@ -1747,7 +1762,7 @@ def opcaoAnulaAtividade(update, context): #anula informação de atividade
             return                
         pendencias[userId] = 'anulaAtividade'  #usuário agora tem uma pendência de informação   
         response_message = "Envie /menu para ver o menu principal.\nEnvie o *nº do TDPF (16 dígitos, sem espaços) e, opcionalmente, o código da atividade* a ser excluída (se o código não for informado, será excluída a última cadastrada p/ o TDPF) - separe as informa;óes (TDPF e código) com espaço."
-        bot.send_message(userId, text=limpaMarkdown(response_message), parse_mode= 'MarkdownV2')
+        enviaMsgBot(bot, userId, text=limpaMarkdown(response_message), parse_mode= 'MarkdownV2')
         conn.close()
     else:
         mostraMenuPrincipal(update, context)         
@@ -1765,7 +1780,7 @@ def opcaoInformaTerminoAtividade(update, context):
     if achou:    
         conn = conecta()
         if not conn:
-            bot.send_message(userId, text="Erro ao tentar conectar ao Banco de Dados - opcaoInformaTerminoAtividade")
+            enviaMsgBot(bot, userId, text="Erro ao tentar conectar ao Banco de Dados - opcaoInformaTerminoAtividade")
             mostraMenuPrincipal(update, context)
             return
         if exibeAtividadesEmAndamento(bot, userId, conn)==0:
@@ -1774,7 +1789,7 @@ def opcaoInformaTerminoAtividade(update, context):
             return
         pendencias[userId] = 'informaTerminoAtividade' #usuário agora tem uma pendência de informação (término atividade)
         response_message = "Envie /menu para ver o menu principal.\nEnvie agora, numa única mensagem, *o código da atividade, a data de seu término (dd/mm/aaaa) e quantidade de horas dispendidas (número inteiro)* até o momento - separe as informações com espaço:"  
-        bot.send_message(userId, text=limpaMarkdown(response_message), parse_mode= 'MarkdownV2')
+        enviaMsgBot(bot, userId, text=limpaMarkdown(response_message), parse_mode= 'MarkdownV2')
         conn.close()
     else:
         mostraMenuPrincipal(update, context)   
@@ -1792,7 +1807,7 @@ def opcaoInformaHorasAtividade(update, context):
     if achou:    
         conn = conecta()
         if not conn:
-            bot.send_message(userId, text="Erro ao tentar conectar ao Banco de Dados - opcaoInformaHorasAtividade")
+            enviaMsgBot(bot, userId, text="Erro ao tentar conectar ao Banco de Dados - opcaoInformaHorasAtividade")
             mostraMenuPrincipal(update, context)
             return
         if exibeAtividadesEmAndamento(bot, userId, conn)==0:
@@ -1801,7 +1816,7 @@ def opcaoInformaHorasAtividade(update, context):
             return
         pendencias[userId] = 'informaHorasAtividade' #usuário agora tem uma pendência de informação (horas atividade)
         response_message = "Envie /menu para ver o menu principal.\nEnvie agora, numa única mensagem, *o código da atividade e a quantidade de horas dispendidas* até o momento (número inteiro) - separe as informações com espaço:"  
-        bot.send_message(userId, text=limpaMarkdown(response_message), parse_mode= 'MarkdownV2')
+        enviaMsgBot(bot, userId, text=limpaMarkdown(response_message), parse_mode= 'MarkdownV2')
         conn.close()
     else:
         mostraMenuPrincipal(update, context)   
@@ -1820,7 +1835,7 @@ def opcaoEnviaCienciasAtividades(update, context): #Envia para o e-mail do usuá
         return                     
     conn = conecta()
     if not conn:
-        bot.send_message(userId, text="Erro ao criar conexão ao Banco de Dados - opcaoEnviaCienciasAtividades")
+        enviaMsgBot(bot, userId, text="Erro ao criar conexão ao Banco de Dados - opcaoEnviaCienciasAtividades")
         mostraMenuPrincipal(update, context)
         return
     consulta = """
@@ -1839,18 +1854,18 @@ def opcaoEnviaCienciasAtividades(update, context): #Envia para o e-mail do usuá
     if len(linhas)==0:
         bAchou = False  
     if not bAchou:
-        bot.send_message(userId, text="Não há TDPFs em andamento em que o usuário esteja alocado")
+        enviaMsgBot(bot, userId, text="Não há TDPFs em andamento em que o usuário esteja alocado")
         mostraMenuPrincipal(update, context)
         conn.close()
         return  
     email = linhas[0][3]   
     if email==None or email=="": #email vazio
-        bot.send_message(userId, text="Email do usuário não foi informado - não haverá envio.")
+        enviaMsgBot(bot, userId, text="Email do usuário não foi informado - não haverá envio.")
         mostraMenuPrincipal(update, context)  
         conn.close() 
         return 
     if not "@rfb.gov.br" in email: 
-        bot.send_message(userId, text="Email do usuário é inválido - aparenta não ser institucional - não haverá envio.")
+        enviaMsgBot(bot, userId, text="Email do usuário é inválido - aparenta não ser institucional - não haverá envio.")
         mostraMenuPrincipal(update, context)  
         conn.close() 
         return                                            
@@ -1980,12 +1995,12 @@ def opcaoEnviaCienciasAtividades(update, context): #Envia para o e-mail do usuá
         if resultado!=3:
             msg = "Erro no envio de email - opcaoEnviaCienciasAtividades - "+str(resultado)
             logging.info(msg + " - "+email)
-            bot.send_message(userId, text=msg)
+            enviaMsgBot(bot, userId, text=msg)
         else:
-            bot.send_message(userId, text="E-mail enviado.")   
+            enviaMsgBot(bot, userId, text="E-mail enviado.")   
         os.remove(nomeArq)
     else:    
-        bot.send_message(userId, text="Não há atividades e ciências informadas relativamente aos TDPFs em andamento sob sua responsabilidade.")
+        enviaMsgBot(bot, userId, text="Não há atividades e ciências informadas relativamente aos TDPFs em andamento sob sua responsabilidade.")
     conn.close()
     mostraMenuPrincipal(update, context)         
     return   
@@ -2001,7 +2016,7 @@ def opcaoInformaCiencia(update, context): #Informa ciência de TDPF
     if achou:                      
         pendencias[userId] = 'ciencia' #usuário agora tem uma pendência de informação (ciência)
         response_message = "Envie /menu para ver o menu principal.\nEnvie agora, numa única mensagem, *o nº do TDPF (16 dígitos), a data de ciência (dd/mm/aaaa) e, opcionalmente, a data de vencimento da intimação (ou prazo em dias corridos*; será aplicada a regra de que não começa nem termina em sábado/domingo) válida para fins de perda da espontaneidade tributária relativa ao respectivo procedimento fiscal - separe as informações com espaço:"  
-        bot.send_message(userId, text=limpaMarkdown(response_message), parse_mode= 'MarkdownV2')
+        enviaMsgBot(bot, userId, text=limpaMarkdown(response_message), parse_mode= 'MarkdownV2')
     else:
         mostraMenuPrincipal(update, context) 
     return
@@ -2018,7 +2033,7 @@ def opcaoPrazos(update, context): #Informa prazos para receber avisos
     conn = conecta()
     if not conn:
         response_message = "Erro na conexão (5)"
-        bot.send_message(userId, text=response_message)
+        enviaMsgBot(bot, userId, text=response_message)
         return     
     try:
         cursor = conn.cursor(buffered=True)    
@@ -2034,7 +2049,7 @@ def opcaoPrazos(update, context): #Informa prazos para receber avisos
     except:
         conn.close()
         response_message = "Erro na consulta. (5)"
-        bot.send_message(userId, text=response_message)
+        enviaMsgBot(bot, userId, text=response_message)
         return             
     if not achou:
         response_message = "Usuário não está registrado no serviço. "+textoRetorno
@@ -2044,7 +2059,7 @@ def opcaoPrazos(update, context): #Informa prazos para receber avisos
         else:    
             pendencias[userId] = 'prazos'   #usuário agora tem uma pendência de informação
             response_message = "Envie /menu para ver o menu principal.\nPrazos vigentes para receber alertas: *{} (d1), {} (d2) e {} (d3) dias* antes de o contribuinte readquirir a espontaneidade.\nEnvie agora, numa única mensagem, *três quantidades de dias (1 a 50) distintas* antes de o contribuinte readquirir a espontaneidade tributária em que você deseja receber alertas (separe as informações com espaço):".format(d1, d2, d3)
-    bot.send_message(userId, text=limpaMarkdown(response_message), parse_mode= 'MarkdownV2')
+    enviaMsgBot(bot, userId, text=limpaMarkdown(response_message), parse_mode= 'MarkdownV2')
     conn.close()  
     return
 
@@ -2059,7 +2074,7 @@ def opcaoAnulaCiencia(update, context): #Anula ciência de TDPF
     if achou:            
         pendencias[userId] = 'anulaCiencia'  #usuário agora tem uma pendência de informação   
         response_message = "Envie /menu para ver o menu principal.\nEnvie agora *o nº do TDPF (16 dígitos)* para o qual você deseja anular a última ciência informada que impedia a recuperação da espontaneidade (retornará para a anterior):"
-        bot.send_message(userId, text=limpaMarkdown(response_message), parse_mode= 'MarkdownV2')
+        enviaMsgBot(bot, userId, text=limpaMarkdown(response_message), parse_mode= 'MarkdownV2')
     else:
         mostraMenuPrincipal(update, context)         
     return
@@ -2075,7 +2090,7 @@ def opcaoFinalizaAvisos(update, context): #Finaliza avisos para um certo TDPF
     if achou:   
         pendencias[userId] = 'fim'     #usuário agora tem uma pendência de informação
         response_message = "Envie /menu para ver o menu principal.\nEnvie agora *o nº do TDPF (16 dígitos) ou a palavra TODOS* para finalizar alertas/monitoramento de um ou de todos os TDPFs:"
-        bot.send_message(userId, text=limpaMarkdown(response_message), parse_mode= 'MarkdownV2')
+        enviaMsgBot(bot, userId, text=limpaMarkdown(response_message), parse_mode= 'MarkdownV2')
     else:
         mostraMenuPrincipal(update, context)         
     return
@@ -2091,7 +2106,7 @@ def opcaoAcompanhaTDPFs(update, context): #acompanha um TDPF ou todos os TDPFs e
     if achou:   
         pendencias[userId] = 'acompanha' #usuário agora tem uma pendência de informação
         response_message = "Envie /menu para ver o menu principal.\nEnvie agora o *nº do TDPF (16 dígitos) ou a palavra TODOS* para receber alertas relativos ao TDPF informado ou a todos em que estiver alocado e/ou que for supervisor:"  
-        bot.send_message(userId, text=limpaMarkdown(response_message), parse_mode= 'MarkdownV2')
+        enviaMsgBot(bot, userId, text=limpaMarkdown(response_message), parse_mode= 'MarkdownV2')
     else:
         mostraMenuPrincipal(update, context)         
     return
@@ -2217,7 +2232,7 @@ def opcaoMostraTDPFs(update, context): #Relação de TDPFs monitorados, prazos e
     else:
         if len(lista)==1 and type(lista[0]) is str: #só retornou uma mensagem de erro
             response_message = lista[0]
-            bot.send_message(userId, text=response_message) 
+            enviaMsgBot(bot, userId, text=response_message) 
             return
         i = 1
         msg = ""
@@ -2260,9 +2275,9 @@ def opcaoMostraTDPFs(update, context): #Relação de TDPFs monitorados, prazos e
             if i%15==0:   #há limite de tamanho de msg - enviamos 15 TDPFs por vez, no máximo
                 response_message = "TDPFs Monitorados Por Você:\na) TDPF; b) Supervisor; c) Data da última ciência; d) Dias restantes p/ recuperação da espontaneidade; e) Documento; f) Vencimento do Prazo da Intimação; g) Dias restantes para o vencto. do TDPF:"
                 response_message = response_message+msg  
-                if ambiente=="TESTE":
+                if ambiente!="PRODUÇÃO":
                     response_message = response_message+"\n\nAmbiente: "+ambiente   
-                bot.send_message(userId, text=response_message)               
+                enviaMsgBot(bot, userId, text=response_message)               
                 msg = ""                       
             i+=1                 
         if msg!="":
@@ -2270,10 +2285,10 @@ def opcaoMostraTDPFs(update, context): #Relação de TDPFs monitorados, prazos e
             response_message = response_message+msg
             response_message = response_message + "\n\nVencimento do TDPF pode ser inferior ao do Ação Fiscal, pois as informações do serviço se baseiam"
             response_message = response_message + " na data de distribuição, que pode ter ocorrido antes da emissão do TDPF."             
-            if ambiente=="TESTE":
+            if ambiente!="PRODUÇÃO":
                 response_message = response_message+"\n\nAmbiente: "+ambiente
             response_message = limpaMarkdown(response_message)
-            bot.send_message(userId, text=response_message, parse_mode= 'MarkdownV2')                
+            enviaMsgBot(bot, userId, text=response_message, parse_mode= 'MarkdownV2')                
         response_message = ""         
         msg = ""
         i = 1
@@ -2287,11 +2302,11 @@ def opcaoMostraTDPFs(update, context): #Relação de TDPFs monitorados, prazos e
                 i+=1
         if msg!="":
             response_message = "Lista de atividades em andamento dos TDPFs Monitorados:\na)TDPF; b) Código; c) Descrição; d) Início; e) Vencimento; f) Horas" + msg            
-            if ambiente=="TESTE":
+            if ambiente!="PRODUÇÃO":
                 response_message = response_message+"\n\nAmbiente: "+ambiente			
     if response_message!="": 
         response_message = limpaMarkdown(response_message)
-        bot.send_message(userId, text=response_message, parse_mode= 'MarkdownV2')                
+        enviaMsgBot(bot, userId, text=response_message, parse_mode= 'MarkdownV2')                
     mostraMenuPrincipal(update, context)
     return
 
@@ -2306,7 +2321,7 @@ def opcaoMostraSupervisionados(update, context): #acompanha um TDPF ou todos os 
     if achou:   
         pendencias[userId] = 'mostraSuperv' #usuário agora tem uma pendência de informação
         response_message = "Envie /menu para ver o menu principal.\nDeseja que envie também e-mail (SIM/S ou NÃO/N)?"  
-        bot.send_message(userId, text=response_message)
+        enviaMsgBot(bot, userId, text=response_message)
     else:
         mostraMenuPrincipal(update, context)         
     return
@@ -2322,25 +2337,25 @@ def mostraSupervisionados(update, context): #Relação de TDPFs supervisionados 
     if len(parametros)!=1:
         response_message = "Envie somente SIM, S, NÃO ou N."
         response_message = response_message+textoRetorno  
-        bot.send_message(userId, text=response_message)  
+        enviaMsgBot(bot, userId, text=response_message)  
         return  
     resposta = parametros[0].upper()
     if not resposta in ["SIM", "S", "NÃO", "N", "NAO"]:
         response_message = "Envie somente SIM, S, NÃO ou N."
         response_message = response_message+textoRetorno  
-        bot.send_message(userId, text=response_message)
+        enviaMsgBot(bot, userId, text=response_message)
         return          
     resposta = resposta[:1]                 
     eliminaPendencia(userId)       
     lista = montaListaTDPFs(userId, 2)
     if lista==None:
         response_message = "Você não supervisiona nenhum TDPF." 
-        bot.send_message(userId, text=response_message)
+        enviaMsgBot(bot, userId, text=response_message)
         mostraMenuPrincipal(update, context)  
         return             
     if len(lista)==1 and type(lista[0]) is str:
         response_message = lista[0]
-        bot.send_message(userId, text=response_message) 
+        enviaMsgBot(bot, userId, text=response_message) 
         mostraMenuPrincipal(update, context)         
         return 
     if resposta=='S':
@@ -2466,10 +2481,10 @@ def mostraSupervisionados(update, context): #Relação de TDPFs supervisionados 
             response_message = response_message + msg  
             response_message = response_message + "\n\nVencimento do TDPF pode ser inferior ao do Ação Fiscal, pois as informações do serviço se baseiam"
             response_message = response_message + " na data de distribuição, que pode ter ocorrido antes da emissão do TDPF."            
-            if ambiente=="TESTE":
+            if ambiente!="PRODUÇÃO":
                 response_message = response_message+"\n\nAmbiente: "+ambiente
             response_message = response_message.replace(".", "\.").replace("_", "\_").replace("[", "\[").replace("]", "\]").replace(")", "\)").replace("(", "\(").replace("-","\-")#.replace("*", "\\*")        
-            bot.send_message(userId, text=response_message, parse_mode= 'MarkdownV2')                  	                                  
+            enviaMsgBot(bot, userId, text=response_message, parse_mode= 'MarkdownV2')                  	                                  
             msg = ""
         i+=1  
     if conn:
@@ -2477,10 +2492,10 @@ def mostraSupervisionados(update, context): #Relação de TDPFs supervisionados 
     if msg!="":    
         response_message = "TDPFs Supervisionados Por Você:\na) TDPF; b) Monitorado Por Algum Fiscal; c) Data da última ciência; d) Dias restantes p/ recuperação da espontaneidade; e) Dias restantes para o vencto. do TDPF:"  
         response_message = response_message+msg
-        if ambiente=="TESTE":
+        if ambiente!="PRODUÇÃO":
             response_message = response_message+"\n\nAmbiente: "+ambiente		
             response_message = limpaMarkdown(response_message)
-            bot.send_message(userId, text=response_message, parse_mode= 'MarkdownV2')   
+            enviaMsgBot(bot, userId, text=response_message, parse_mode= 'MarkdownV2')   
     if resposta=='S':
         if email!="" and "@rfb.gov.br" in email:
             nomeArq = "Sup_"+str(userId)+"_"+datetime.now().strftime("%Y_%m_%d_%H_%M_%S")+".xlsx"
@@ -2490,9 +2505,9 @@ def mostraSupervisionados(update, context): #Relação de TDPFs supervisionados 
             if resultado!=3:
                 msg = "Erro no envio de email - mostraSupervisionados - "+str(resultado)
                 logging.info(msg + " - "+email)
-                bot.send_message(userId, text=msg)
+                enviaMsgBot(bot, userId, text=msg)
             else:
-                bot.send_message(userId, text="E-mail enviado.")   
+                enviaMsgBot(bot, userId, text="E-mail enviado.")   
             os.remove(nomeArq)  
         conn.close()    
     mostraMenuPrincipal(update, context)
@@ -2509,7 +2524,7 @@ def opcaoEnviaAtividades(update, context): #envia relação de atividades de TDP
     if achou:   
         conn = conecta()
         if not conn:
-            bot.send_message(userId, text="Erro ao criar conexão ao Banco de Dados - opcaoEnviaAtividades")
+            enviaMsgBot(bot, userId, text="Erro ao criar conexão ao Banco de Dados - opcaoEnviaAtividades")
             mostraMenuPrincipal(update, context)
             return
         consulta = """
@@ -2528,18 +2543,18 @@ def opcaoEnviaAtividades(update, context): #envia relação de atividades de TDP
         if len(linhas)==0:
             bAchou = False  
         if not bAchou:
-            bot.send_message(userId, text="Não há TDPFs sob sua supervisão ou usuário está inativo no serviço - opcaoEnviaAtividades")
+            enviaMsgBot(bot, userId, text="Não há TDPFs sob sua supervisão ou usuário está inativo no serviço - opcaoEnviaAtividades")
             mostraMenuPrincipal(update, context)
             conn.close()
             return  
         email = linhas[0][3]   
         if email==None or email=="": #email vazio
-            bot.send_message(userId, text="Email do usuário não foi informado - não haverá envio.")
+            enviaMsgBot(bot, userId, text="Email do usuário não foi informado - não haverá envio.")
             mostraMenuPrincipal(update, context)  
             conn.close() 
             return 
         if not "@rfb.gov.br" in email: 
-            bot.send_message(userId, text="Email do usuário é inválido - aparenta não ser institucional - não haverá envio.")
+            enviaMsgBot(bot, userId, text="Email do usuário é inválido - aparenta não ser institucional - não haverá envio.")
             mostraMenuPrincipal(update, context)  
             conn.close() 
             return                                            
@@ -2625,12 +2640,12 @@ def opcaoEnviaAtividades(update, context): #envia relação de atividades de TDP
             if resultado!=3:
                 msg = "Erro no envio de email - opcaoEnviaAtividades - "+str(resultado)
                 logging.info(msg + " - "+email)
-                bot.send_message(userId, text=msg)
+                enviaMsgBot(bot, userId, text=msg)
             else:
-                bot.send_message(userId, text="E-mail enviado.")   
+                enviaMsgBot(bot, userId, text="E-mail enviado.")   
             os.remove(nomeArq)
         else:    
-            bot.send_message(userId, text="Não há atividades relativamente aos TDPFs em andamento sob sua supervisão.")
+            enviaMsgBot(bot, userId, text="Não há atividades relativamente aos TDPFs em andamento sob sua supervisão.")
         conn.close()
     mostraMenuPrincipal(update, context)         
     return   
@@ -2646,7 +2661,7 @@ def opcaoSupervisorEspontaneidade(update, context): #exibição de TDPFS que est
     if achou:   
         pendencias[userId] = 'supervisorEspontaneidade' #usuário agora tem uma pendência de informação
         response_message = "Envie /menu para ver o menu principal.\nEnvie agora um intervalo de dias (um ou dois dígitos para cada) em que haverá a recuperação da espontaneidade tributária - TDFPs de sua EQUIPE:"  
-        bot.send_message(userId, text=response_message)
+        enviaMsgBot(bot, userId, text=response_message)
     else:
         mostraMenuPrincipal(update, context)         
     return
@@ -2672,7 +2687,7 @@ def mostraSupervisorEspontaneidade(update, context): #exibe os TDPFs da equipe q
         except:    
             response_message = "Envie somente dois números inteiros (separados por espaço)."
             response_message = response_message+textoRetorno  
-            bot.send_message(userId, text=response_message)  
+            enviaMsgBot(bot, userId, text=response_message)  
             return
     elif len(parametros)==3 and parametros[0].isdigit and parametros[1].upper()=="A" and parametros[2].isdigit():
         try:
@@ -2681,12 +2696,12 @@ def mostraSupervisorEspontaneidade(update, context): #exibe os TDPFs da equipe q
         except:    
             response_message = "Envie somente dois números inteiros (separados por espaço) (2)."
             response_message = response_message+textoRetorno  
-            bot.send_message(userId, text=response_message)  
+            enviaMsgBot(bot, userId, text=response_message)  
             return
     elif len(parametros)!=2:
         response_message = "Envie somente dois números inteiros (separados por espaço) (3)."
         response_message = response_message+textoRetorno  
-        bot.send_message(userId, text=response_message)  
+        enviaMsgBot(bot, userId, text=response_message)  
         return
     else: 
         resposta1 = parametros[0]
@@ -2698,22 +2713,22 @@ def mostraSupervisorEspontaneidade(update, context): #exibe os TDPFs da equipe q
             except:
                 response_message = "Envie somente dois números inteiros (separados por espaço) (4)."
                 response_message = response_message+textoRetorno  
-                bot.send_message(userId, text=response_message)  
+                enviaMsgBot(bot, userId, text=response_message)  
                 return 
         else:
             response_message = "Envie somente dois números inteiros (separados por espaço) (5)."
             response_message = response_message+textoRetorno  
-            bot.send_message(userId, text=response_message)  
+            enviaMsgBot(bot, userId, text=response_message)  
             return  
     prazo.sort()  
     if prazo[0]>99 or prazo[1]>99 or prazo[0]<0 or prazo[1]<0:
         response_message = "Envie somente dois números inteiros positivos (separados por espaço) de no máximo dois dígitos cada."
         response_message = response_message+textoRetorno  
-        bot.send_message(userId, text=response_message)  
+        enviaMsgBot(bot, userId, text=response_message)  
         return                           
     conn = conecta()
     if not conn:
-        bot.send_message(userId, text="Erro na conexão - mostraSupervisorEspontaneidade")
+        enviaMsgBot(bot, userId, text="Erro na conexão - mostraSupervisorEspontaneidade")
         return        
     cursor = conn.cursor(buffered=True)
     consulta = """
@@ -2757,7 +2772,7 @@ def mostraSupervisorEspontaneidade(update, context): #exibe os TDPFs da equipe q
     else:
         response_message = "Não haverá recuperação da espontaneidade tributária para nenhum TDPF neste intervalo ou usuário não é supervisor."    
     response_message = limpaMarkdown(response_message)            
-    bot.send_message(userId, text=response_message, parse_mode= 'MarkdownV2')                          
+    enviaMsgBot(bot, userId, text=response_message, parse_mode= 'MarkdownV2')                          
     conn.close()
     mostraMenuPrincipal(update, context)  
     return
@@ -2775,7 +2790,7 @@ def opcaoEMail(update, context): #cadastra e-mail para o recebimento de avisos
         return     
     conn = conecta()
     if not conn:
-        bot.send_message(userId, text="Erro na conexão - opcaoEmail")
+        enviaMsgBot(bot, userId, text="Erro na conexão - opcaoEmail")
         return        
     cursor = conn.cursor(buffered=True)
     comando = "Select CPF, email from Usuarios Where Saida Is Null and idTelegram=%s" 
@@ -2784,11 +2799,11 @@ def opcaoEMail(update, context): #cadastra e-mail para o recebimento de avisos
         row = cursor.fetchone()
         conn.close()
         if not row:
-            bot.send_message(userId, text="Usuário não está registrado no serviço ou está inativo. "+textoRetorno)
+            enviaMsgBot(bot, userId, text="Usuário não está registrado no serviço ou está inativo. "+textoRetorno)
             return
         email = row[1]
     except:
-        bot.send_message(userId, text="Erro na consulta (10).")  
+        enviaMsgBot(bot, userId, text="Erro na consulta (10).")  
         conn.close()      
         return False     
     pendencias[userId] = 'email'     #usuário agora tem uma pendência de informação
@@ -2796,15 +2811,23 @@ def opcaoEMail(update, context): #cadastra e-mail para o recebimento de avisos
         response_message = "Envie /menu para ver o menu principal.\nEmail atualmente cadastrado - "+email+". Informe seu *novo nome de usuário do endereço de e-mail institucional ou a palavra NULO* para descadastrar o atual (exemplo - se seu e-mail é fulano@rfb.gov.br, envie fulano):"
     else:    
         response_message = "Envie /menu para ver o menu principal.\nEnvie agora seu *nome de usuário do endereço de e-mail institucional* no qual você também receberá alertas (exemplo - se seu e-mail é fulano@rfb.gov.br, envie fulano):"
-    bot.send_message(userId, text=limpaMarkdown(response_message), parse_mode= 'MarkdownV2')  
+    enviaMsgBot(bot, userId, text=limpaMarkdown(response_message), parse_mode= 'MarkdownV2')  
     return  
 
 ############################# Handlers #########################################
+def error_handler(_, update, error):
+    #try:
+    #    print("aqui")
+    #    raise error
+    #except:
+    logging.info("Falha ao enviar mensagem - Erro: "+str(error)) #com ou sem o try acima, dá o erro e interrompe o envio das mensagens (quando há várias)
+    return
+
 def botTelegram():
     global updater, token, senhaAvisoUrgente
     logging.info('Tentando iniciar o Updater Telegram')
     updater = Updater(token, use_context=True) 
-    
+    updater.dispatcher.add_error_handler(error_handler)
     updater.dispatcher.add_handler(CommandHandler('start', start))
     #updater.dispatcher.add_handler(CallbackQueryHandler(menuTDPF))    
     updater.dispatcher.add_handler(CommandHandler('menu', start))
@@ -2841,6 +2864,7 @@ def botTelegram():
     
     updater.start_polling()
     logging.info('Serviço iniciado - '+datetime.now().strftime('%d/%m/%Y %H:%M'))
+    #enviaMsgUpdater(842552685, "Serviço iniciado")    
     #updater.idle()    #não é necessário pq o programa vai ficar rodando em loop infinito
 ################################################################################
 
@@ -2851,7 +2875,7 @@ def disparaAvisoUrgente(update, context): #avisos urgentes da Cofis disparados p
     conn = conecta()
     userId = update.effective_user.id
     if not conn:
-        updater.bot.send_message(userId, "Erro na conexão ao banco de dados")
+        enviaMsgUpdater(userId, "Erro na conexão ao banco de dados")
         return
     logging.info("Acionado o disparo de mensagens URGENTES - "+datetime.now().strftime('%d/%m/%Y %H:%M'))
     cursor = conn.cursor()
@@ -2861,7 +2885,7 @@ def disparaAvisoUrgente(update, context): #avisos urgentes da Cofis disparados p
     if not mensagens:
         msgErro = "Não há mensagem a ser enviada"
         logging.info(msgErro) 
-        updater.bot.send_message(userId, msgErro)
+        enviaMsgUpdater(userId, msgErro)
         return #não há mensagens a serem enviadas
     msgCofis = ""
     for mensagem in mensagens:
@@ -2869,13 +2893,13 @@ def disparaAvisoUrgente(update, context): #avisos urgentes da Cofis disparados p
             msgCofis = msgCofis+";\n"
         msgCofis = msgCofis+mensagem[0]
     if msgCofis!="":
-        msgCofis = "Mensagem URGENTE Cofis:\n"+msgCofis+"."  
-        if ambiente=="TESTE":
+        msgCofis = "Mensagem URGENTE Cofis:\n"+msgCofis
+        if ambiente!="PRODUÇÃO":
             msgCofis = msgCofis + "\nAmbiente: "+ambiente
     else:
         msgErro = "Não há mensagem a ser enviada (2)"
         logging.info(msgErro) 
-        updater.bot.send_message(userId, msgErro)        
+        enviaMsgUpdater(userId, msgErro)        
         return
     comando = "Select idTelegram from Usuarios Where Saida Is Null and idTelegram Is Not Null and idTelegram<>0 and Adesao Is Not Null"
     cursor.execute(comando)
@@ -2883,7 +2907,7 @@ def disparaAvisoUrgente(update, context): #avisos urgentes da Cofis disparados p
     totalMsg = 0
     msgDisparadas = 0
     for usuario in usuarios: #percorremos os usuários ativos Telegram
-        updater.bot.send_message(usuario[0], text=msgCofis)   
+        enviaMsgUpdater(usuario[0], text=msgCofis)   
         totalMsg+=1
         msgDisparadas+=1
         if msgDisparadas>=30:
@@ -2891,8 +2915,8 @@ def disparaAvisoUrgente(update, context): #avisos urgentes da Cofis disparados p
             time.sleep(1) #a cada 30 mensagens, dormimos um segundo (limitação do Bot é 30 por seg - TESTE) 
     msg = "Total de usuários para os quais foi enviada a mensagem (AvisoUrgente) no ambiente "+ambiente+": "+str(totalMsg)
     logging.info(msg) 
-    updater.bot.send_message(userId, msg)     
-    updater.bot.send_message(userId, "Mensagem que foi enviada para cada usuário:\n'"+msgCofis+"'")  
+    enviaMsgUpdater(userId, msg)     
+    enviaMsgUpdater(userId, "Mensagem que foi enviada para cada usuário:\n'"+msgCofis+"'")  
     try:
         comando = "Update AvisosUrgentes Set DataEnvio=%s Where DataEnvio Is Null"
         cursor.execute(comando, (dataAtual,))
@@ -2900,7 +2924,7 @@ def disparaAvisoUrgente(update, context): #avisos urgentes da Cofis disparados p
     except:
         msgErro = "Erro ao atualizar a tabela de AvisosUrgentes - datas de envio ficaram em branco. Cuidado para não reenviar."
         logging.info(msgErro)
-        updater.bot.send_message(userId, msgErro)         
+        enviaMsgUpdater(userId, msgErro)         
         conn.rollback()
     return
 
@@ -2942,7 +2966,7 @@ def disparaMensagens(): #avisos diários (produção) ou de hora em hora (teste)
             if server:
                 server.quit()
             return
-        logging.info("Verificando disparo para "+usuario[1])
+        #logging.info("Verificando disparo para "+usuario[1])
         #if usuario.CPF=="53363833172": #me excluo do envio de mensagens - só para testes
         #    continue
         #if usuario.CPF=="05517694675": #exclusão da Juliana
@@ -3077,10 +3101,10 @@ def disparaMensagens(): #avisos diários (produção) ou de hora em hora (teste)
                 if len(listaUsuario)>0:
                     listaUsuario = listaUsuario+"\n\n"
                 listaUsuario = listaUsuario+msgCofis
-            if ambiente=="TESTE":
+            if ambiente!="PRODUÇÃO":
                 listaUsuario = listaUsuario+"\n\nAmbiente: "+ambiente
             logging.info("Disparando mensagem para "+cpf)
-            updater.bot.send_message(usuario[0], text=limpaMarkdown(listaUsuario), parse_mode= 'MarkdownV2')  
+            enviaMsgUpdater(usuario[0], text=limpaMarkdown(listaUsuario), parse_mode= 'MarkdownV2')  
 			#enviamos e-mail também, se houver um na tabela
             if email!=None and server!=None:
                 email = email.strip()
@@ -3131,10 +3155,10 @@ def disparaMensagens(): #avisos diários (produção) ou de hora em hora (teste)
 
         if i>0:
             listaCienciasPendentes = "Processos sem registro de ciência há mais de 30 dias da integração.\nTDPF | Processo | Data da Integração:\n"+listaCienciasPendentes
-            if ambiente=="TESTE":
+            if ambiente!="PRODUÇÃO":
                 listaCienciasPendentes = listaCienciasPendentes+"\nAmbiente: "+ambiente
             logging.info("Disparando mensagem para "+cpf+" - Ciências Pendentes")
-            updater.bot.send_message(usuario[0], text=limpaMarkdown(listaCienciasPendentes), parse_mode= 'MarkdownV2')  
+            enviaMsgUpdater(usuario[0], text=limpaMarkdown(listaCienciasPendentes), parse_mode= 'MarkdownV2')  
             totalMsg+=1
             msgDisparadas+=1
             if msgDisparadas>=30:
@@ -3201,9 +3225,9 @@ def disparaMensagens(): #avisos diários (produção) ou de hora em hora (teste)
         if linha[0]!=cpfAnt:
             if msg!="":
                 msg = cabecalho+msg
-                if ambiente=="TESTE":
+                if ambiente!="PRODUÇÃO":
                     msg = msg+"\n"+"Ambiente: "+ambiente                
-                updater.bot.send_message(userId, text=limpaMarkdown(msg), parse_mode= 'MarkdownV2')
+                enviaMsgUpdater(userId, text=limpaMarkdown(msg), parse_mode= 'MarkdownV2')
                 msg = ""
             equipe = ""    
             cpfAnt = linha[0]    
@@ -3222,9 +3246,9 @@ def disparaMensagens(): #avisos diários (produção) ou de hora em hora (teste)
         
     if msg!="": #envia a mensagem para o último usuário
         msg = cabecalho+msg
-        if ambiente=="TESTE":
+        if ambiente!="PRODUÇÃO":
             msg = msg+"\n"+"Ambiente: "+ambiente        
-        updater.bot.send_message(userId, text=limpaMarkdown(msg), parse_mode= 'MarkdownV2')
+        enviaMsgUpdater(userId, text=limpaMarkdown(msg), parse_mode= 'MarkdownV2')
 
     #avisamos os supervisores dos processos integrados e sem registro de ciência há mais de 30 dias (o aviso se repete a cada 15 dias, limitado a 60 dias da integração)  
     #(não vai e-mail)
@@ -3252,9 +3276,9 @@ def disparaMensagens(): #avisos diários (produção) ou de hora em hora (teste)
         if linha[4]!=userId:
             if msg!="":
                 msg = cabecalho+msg
-                if ambiente=="TESTE":
+                if ambiente!="PRODUÇÃO":
                     msg = msg+"\n"+"Ambiente: "+ambiente                
-                updater.bot.send_message(userId, text=limpaMarkdown(msg), parse_mode= 'MarkdownV2')
+                enviaMsgUpdater(userId, text=limpaMarkdown(msg), parse_mode= 'MarkdownV2')
                 msg = ""
             equipe = ""    
             userId = linha[4]    
@@ -3275,9 +3299,9 @@ def disparaMensagens(): #avisos diários (produção) ou de hora em hora (teste)
 
     if msg!="": #envia a mensagem para o último usuário
         msg = cabecalho+msg
-        if ambiente=="TESTE":
+        if ambiente!="PRODUÇÃO":
             msg = msg+"\n"+"Ambiente: "+ambiente        
-        updater.bot.send_message(userId, text=limpaMarkdown(msg), parse_mode= 'MarkdownV2')  
+        enviaMsgUpdater(userId, text=limpaMarkdown(msg), parse_mode= 'MarkdownV2')  
 
     agora = datetime.now()
     lista = []
@@ -3317,9 +3341,9 @@ def disparaMensagens(): #avisos diários (produção) ou de hora em hora (teste)
         if linha[0]!=cpfAnt:
             if msg!="":
                 msg = cabecalho+msg
-                if ambiente=="TESTE":
+                if ambiente!="PRODUÇÃO":
                     msg = msg+"\n"+"Ambiente: "+ambiente                
-                updater.bot.send_message(userId, text=limpaMarkdown(msg), parse_mode= 'MarkdownV2')
+                enviaMsgUpdater(userId, text=limpaMarkdown(msg), parse_mode= 'MarkdownV2')
                 msg = ""
             equipe = ""    
             cpfAnt = linha[0]    
@@ -3349,9 +3373,9 @@ def disparaMensagens(): #avisos diários (produção) ou de hora em hora (teste)
         userId = linha[2]               
     if msg!="":
         msg = cabecalho+msg
-        if ambiente=="TESTE":
+        if ambiente!="PRODUÇÃO":
             msg = msg+"\n"+"Ambiente: "+ambiente
-        updater.bot.send_message(userId, text=limpaMarkdown(msg), parse_mode= 'MarkdownV2')
+        enviaMsgUpdater(userId, text=limpaMarkdown(msg), parse_mode= 'MarkdownV2')
 
     conn.close()              
     return
@@ -3382,7 +3406,7 @@ def disparaMsgJuntada(): #alerta de juntada (não vai para o e-mail)
     for usuario in usuarios: #percorremos os usuários ativos Telegram
         if termina: #programa foi informado de que é para encerrar (quit)
             return
-        logging.info("Verificando disparo para "+usuario[1])
+        #logging.info("Verificando disparo de Aviso de Juntada para "+usuario[1])
         
         listaUsuario = "" #lista de TDPF com espontaneidade, atividade ou o próprio TDPF vencendo
         userId = usuario[0]
@@ -3407,7 +3431,9 @@ def disparaMsgJuntada(): #alerta de juntada (não vai para o e-mail)
             juntadasAvisadas.add(fiscalizacao[3])
         if listaUsuario!="":
             listaUsuario = cabecalho + listaUsuario
-            updater.bot.send_message(userId, text=limpaMarkdown(listaUsuario), parse_mode= 'MarkdownV2')  
+            if ambiente!="PRODUÇÃO":
+                listaUsuario = listaUsuario + "\n\nAmbiente: "+ambiente
+            enviaMsgUpdater(userId, text=limpaMarkdown(listaUsuario), parse_mode= 'MarkdownV2')  
             totalMsg+=1
             msgDisparadas+=1
             if msgDisparadas>=30:
@@ -3431,6 +3457,79 @@ def disparaMsgJuntada(): #alerta de juntada (não vai para o e-mail)
     conn.close()
     return
 
+def disparaMsgProrrogacao(): #avisa sobre prorrogação pendente de assinatura ou de registro no RHAF
+    global updater, termina, ambiente, dirLog
+    #verificamos o dia e a hora da última pesquisa    
+    try:
+        f = open(dirLog+"AvisoProrrogacao.txt",'r')
+        ultimaDataHora = f.read()
+        ultimaDataHora = datetime.strptime(ultimaDataHora, "%d/%m/%Y %H:%M") #esta data serve para não mandar msg sobre evento já verificado
+        f.close()
+    except:
+        ultimaDataHora =  datetime.strptime("01/01/1900 00:00", "%d/%m/%Y %H:%M")  
+    conn = conecta()
+    if not conn:
+        logging.info("Conexão ao BD falhou (disparaMsgProrrogacao")
+        return
+    logging.info("Acionado o disparo de mensagens Prorrogação - "+datetime.now().strftime('%d/%m/%Y %H:%M'))
+    cursor = conn.cursor(buffered=True)
+    comando = """Select idTelegram, Fiscais.Codigo, Usuarios.CPF from Usuarios, Fiscais
+                 Where Adesao Is Not Null and Saida Is Null and idTelegram Is Not Null and idTelegram<>0 and Usuarios.CPF=Fiscais.CPF"""
+    cursor.execute(comando)
+    usuarios = cursor.fetchall()
+    totalMsg = 0
+    msgDisparadas = 0    
+    cabecalho = "Alerta de Prorrogação Pendente (TDPF | Pendência):\n\n" 
+    consulta1 = """Select Distinctrow TDPFS.Numero From Prorrogacoes, AssinaturaFiscal, TDPFS 
+                   Where Prorrogacoes.TDPF=TDPFS.Codigo and Prorrogacoes.Codigo=AssinaturaFiscal.Prorrogacao and Prorrogacoes.Data>%s and
+                   AssinaturaFiscal.Fiscal=%s and AssinaturaFiscal.DataAssinatura Is Null"""    
+    consulta2 = """Select TDPFS.Numero, Prorrogacoes.Codigo, AssinaturaFiscal.Codigo From Prorrogacoes, AssinaturaFiscal, TDPFS 
+                   Where Prorrogacoes.DataAssinatura Is Not Null and Prorrogacoes.DataAssinatura>%s and Prorrogacoes.TDPF=TDPFS.Codigo and AssinaturaFiscal.Fiscal=%s
+                   and Prorrogacoes.Codigo=AssinaturaFiscal.Prorrogacao and Prorrogacoes.RegistroRHAF Is Null"""                    
+    for usuario in usuarios: #percorremos os usuários ativos Telegram
+        if termina: #programa foi informado de que é para encerrar (quit)
+            return
+        #logging.info("Verificando disparo de Aviso de Prorrogação para "+usuario[2])
+        
+        listaUsuario = "" #lista de TDPF com espontaneidade, atividade ou o próprio TDPF vencendo
+        userId = usuario[0]
+        chaveFiscal = usuario[1]
+        cursor.execute(consulta1, (ultimaDataHora, chaveFiscal))
+        linhas = cursor.fetchall()
+        for linha in linhas: #avisamos de assinaturas pendentes
+            listaUsuario = listaUsuario + "*"+formataTDPF(linha[0])+"* | Assinatura\n\n"
+        cursor.execute(consulta2, (ultimaDataHora, chaveFiscal))
+        linhas = cursor.fetchall()
+        for linha in linhas: #avisamos de pendência de registro no RHAF - apenas fiscal que criou a prorrogação
+            tdpfFormatado = formataTDPF(linha[0])
+            prorrogacao = linha[1]
+            codigoAssinatura = linha[2]
+            #temos que verificar se este é o fiscal que criou a prorrogação, ou seja, o que tem menor código na tabela assinatura fiscal dentre os da prorrogação corrente
+            consultaFiscalResp = "Select MIN(Codigo) from AssinaturaFiscal Where AssinaturaFiscal.Prorrogacao=%s"
+            cursor.execute(consultaFiscalResp, (prorrogacao, ))
+            menorCodigoAssinatura = cursor.fetchone()
+            if codigoAssinatura==menorCodigoAssinatura[0]: #é a menor, então é o fiscal que criou a prorrogação - receberá o aviso
+                listaUsuario = listaUsuario + "*"+tdpfFormatado+"* | Registro no RHAF"
+        if listaUsuario!="":
+            listaUsuario = cabecalho + listaUsuario
+            if ambiente!="PRODUÇÃO":
+                listaUsuario = listaUsuario + "\n\nAmbiente: "+ambiente            
+            enviaMsgUpdater(userId, text=limpaMarkdown(listaUsuario), parse_mode= 'MarkdownV2')  
+            totalMsg+=1
+            msgDisparadas+=1
+            if msgDisparadas>=30:
+                msgDisparadas = 0
+                time.sleep(1) #a cada 30 mensagens, dormimos um segundo (limitação do Bot é 30 por seg - TESTE)  
+    try:
+        f = open(dirLog+"AvisoProrrogacao.txt",'w')
+        f.write(datetime.now().strftime("%d/%m/%Y %H:%M")) #atualizamos a data para não informarmos sobre pendências já verificadas
+        f.close()                  
+    except:
+        print("Falhou a criação do arquivo com o registro da data e hora do envio de mensagens - PRORROGAÇÕES")
+        logging.info("Falhou a criação do arquivo com o registro da data e hora do envio de mensagens - PRORROGAÇÕES")
+    logging.info("Total de mensagens disparadas (prorrogações): "+str(totalMsg)) 
+    conn.close()
+    return                      
 
 def disparador():
     global termina, dirLog, sistema, ambiente, diaAtual
@@ -3526,18 +3625,22 @@ updater = None #para ser acessível ao disparador de mensagens
 if ambiente=="TESTE":
     schedule.every(60).minutes.do(disparaMensagens) #deixamos enviar msgs a cada 1 h no ambiente de testes
     schedule.every(60).minutes.do(disparaMsgJuntada)
+    schedule.every(60).minutes.do(disparaMsgProrrogacao)
 else:
-	schedule.every().day.at("07:30").do(disparaMensagens) #uma vez por dia - produção
+	schedule.every().day.at("07:30").do(disparaMensagens) #uma vez por dia - produção     
 if ambiente!="TESTE":
     schedule.every().day.at("15:00").do(disparaMsgJuntada) #não funciona colocando no else acima (dá erro de identação)
-
+    schedule.every().day.at("10:00").do(disparaMsgProrrogacao) 
+    schedule.every().day.at("15:45").do(disparaMsgProrrogacao)
 termina = False
 diaAtual = datetime.now().date() #será utilizado para criar um arquivo de Log p/ cada dia
 botTelegram()
 threadDisparador = threading.Thread(target=disparador, daemon=True) #encerra thread quando sair do programa sem esperá-la
 threadDisparador.start()
 print("Serviço iniciado [", datetime.now(), "]")
-disparaMensagens()
+#disparaMensagens()
+#disparaMsgJuntada
+#disparaMsgProrrogacao()
 while not termina:
     entrada = input("Digite QUIT para terminar o serviço BOT: ")
     if entrada:

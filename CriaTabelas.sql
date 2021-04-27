@@ -126,7 +126,7 @@ DROP TABLE IF EXISTS `MensagensCofis`;
 
 CREATE TABLE `MensagensCofis` (
   `Codigo` INTEGER NOT NULL AUTO_INCREMENT, 
-  `Mensagem` VARCHAR(100), 
+  `Mensagem` VARCHAR(200), 
   `Data` DATETIME, 
   PRIMARY KEY (`Codigo`), 
   INDEX (`Data`)
@@ -136,7 +136,7 @@ DROP TABLE IF EXISTS `AvisosUrgentes`;
 
 CREATE TABLE `AvisosUrgentes` (
   `Codigo` INTEGER NOT NULL AUTO_INCREMENT, 
-  `Mensagem` VARCHAR(100), 
+  `Mensagem` VARCHAR(200), 
   `DataEnvio` DATETIME, 
   PRIMARY KEY (`Codigo`), 
   INDEX (`DataEnvio`)
