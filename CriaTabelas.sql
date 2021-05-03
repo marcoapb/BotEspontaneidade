@@ -163,6 +163,7 @@ CREATE TABLE `DiarioFiscalizacao` (
   `TDPF` BIGINT,
   `Data` DATETIME, 
   `Entrada` VARBINARY(16384),  
+  `Extensao` VARCHAR(5),
   PRIMARY KEY (`Codigo`), 
   INDEX (`Fiscal`),
   INDEX (`TDPF`),

@@ -738,7 +738,7 @@ def trataMsgRecebida(msgRecebida, c, addr): #c é o socket estabelecido com o cl
                     return                
                 if not estaoChavesValidas(addr): #meio difícil de ocorrer aqui, pq tem lá no servidor, mas ...
                     geraChaves(addr) 
-                versaoScript = "12a" #versão mínima do Script (X.XX, sem o ponto) - só informa na mensagem abaixo (não restringe nas requisições)
+                versaoScript = "140" #versão mínima do Script (X.XX, sem o ponto; colocar o zero ao final, se for o caso) - só informa na mensagem abaixo (não restringe nas requisições)
                 enviaRespostaSemFechar("0000"+chavesCripto[segmentoIP(addr)][2].strftime("%d/%m/%Y %H:%M:%S")+versaoScript, c) #envia a validade da chave e a versão mínima exigida do Script
                 try:
                     msg = c.recv(1024).decode("utf-8") #só aguarda um 00
@@ -2088,8 +2088,8 @@ def trataMsgRecebida(msgRecebida, c, addr): #c é o socket estabelecido com o cl
             enviaResposta(resposta, c) 
             conn.close()
             return        
-        if inicio>vencimento or vencimento.date()<datetime.today().date():
-            resposta = "99REQUISIÇÃO INVÁLIDA - DATA DE VENCIMENTO ANTERIOR À DE INÍCIO OU PASSADA (14F)"
+        if inicio>vencimento: #foi pedido para retirar essa crítica or vencimento.date()<datetime.today().date():
+            resposta = "99REQUISIÇÃO INVÁLIDA - DATA DE VENCIMENTO ANTERIOR À DE INÍCIO (14F)" #OU PASSADA (14F)"
             enviaResposta(resposta, c) 
             conn.close()
             return 
@@ -2364,8 +2364,8 @@ def trataMsgRecebida(msgRecebida, c, addr): #c é o socket estabelecido com o cl
             enviaResposta(resposta, c) 
             conn.close()
             return        
-        if inicio>vencimento or vencimento.date()<datetime.today().date():
-            resposta = "99REQUISIÇÃO INVÁLIDA - DATA DE VENCIMENTO ANTERIOR À DE INÍCIO OU PASSADA (17I)"
+        if inicio>vencimento: #foi pedido para retirar essa crítica or vencimento.date()<datetime.today().date():
+            resposta = "99REQUISIÇÃO INVÁLIDA - DATA DE VENCIMENTO ANTERIOR À DE INÍCIO (17I)" #OU PASSADA (17I)"
             enviaResposta(resposta, c) 
             conn.close()
             return 
@@ -2449,13 +2449,14 @@ def trataMsgRecebida(msgRecebida, c, addr): #c é o socket estabelecido com o cl
         return             
 
     if codigo==18: #inclui entrada em diário da fiscalização
-        if len(msgRecebida)!=(33+tamChave):
+        if len(msgRecebida)!=(38+tamChave):
             resposta = "99REQUISIÇÃO INVÁLIDA (18A)"
             enviaResposta(resposta, c) 
             conn.close()
-            return  
-        primEnvio = msgRecebida[-4:-2]
-        numPartes = msgRecebida[-2:]
+            return
+        primEnvio = msgRecebida[-9:-7]
+        numPartes = msgRecebida[-7:-5]
+        extensao = msgRecebida[-5:].strip()
         try:
             primEnvio = int(primEnvio) 
             if primEnvio!=0:       
@@ -2470,7 +2471,7 @@ def trataMsgRecebida(msgRecebida, c, addr): #c é o socket estabelecido com o cl
             return  
         try:
             numPartes = int(numPartes) 
-            if primEnvio!=0:       
+            if primEnvio!=0 or numPartes>64:    #no máximo 64 partes (para não passar, no total, de 65535)   
                 resposta = "99REQUISIÇÃO INVÁLIDA - NÚMERO DE PARTES INVÁLIDA (18E)"
                 enviaResposta(resposta, c) 
                 conn.close()
@@ -2480,6 +2481,30 @@ def trataMsgRecebida(msgRecebida, c, addr): #c é o socket estabelecido com o cl
             enviaResposta(resposta, c) 
             conn.close()
             return 
+        if len(extensao)==0:
+            resposta = "99REQUISIÇÃO INVÁLIDA - EXTENSÃO VAZIA (18F1)"
+            enviaResposta(resposta, c) 
+            conn.close()
+            return             
+        #recebemos os dados da criptografia simétrica 
+        try:    #informações sobre a criptografia simétrica (chave 16 caracteres criptografada com certificado digital [712], nonce [16] e tag [16] = 744)         
+            infoCripto = c.recv(1024) #chegou a requisicao criptografada simetricamente 
+            tamEfetivo = len(infoCripto)
+            tentativas = 0
+            while tamEfetivo<744: #tamanho da mensagem com os dados
+                mensagemRec = infoCripto + c.recv(1024) #chegou a requisicao criptografada simetricamente
+                tamEfetivo = len(infoCripto)
+                tentativas+=1
+                if tentativas>15:
+                    logging.info("Tentativas de recebimento dos dados da chave criptográfica simétricaforam excedidas - CPF "+cpf)   
+                    c.close()
+                    conn.close()
+                    return
+        except:
+            c.close()
+            conn.close()
+            logging.info("Erro de time out 18 (A) - provavelmente cliente não respondeu no prazo. Abandonando operação.")   
+            return     
         resposta = "1801OK"
         respostaErro = "1888"
         entrada = None
@@ -2489,13 +2514,13 @@ def trataMsgRecebida(msgRecebida, c, addr): #c é o socket estabelecido com o cl
             enviaRespostaSemFechar(resposta, c)   
             logging.info("Enviou")              
             try:              
-                mensagemRec = c.recv(4096) #chegou a requisicao criptografada com certificado do usuário (não há como descriptografar)
+                mensagemRec = c.recv(4096) #chegou a requisicao criptografada simetricamente 
                 tam = int(mensagemRec[:5].decode('utf-8'))
                 mensagemRec = mensagemRec[5:]
                 tamEfetivo = len(mensagemRec)
                 tentativas = 0
                 while tamEfetivo<tam:
-                    mensagemRec = c.recv(4096) #chegou a requisicao criptografada com certificado do usuário (não há como descriptografar)
+                    mensagemRec = mensagemRec + c.recv(4096) #chegou a requisicao criptografada simetricamente
                     tamEfetivo = len(mensagemRec)
                     tentativas+=1
                     if tentativas>30:
@@ -2506,17 +2531,17 @@ def trataMsgRecebida(msgRecebida, c, addr): #c é o socket estabelecido com o cl
             except:
                 c.close()
                 conn.close()
-                logging.info("Erro de time out 18 - provavelmente cliente não respondeu no prazo. Abandonando operação.")
+                logging.info("Erro de time out 18 (B) - provavelmente cliente não respondeu no prazo. Abandonando operação.")
                 return
             if parte==1:
                 entrada = mensagemRec
             else:                 
                 entrada = entrada + mensagemRec    
         if entrada:                              
-            comando = "Insert into DiarioFiscalizacao (Fiscal, TDPF, Data, Entrada) Values (%s, %s, %s, %s)"
+            comando = "Insert into DiarioFiscalizacao (Fiscal, TDPF, Data, Entrada, Extensao) Values (%s, %s, %s, %s, %s)"
             try:
                 logging.info("Inserindo ...")
-                cursor.execute(comando, (chaveFiscal, chaveTdpf, datetime.today().date(), entrada)) #chaveFiscal vem para todas as funções; chaveTdpf vem da rotina comum às requisições 2-5 e 14-20
+                cursor.execute(comando, (chaveFiscal, chaveTdpf, datetime.today().date(), infoCripto+entrada, extensao)) #chaveFiscal vem para todas as funções; chaveTdpf vem da rotina comum às requisições 2-5 e 14-20
                 conn.commit()            
                 consulta = "Select Codigo from DiarioFiscalizacao Where Fiscal=%s and TDPF=%s Order by Codigo DESC" #obtém a última entrada deste fiscal/tdpf
                 cursor.execute(consulta, (chaveFiscal, chaveTdpf))
@@ -2544,7 +2569,7 @@ def trataMsgRecebida(msgRecebida, c, addr): #c é o socket estabelecido com o cl
             enviaResposta(resposta, c) 
             conn.close()
             return
-        consulta = "Select Codigo, Data from DiarioFiscalizacao Where Fiscal=%s and TDPF=%s order by Codigo"
+        consulta = "Select Codigo, Data, Extensao from DiarioFiscalizacao Where Fiscal=%s and TDPF=%s order by Codigo"
         cursor.execute(consulta, (chaveFiscal, chaveTdpf))
         entradas = cursor.fetchall()
         if entradas==None:
@@ -2577,12 +2602,16 @@ def trataMsgRecebida(msgRecebida, c, addr): #c é o socket estabelecido com o cl
                 return             
             codReg = entrada[0]   
             data = entrada[1].strftime("%d/%m/%Y") 
+            extensao = entrada[2]
+            if extensao==None:
+                extensao = ""
+            extensao = extensao.ljust(5)
             texto = entradasRaw[j][0]   
             j+=1              
             totalPartes = len(texto) // tamParte #tamParte caracteres do texto são enviados de cada vez
             if (len(texto) % tamParte) > 0:
                 totalPartes+=1
-            enviaRespostaSemFechar("19"+str(codReg).rjust(10, "0")+data+str(totalPartes).rjust(2, "0"), c)
+            enviaRespostaSemFechar("19"+str(codReg).rjust(10, "0")+data+extensao+str(totalPartes).rjust(2, "0"), c)
             for i in range(totalPartes): #para cada entrada (codReg), fazemos o envio das partes de 300 caracteres cada
                 try:
                     mensagemRec = c.recv(1024).decode('utf-8') #chegou a requisicao sem criptografia

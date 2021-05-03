@@ -636,7 +636,7 @@ def avisaUsuariosNacionais(texto, cursor): #avisamos os usuários nacionais do r
 
 def avisaUsuariosRegionais(conn): #avisamos usuários regionais dos TDPFs vincendos em curto prazo (4 a 10 dias - vai apenas um aviso, portanto, pois a carga é semanal)
     AMBIENTE = os.getenv("AMBIENTE", "TESTE") 
-    if AMBIENTE!="PRODUÇÃO":
+    if not AMBIENTE in ["PRODUÇÃO", "TESTE"]:
         return
     cursor = conn.cursor(buffered=True)
     consultaULocais = """Select email, Usuarios.Orgao from Usuarios, Orgaos 
@@ -644,11 +644,13 @@ def avisaUsuariosRegionais(conn): #avisamos usuários regionais dos TDPFs vincen
     cursor.execute(consultaULocais)
     rows = cursor.fetchall()
     consultaTdpfs = """
-                  Select Distinctrow TDPFS.Codigo, TDPFS.Numero, TDPFS.Grupo, Fiscais.Nome, TDPFS.Vencimento from Orgaos, TDPFS, Jurisdicao, Supervisores, Fiscais
+                  Select Distinctrow TDPFS.Codigo, TDPFS.Numero, TDPFS.Grupo, Fiscais.Nome, TDPFS.Vencimento, TDPFS.Emissao from Orgaos, TDPFS, Jurisdicao, Supervisores, Fiscais
                   Where TDPFS.Encerramento Is Null and Jurisdicao.Orgao=%s and Jurisdicao.Equipe=TDPFS.Grupo and Supervisores.Equipe=Jurisdicao.Equipe 
                   and Supervisores.Fim Is Null and Fiscais.Codigo=Supervisores.Fiscal and 
+                  TDPFS.Emissao<cast((now() - interval 180 day) as date) and
                   (TDPFS.Vencimento>=cast((now() + interval 4 day) as date) and TDPFS.Vencimento<=cast((now() + interval 10 day) as date)) 
                   Order by TDPFS.Grupo, TDPFS.Numero"""  #TDPFs que vencem de 4 a 10 dias (avisamos apenas uma vez, pois na próxima carga estará vencido, faltará menos de 4 dias ou terá sido renovado)
+                                                         #mas somente TDPFs emitidos há mais de 180 dias (60 dias de margem), pois só nos interessa da 2a prorrogação em diante
     consultaAviso = "Select Codigo, Data from AvisosVencimentoDifis Where TDPF=%s"    
     insere = set()
     atualiza = set()              
@@ -675,6 +677,7 @@ def avisaUsuariosRegionais(conn): #avisamos usuários regionais dos TDPFs vincen
             equipe = tdpf[2].strip()
             nome = tdpf[3]
             vencimento = tdpf[4]
+            emissao = tdpf[5]
             if equipeAnt!=equipe:
                 equipeAnt = equipe
                 if texto!="":
@@ -683,14 +686,16 @@ def avisaUsuariosRegionais(conn): #avisamos usuários regionais dos TDPFs vincen
                 i = 0
             total+=1
             i+=1
-            texto = texto +"  "+str(i)+") "+numero[:7]+"."+numero[7:11]+"."+numero[11:]+" - "+vencimento.strftime("%d/%m/%Y")+"\n"
+            texto = texto +"  "+str(i)+") "+numero[:7]+"."+numero[7:11]+"."+numero[11:]+" - "+vencimento.strftime("%d/%m/%Y")+" - "+emissao.strftime("%d/%m/%Y")+"\n"
         if texto!="":
-            texto = "Sr. Usuário Regional,\n\nEstamos enviando abaixo a relação de TDPFs de sua região com vencimento entre 4 e 10 dias:\n\n" + texto
+            texto = "Sr. Usuário Regional,\n\nEstamos enviando abaixo a relação de TDPFs de sua região com vencimento entre 4 e 10 dias (Nº - Vencimento - Emissão):\n\n" + texto
             texto += "\nTotal de TDPFs: "+str(total)+"\n"
             texto += "\nDevido a restrições do DW, o vencimento no Ação Fiscal pode estar um pouco mais distante. Ressaltamos também que a carga de dados neste serviço ocorre semanalmente."
             texto += "\n\nAtenciosamente,\n\nCofis/Disav"
             if enviaEmail(email, texto, "TDPFs Vincendos Entre 4 e 10 Dias - Região")!=3:
                 print("Erro no envio do e-mail para usuário REGIONAL "+email)
+                if AMBIENTE!="PRODUÇÃO":
+                    print(texto)
                 logging.info("Erro no envio do e-mail para usuário REGIONAL "+email) 
     insereTuplas = []
     atualizaTuplas = []
@@ -862,7 +867,7 @@ def realizaCargaCienciasPendentes():
         cursor.execute(consultaProcesso, (chaveTdpf, processo))
         row = cursor.fetchone()
         if not row and meio in [None, np.nan, ""]: #registro não existe - devemos incluí-lo se meio não estiver preenchido (se meio estiver preenchido, houve ciência)
-            print(chaveTdpf, " - ", processo)
+            #print(chaveTdpf, " - ", processo)
             insere = "Insert Into AvisosCiencia (TDPF, Processo, Integracao, Extracao) Values (%s, %s, %s, %s)"
             try:
                 cursor.execute(insere, (chaveTdpf, processo, paraData(registro), paraData(extracao)))
@@ -1036,9 +1041,9 @@ termina = False
 threadDisparador = threading.Thread(target=disparador, daemon=True) #encerra thread quando sair do programa sem esperá-la
 threadDisparador.start()
 realizaCargaDados() #faz a primeira tentativa de carga das planilhas logo no acionamento do programa
-realizaCargaDCCs() #idem para os DCCs
-realizaCargaCienciasPendentes() #ciencias pendentes de AI 
-realizaCargaIndicadores() #carga de indicadores (parâmetros) dos TDPFs encerrados
+#realizaCargaDCCs() #idem para os DCCs
+#realizaCargaCienciasPendentes() #ciencias pendentes de AI 
+#realizaCargaIndicadores() #carga de indicadores (parâmetros) dos TDPFs encerrados
 while not termina:
     entrada = input("Digite QUIT para terminar o serviço Carga BOT: ")
     if entrada:
