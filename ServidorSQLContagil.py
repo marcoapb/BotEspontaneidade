@@ -738,7 +738,7 @@ def trataMsgRecebida(msgRecebida, c, addr): #c é o socket estabelecido com o cl
                     return                
                 if not estaoChavesValidas(addr): #meio difícil de ocorrer aqui, pq tem lá no servidor, mas ...
                     geraChaves(addr) 
-                versaoScript = "140" #versão mínima do Script (X.XX, sem o ponto; colocar o zero ao final, se for o caso) - só informa na mensagem abaixo (não restringe nas requisições)
+                versaoScript = "14a" #versão mínima do Script (X.XX, sem o ponto; colocar o zero ao final, se for o caso) - só informa na mensagem abaixo (não restringe nas requisições)
                 enviaRespostaSemFechar("0000"+chavesCripto[segmentoIP(addr)][2].strftime("%d/%m/%Y %H:%M:%S")+versaoScript, c) #envia a validade da chave e a versão mínima exigida do Script
                 try:
                     msg = c.recv(1024).decode("utf-8") #só aguarda um 00
@@ -3616,7 +3616,22 @@ def trataMsgRecebida(msgRecebida, c, addr): #c é o socket estabelecido com o cl
             resposta = "33J"
             enviaResposta(resposta, c) 
             conn.close()
-            return             
+            return  
+        #verificamos se falta muito tempo para o TDPF vencer
+        comando = "Select Vencimento from TDPFS Where TDPFS.Codigo=%s"
+        cursor.execute(comando, (chaveTdpf, ))
+        row = cursor.fetchone()
+        if row:
+            if row[0].date()>(datetime.now()+timedelta(days=30)).date():
+                resposta = "33T" #falta muito Tempo para o TDPF vencer
+                enviaResposta(resposta, c) 
+                conn.close()
+                return 
+        else:
+            resposta = "99REQUISIÇÃO INVÁLIDA - TDPF NÃO EXISTE MAIS NA BASE DE DADOS (33B4)"
+            enviaResposta(resposta, c) 
+            conn.close()
+            return                              
         #verificamos se o cpfSuperv (supervisor titular ou substituto) é supervisor titular ou pelo menos tem algum TDPF alocado na mesma equipe (substituto)
         comando = """Select Fiscais.Codigo, Fiscais.CPF, TDPFS.Grupo From Fiscais, TDPFS, Supervisores 
                       Where TDPFS.Codigo=%s and TDPFS.Grupo=Supervisores.Equipe and Supervisores.Fim Is Null and Supervisores.Fiscal=Fiscais.Codigo"""
@@ -3699,7 +3714,7 @@ def trataMsgRecebida(msgRecebida, c, addr): #c é o socket estabelecido com o cl
             if row:
                 email = row[0]
                 tdpfFormatado = formataTDPF(tdpf)
-                texto = "Sr. Chefe de Equipe,\n\nInformamos que a Prorrogação nº "+str(numero)+" do TDPF nº "+tdpfFormatado+" está pendente de sua assinatura no script Alertas Fiscalização do ContÁgil.\n\nAtenciosamente,\n\nCofis/Disav"
+                texto = "Sr. Chefe de Equipe,\n\nInformamos que a Prorrogação nº "+str(numero)+" do TDPF nº "+tdpfFormatado+" - "+nome+" está pendente de sua assinatura no script Alertas Fiscalização do ContÁgil.\n\nAtenciosamente,\n\nCofis/Disav"
                 if ambiente!="PRODUÇÃO":
                     texto = texto + "\n\nAmbiente: "+ambiente
                 resultado = enviaEmail(email, texto, "Prorrogação Pendente de Assinatura - TDPF nº "+tdpfFormatado)
@@ -3912,7 +3927,7 @@ def trataMsgRecebida(msgRecebida, c, addr): #c é o socket estabelecido com o cl
                     if row:
                         email = row[0]
                         tdpfFormatado = formataTDPF(tdpf)
-                        texto = "Sr. Chefe de Equipe,\n\nInformamos que a Prorrogação nº "+str(numero)+" do TDPF nº "+tdpfFormatado+" está pendente de sua assinatura no script Alertas Fiscalização do ContÁgil.\n\nAtenciosamente,\n\nCofis/Disav"
+                        texto = "Sr. Chefe de Equipe,\n\nInformamos que a Prorrogação nº "+str(numero)+" do TDPF nº "+tdpfFormatado+" - "+nome+" está pendente de sua assinatura no script Alertas Fiscalização do ContÁgil.\n\nAtenciosamente,\n\nCofis/Disav"
                         if ambiente!="PRODUÇÃO":
                             texto = texto + "\n\nAmbiente: "+ambiente                        
                         resultado = enviaEmail(email, texto, "Prorrogação Pendente de Assinatura - TDPF nº "+tdpfFormatado)
@@ -3970,17 +3985,23 @@ def trataMsgRecebida(msgRecebida, c, addr): #c é o socket estabelecido com o cl
         return 
 
     if codigo==38: #solicita próximo número de prorrogação para numerar o termo
-        consulta = "Select Numero, DataAssinatura, RegistroRHAF from Prorrogacoes Where TDPF=%s order by Numero DESC"        
-        cursor.execute(consulta, (chaveTdpf,))
+        consulta = """Select Numero, DataAssinatura, RegistroRHAF from Prorrogacoes Where TDPF=%s Order by Numero DESC"""
+        cursor.execute(consulta, (chaveTdpf, ))
         row = cursor.fetchone()
         if not row:
-            resposta = "38S01"
+            resposta = "38S01"                       
         else:
             resposta = "38S"+str(row[0]+1).rjust(2, "0")
             if row[1] == None:
                 resposta = resposta + "P" #a última prorrogação está pendente de assinatura
             elif row[2] == None:
                 resposta = resposta + "R" #a última prorrogação está pendente de registro no RHAF
+        if len(resposta)==5: #não houve pendência - verificamos quando ocorre o vencimento
+            consulta = "Select Vencimento from TDPFS Where Codigo=%s"
+            cursor.execute(consulta, (chaveTdpf, ))
+            row = cursor.fetchone()
+            if row[0].date()>(datetime.now()+timedelta(days=30)).date(): #vencimento do TDPF ocorre em mais de 30 dias da data atual - prorrogação não é possível
+                resposta = resposta + "T" #falta muito (T)tempo para o vencimento             
         enviaResposta(resposta, c) 
         conn.close()
         return  

@@ -327,7 +327,8 @@ def registra(update, context): #registra usuário no serviço
             enviaMsgBot(bot, userId, text=response_message) 
             mostraMenuPrincipal(update, context)   
             conn.close() 
-            return            
+            return  
+    print(response_message)          
     enviaMsgBot(bot, userId, text=response_message)
     return
 
@@ -1086,6 +1087,7 @@ def ciencia(update, context): #critica e tenta efetivar a ciência de um TDPF (r
         response_message = "Número de informações (parâmetros) inválido. Envie somente o nº do TDPF, a última data de ciência relativa a ele e, opcionalmente, o vencimento da intimação (data ou dias corridos)."
         response_message = response_message+textoRetorno
     else:
+        response_message = ""
         tdpf = getAlgarismos(parametros[0])
         data = parametros[1]
         prazo = None        
@@ -1153,14 +1155,14 @@ def ciencia(update, context): #critica e tenta efetivar a ciência de um TDPF (r
             else:  
                 if prazo!=None: #vemos qual vai ser o prazo em função do prazo em dias
                     vencimentoObj = calculaVencimento(prazo, dateTimeObj)
-                if vencimentoObj.date()<=dateTimeObj.date():
-                    response_message = "Vencimento deve ser posterior à data de ciência. "+msgCiencia
-                    response_message = response_message+textoRetorno   
-                else: 
+                    if vencimentoObj.date()<=dateTimeObj.date():
+                        response_message = "Vencimento deve ser posterior à data de ciência. "+msgCiencia
+                        response_message = response_message+textoRetorno   
+                if response_message=="": 
                     eliminaPendencia(userId)
                     pendencias[userId] = 'cienciaTexto'
                     cienciaTxt[userId] = [tdpf, dateTimeObj, vencimentoObj]
-                    response_message = "Informe a descrição do documento que efetivou a ciência (ex.: TIPF) (máximo de 50 caracteres):"                                                
+                    response_message = "Informe a descrição do documento que efetivou a ciência (ex.: TIPF) (máximo de 50 caracteres):"                                        
     enviaMsgBot(bot, userId, text=response_message)  
     return 
 
