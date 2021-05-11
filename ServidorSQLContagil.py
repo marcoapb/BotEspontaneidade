@@ -218,7 +218,14 @@ def conectaRaw():
 
 def enviaRespostaSemFechar(resposta, c):
     #logging.info(resposta)    
-    tam = str(len(resposta)).rjust(5,"0").encode('utf-8')    
+    tam = len(resposta)
+    if tam>99999:
+        print("Mensagem ultrapassou o tamanho de 99999 bytes - ", c.getpeername())
+        print("Resposta: ", resposta[:2])
+        logging.error("Mensagem ultrapassou o tamanho de 99999 bytes - "+str(c.getpeername())+" - Resposta: "+resposta[:2])
+        return
+    else:
+        tam = str(tam).rjust(5,"0").encode('utf-8')    
     resposta = resposta.encode('utf-8')      
     try:    
         c.sendall(tam+resposta)
@@ -231,6 +238,19 @@ def enviaResposta(resposta, c):
     enviaRespostaSemFechar(resposta, c)
     c.close()        
     return
+
+def ultimoDiaMes(mes, ano): #retorna o último dia do mês
+    if mes in (1, 3, 5, 7, 8, 10, 12):
+        ultimo_dia = 31
+    elif mes == 2:
+        # verifica se é ano bissexto
+        if (ano % 4 == 0) and (ano % 100 != 0 or ano % 400 == 0):
+            ultimo_dia = 29
+        else:
+            ultimo_dia = 28
+    else:
+        ultimo_dia = 30
+    return ultimo_dia        
 
 def isDate(data): #verifica se a string é uma data válida
     if data==None:
@@ -245,17 +265,7 @@ def isDate(data): #verifica se a string é uma data válida
     # mês ou ano inválido (só considera do ano 1 em diante), retorna False
     if mes < 1 or mes > 12 or ano <= 0:
         return False
-    # verifica qual o último dia do mês
-    if mes in (1, 3, 5, 7, 8, 10, 12):
-        ultimo_dia = 31
-    elif mes == 2:
-        # verifica se é ano bissexto
-        if (ano % 4 == 0) and (ano % 100 != 0 or ano % 400 == 0):
-            ultimo_dia = 29
-        else:
-            ultimo_dia = 28
-    else:
-        ultimo_dia = 30
+    ultimo_dia = ultimoDiaMes(mes, ano)
     # verifica se o dia é válido
     if dia < 1 or dia > ultimo_dia:
         return False
@@ -723,7 +733,7 @@ def consultaPontuacao(cursor, chaveTdpf, tipoOrgaoUsuario, pediuParametros=False
 
 
 def trataMsgRecebida(msgRecebida, c, addr): #c é o socket estabelecido com o cliente que será utilizado para a resposta
-    global chavesCripto, ambiente, CPF1, CPF2, CPF3, SENHADCCS
+    global chavesCripto, ambiente, CPF1, CPF2, CPF3, SENHADCCS, dataExtracao, ultimaVerificacao
     tamChave = 6 #tamanho da chave do ContÁgil (chave de registro) 
     tamMsg = 100
     tamNome = 100
@@ -738,8 +748,8 @@ def trataMsgRecebida(msgRecebida, c, addr): #c é o socket estabelecido com o cl
                     return                
                 if not estaoChavesValidas(addr): #meio difícil de ocorrer aqui, pq tem lá no servidor, mas ...
                     geraChaves(addr) 
-                versaoScript = "14a" #versão mínima do Script (X.XX, sem o ponto; colocar o zero ao final, se for o caso) - só informa na mensagem abaixo (não restringe nas requisições)
-                enviaRespostaSemFechar("0000"+chavesCripto[segmentoIP(addr)][2].strftime("%d/%m/%Y %H:%M:%S")+versaoScript, c) #envia a validade da chave e a versão mínima exigida do Script
+                versaoScript = "14d" #versão mínima do Script (X.XX, sem o ponto; colocar o zero ao final, se for o caso) - só informa na mensagem abaixo (não restringe nas requisições)
+                enviaRespostaSemFechar("0000"+chavesCripto[segmentoIP(addr)][2].strftime("%d/%m/%Y %H:%M:%S")+versaoScript+dataExtracao.strftime("%d/%m/%Y %H:%M"), c) #envia a validade da chave e a versão mínima exigida do Script
                 try:
                     msg = c.recv(1024).decode("utf-8") #só aguarda um 00
                     if msg=="00":
@@ -854,7 +864,7 @@ def trataMsgRecebida(msgRecebida, c, addr): #c é o socket estabelecido com o cl
         return  
 
         
-    if codigo<1 or (codigo>40 and codigo!=60): #número de requisições válidas
+    if codigo<1 or (codigo>41 and codigo!=60): #número de requisições válidas
         resposta = "99CÓD DA REQUISIÇÃO É INVÁLIDO (C)" 
         enviaResposta(resposta, c)          
         return     
@@ -873,6 +883,14 @@ def trataMsgRecebida(msgRecebida, c, addr): #c é o socket estabelecido com o cl
         enviaResposta(resposta, c) 
         return            
     cursor = conn.cursor(buffered=True)    
+    if datetime.now()>ultimaVerificacao+timedelta(hours=1): #buscamos de hora em hora a última data de extração dos dados
+        cursor.execute("Select Data from Extracoes Order By Data DESC")
+        row = cursor.fetchone() #data de extração dos dados do Ação Fiscal, via DW ou Receita Data
+        if row:
+            dataExtracao = row[0]
+        else:
+            dataExtracao = datetime.strptime("01/01/2021", "%d/%m/%Y")
+        ultimaVerificacao = datetime.now()
 
     if codigo!=18 and ambiente!="TESTE": #fazemos o log no ambiente de produção, exceto para envio de entrada do diário da fiscalização 
                                          #e solicitação de chave pública (acima - cód = 00)
@@ -1804,7 +1822,7 @@ def trataMsgRecebida(msgRecebida, c, addr): #c é o socket estabelecido com o cl
                         return 
 
     if codigo==13: #mostra lista de tdpfs ativos e últimas ciências sob supervisão do CPF (tipo Orgao R ou N contam como supervisores) - semelhante ao código 6
-        qtdeRegistros = 200 #qtde de registros de tdpfs que enviamos por vez
+        qtdeRegistros = 200 #qtde de registros de tdpfs que enviamos por vez - se alterar aqui, tem que alterar no script e vice-versa
         if len(msgRecebida)!=(19+tamChave):
             resposta = "99REQUISIÇÃO INVÁLIDA (13A)"
             enviaResposta(resposta, c) 
@@ -4149,7 +4167,219 @@ def trataMsgRecebida(msgRecebida, c, addr): #c é o socket estabelecido com o cl
         conn.close()
         return  
 
+    if codigo==41: #informações gerenciais de um período (mm/aaaa a mm/aaaa)
+        qtdeRegistros = 150 #qtde de registros de tdpfs que enviamos por vez - se alterar aqui, tem que alterar no script e vice-versa
+        if len(msgRecebida)!=(32+tamChave):
+            resposta = "99REQUISIÇÃO INVÁLIDA (41A)"
+            enviaResposta(resposta, c) 
+            conn.close()
+            return 
+        perInicial = msgRecebida[13+tamChave:20+tamChave]
+        perFinal = msgRecebida[20+tamChave:27+tamChave]
+        perInicial = "01/"+perInicial
+        try:
+            perInicial = datetime.strptime(perInicial, "%d/%m/%Y").date()
+            if perInicial>datetime.now().date():
+                resposta = "99PERÍODO INICIAL DEVE SER PASSADO (41B)"
+                enviaResposta(resposta, c) 
+                conn.close()
+                return                
+        except:
+            resposta = "99PERÍODO INICIAL INVÁLIDO (41C)"
+            enviaResposta(resposta, c) 
+            conn.close()
+            return
+        if perFinal in ["00/0000", "       "]:
+            perFinal = datetime.now().date()
+        else:
+            try:
+                data = datetime.strptime("01/"+perFinal, "%d/%m/%Y")
+                ultimoDia = ultimoDiaMes(int(perFinal[:2]), int(perFinal[-4:]))
+                perFinal = datetime.strptime(str(ultimoDia).rjust(2,"0")+"/"+perFinal, "%d/%m/%Y").date()
+                if perFinal<perInicial:
+                    resposta = "99PERÍODO FINAL DEVE SER POSTERIOR AO INICIAL (41D)"
+                    enviaResposta(resposta, c) 
+                    conn.close()
+                    return                 
+            except:
+                resposta = "99PERÍODO FINAL INVÁLIDO (41E)"
+                enviaResposta(resposta, c) 
+                conn.close()
+                return                                   
+        regInicial = msgRecebida[-5:]
+        if not regInicial.isdigit():
+            resposta = "99REQUISIÇÃO INVÁLIDA - REGISTRO INICIAL (41F)"
+            enviaResposta(resposta, c) 
+            conn.close()
+            return  
+        try:
+            regInicial = int(regInicial)            
+        except:
+            resposta = "99REQUISIÇÃO INVÁLIDA - REGISTRO INICIAL (41G)"
+            enviaResposta(resposta, c) 
+            conn.close()
+            return
+        c.settimeout(20)            
+        if regInicial>0: #se foi informado o registro, devemos buscar a partir dele
+            offsetReg = "Limit "+str(qtdeRegistros)+" Offset "+str(regInicial-1)             
+        else: #caso contrário, buscamos todos para informar a quantidade total que existe
+             offsetReg = "Limit "+str(qtdeRegistros)+" Offset 0"
+        logging.info("Offset: "+offsetReg) 
+        comando = """Select TDPFS.Codigo, TDPFS.Numero, TDPFS.Nome, TDPFS.Emissao, TDPFS.Encerramento, TDPFS.TrimestrePrevisto, TDPFS.Grupo, TDPFS.Porte, TDPFS.Acompanhamento """
+        if tipoOrgaoUsuario=="L": #esta variável e orgaoUsuario vem de rotina comum de validação do usuário
+            comando = comando + """ from TDPFS, Supervisores 
+                                    Where Supervisores.Fiscal=%s and Supervisores.Fim Is Null and Supervisores.Equipe=TDPFS.Grupo
+                                    and ((TDPFS.Encerramento>=%s  and TDPFS.Encerramento<=%s) or (TDPFS.Emissao<=%s and TDPFS.Encerramento Is Null))
+                                    Order by TDPFS.Numero """+offsetReg
+            if regInicial==0: #contamos a quantidade de registros para informar na primeira consulta
+                consulta = """Select Count(TDPFS.Numero)
+                                from TDPFS, Supervisores 
+                                Where Supervisores.Fiscal=%s and Supervisores.Fim Is Null and Supervisores.Equipe=TDPFS.Grupo
+                                and ((TDPFS.Encerramento>=%s  and TDPFS.Encerramento<=%s) or (TDPFS.Emissao<=%s and TDPFS.Encerramento Is Null)) """
+        elif tipoOrgaoUsuario=="R":
+            if chaveFiscal==None or chaveFiscal==0: 
+                comando = comando + """ from TDPFS
+                                        Where TDPFS.Grupo in (Select Equipe from Jurisdicao Where Orgao=%s)
+                                        and ((TDPFS.Encerramento>=%s  and TDPFS.Encerramento<=%s) or (TDPFS.Emissao<=%s and TDPFS.Encerramento Is Null))
+                                        Order by TDPFS.Numero """+offsetReg
+            else:
+                comando = comando + """ from TDPFS
+                                        Where (TDPFS.Grupo in (Select Equipe from Jurisdicao Where Orgao=%s) or 
+                                        TDPFS.Grupo in (Select Equipe from Supervisores Where Supervisores.Fiscal=%s and Supervisores.Fim Is Null))
+                                        and ((TDPFS.Encerramento>=%s  and TDPFS.Encerramento<=%s) or (TDPFS.Emissao<=%s and TDPFS.Encerramento Is Null))
+                                        Order by TDPFS.Numero """+offsetReg
 
+            if regInicial==0: #contamos a quantidade de registros para informar na primeira consulta
+                if chaveFiscal==None or chaveFiscal==0: 
+                    consulta = """ Select Count(TDPFS.Numero)
+                                    from TDPFS
+                                    Where TDPFS.Grupo in (Select Equipe from Jurisdicao Where Orgao=%s) 
+                                    and ((TDPFS.Encerramento>=%s  and TDPFS.Encerramento<=%s) or (TDPFS.Emissao<=%s and TDPFS.Encerramento Is Null)) """
+                else:
+                    consulta = """Select Count(TDPFS.Numero)
+                                    from TDPFS
+                                    Where (TDPFS.Grupo in (Select Equipe from Jurisdicao Where Orgao=%s) or 
+                                    TDPFS.Grupo in (Select Equipe from Supervisores Where Supervisores.Fiscal=%s and Supervisores.Fim Is Null)) 
+                                    and ((TDPFS.Encerramento>=%s  and TDPFS.Encerramento<=%s) or (TDPFS.Emissao<=%s and TDPFS.Encerramento Is Null)) """                                    
+        elif tipoOrgaoUsuario=="N":
+            comando = comando + """from TDPFS
+                                    Where (TDPFS.Encerramento>=%s  and TDPFS.Encerramento<=%s) or (TDPFS.Emissao<=%s and TDPFS.Encerramento Is Null)
+                                    Order by TDPFS.Numero """+offsetReg
+            if regInicial==0: #contamos a quantidade de registros para informar na primeira consulta
+                consulta = """Select Count(TDPFS.Numero)
+                                from TDPFS
+                                Where (TDPFS.Encerramento>=%s  and TDPFS.Encerramento<=%s) or (TDPFS.Emissao<=%s and TDPFS.Encerramento Is Null) """            
+
+        if regInicial==0:
+            if tipoOrgaoUsuario=="L": 
+                cursor.execute(consulta, (chaveFiscal, perInicial, perFinal, perFinal))
+            elif tipoOrgaoUsuario=="R":
+                if chaveFiscal==None or chaveFiscal==0:
+                    cursor.execute(consulta, (orgaoUsuario, perInicial, perFinal, perFinal))
+                else:
+                    cursor.execute(consulta, (orgaoUsuario, chaveFiscal, perInicial, perFinal, perFinal))
+            else:
+                cursor.execute(consulta, (perInicial, perFinal, perFinal))
+            totalReg = cursor.fetchone()
+            #print(str(totalReg[0]))
+            if totalReg:
+                tam = totalReg[0]
+            else:
+                tam = 0
+            if tam==0:
+                resposta = "4100000" #41+qtde TDPFs
+                enviaResposta(resposta, c) 
+                conn.close()
+                return             
+            if tam>=100000: #limite de  tdpfs
+                nnnnn = "99999"
+                tam = 99999
+            else:
+                nnnnn = str(tam).rjust(5, "0")
+
+        if tipoOrgaoUsuario=="L":
+            cursor.execute(comando, (chaveFiscal, perInicial, perFinal, perFinal))
+        elif tipoOrgaoUsuario=="R":
+            if chaveFiscal==None or chaveFiscal==0:
+                cursor.execute(comando, (orgaoUsuario, perInicial, perFinal, perFinal))  
+            else:
+                cursor.execute(comando, (orgaoUsuario, chaveFiscal, perInicial, perFinal, perFinal))  
+        else:
+            cursor.execute(comando, (perInicial, perFinal, perFinal))                      
+        rows = cursor.fetchall()   
+        if regInicial>0:
+            tam = len(rows)     
+        registro = "" 
+        i = 0
+        total = 0        
+        for row in rows:
+            chaveTdpf = row[0]
+            tdpf = row[1]          
+            nome = row[2]
+            if nome==None:
+                nome = ""   
+            nome = nome[:tamNome].ljust(tamNome)                       
+            emissao = dataTexto(row[3])   
+            retorno = consultaPontuacao(cursor, chaveTdpf, tipoOrgaoUsuario, False, True)
+            if retorno==None:
+                pontos = "0000"
+            else:
+                pontos = retorno[4:8]              
+            encerramento = row[4]
+            if encerramento==None:
+                encerramento = "00/00/0000"         
+            else:
+                encerramento = encerramento.strftime("%d/%m/%Y")
+            trimestre = row[5]
+            if trimestre==None:
+                trimestre = " ".ljust(6)
+            elif len(trimestre)!=6:
+                trimestre = " ".ljust(6)
+            equipe = row[6]
+            if equipe==None:
+                equipe =""
+            equipe = equipe.ljust(25)
+            porte = row[7]
+            acompanhamento = row[8]
+            if porte==None or porte=="":
+                porte = "ND "
+            if acompanhamento==None or acompanhamento=="":
+                acompanhamento = "N"            
+            #busca a primeira ciência e a última
+            comando = "Select Data, Documento from Ciencias Where TDPF=%s order by Data"
+            cursor.execute(comando, (chaveTdpf,))
+            cienciaReg = cursor.fetchone() #busca a data de ciência mais antiga (PRIMEIRA)
+            if cienciaReg: 
+                primCiencia = dataTexto(cienciaReg[0]) 
+            else:
+                primCiencia = "00/00/0000"
+            #busca os fiscais com mais horas alocadas
+            comando = """Select Fiscais.Nome, Alocacoes.Horas 
+                         from Fiscais, Alocacoes 
+                         Where Alocacoes.TDPF=%s and Alocacoes.Fiscal=Fiscais.Codigo Order by Alocacoes.Horas DESC"""
+            cursor.execute(comando, (chaveTdpf,))
+            linhas = cursor.fetchall()
+            fiscais = [i[0] for i in linhas]
+            horasL = [i[1] for i in linhas]
+            horas = str(sum(horasL)).rjust(4, "0")
+            for k in range(len(fiscais), 8, 1):
+                fiscais.append(" ".rjust(50))
+                horasL.append(0)
+            regFiscais = ""
+            for k in range(min(len(fiscais), 8)): #pega os dados dos primeiros 8 fiscais
+                regFiscais = regFiscais + fiscais[k][:50].ljust(50) + str(horasL[k]).rjust(4, "0")
+            registro = registro + tdpf + nome + emissao + trimestre + encerramento + primCiencia + porte + acompanhamento + equipe + pontos + horas + regFiscais
+            total+=1
+            i+=1
+            if i%qtdeRegistros==0 or total==tam: #de qtdeRegistros em qtdeRegistros ou no último registro enviamos a mensagem
+                if regInicial==0:
+                    resposta = "41"+nnnnn 
+                else:
+                    resposta = "41"
+                enviaResposta(resposta+registro, c)
+                return 
+
+        
     if codigo==60: #Solicita DCCs vinculados aos TDPFs em andamento (somente usuários autorizados - CPF1, CPF2 e CPF3 [variáveis de ambiente] - e demanda mais uma senha)
         if len(msgRecebida)!=(23+tamChave):
             resposta = "99REQUISIÇÃO INVÁLIDA (60A)"
@@ -4310,7 +4540,6 @@ ambiente = os.getenv("AMBIENTE", "TESTE")
 
 conn = conecta() #testa a conexão com o BD 
 if conn!=None:
-    conn.close()
     #contém as chaves [0], a função de descriptografia [1] e a data/hora de vencimento [2] para cada segmento IP (resto da divisão da soma das partes do IP por 10 ou 20; 10/20 segmentos)
     chavesCripto = dict()
     print("Gerando chaves criptográficas ...")
@@ -4318,6 +4547,15 @@ if conn!=None:
     inicializaChaves()
     end = time.time()
     print(str(len(chavesCripto))+" chaves geradas em "+str(end - start)[:7]+" segundos.")    
+    cursor = conn.cursor()
+    cursor.execute("Select Data from Extracoes Order By Data DESC")
+    row = cursor.fetchone() #data de extração dos dados do Ação Fiscal, via DW ou Receita Data
+    if row:
+        dataExtracao = row[0]
+    else:
+        dataExtracao = datetime.strptime("01/01/2021", "%d/%m/%Y")
+    conn.close()
+    ultimaVerificacao = datetime.now() #buscamos a última data de extração dos dados agora; só fazemos uma nova pesquisa daqui a uma hora
     threads = list() 
     threadServ = threading.Thread(target=servidor, daemon=True) #ativa o servidor
     #threadServ.daemon = True #mata a thread quando sair do programa

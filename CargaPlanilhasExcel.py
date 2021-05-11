@@ -27,6 +27,13 @@ from email.utils import formatdate
 from email import encoders
 import smtplib
 
+#para gerar a planilha com a relação de TDPFs vincendos (enviada por e-mail para usuários regionais)
+from openpyxl import Workbook
+#from openpyxl.styles import colors
+from openpyxl.styles import Font #, Color
+from openpyxl.utils import get_column_letter
+from openpyxl.styles import Alignment
+
 
 #rotina para envio de e-mail - retirado de Bot_Telegram.py
 def enviaEmail(email, texto, assunto, arquivo=None): #envia email, conforme parâmetros - se passar o arquivo (caminho e nome), ele vai como anexo 
@@ -53,8 +60,8 @@ def enviaEmail(email, texto, assunto, arquivo=None): #envia email, conforme par�
     # send the message via the server.
     try:
         server.sendmail(msg['From'], msg['To'], msg.as_string())
-        pass
     except:
+        server.quit()
         return 2
     server.quit()  
     return 3 #sucesso
@@ -247,6 +254,10 @@ def realizaCargaDados():
         if (linha+1)%500==0:
             print("Processando TDPF nº "+str(linha+1)+" de "+str(dfTdpf.shape[0]))
         tdpfAux = dfTdpf.iat[linha,0]
+        if tdpfAux=='9999999.9999.99999': #última linha, referente à data de extração dos dados
+            dataExtracao = dfTdpf.iat[linha,9]
+            cursor.execute(cursor.execute("Insert Into Extracoes (Data) Values (%s)", (paraData(dataExtracao),)))
+            break
         tdpf = getAlgarismos(tdpfAux)
         distribuicao = dfTdpf.iat[linha, 9] #na verdade, aqui é a data de assinatura/emissão do TDPF (antes tinha apenas a distribuição) 
                                             #<- a assinatura revelou-se pior que a distribuição - voltei a usar esta
@@ -546,6 +557,7 @@ def realizaCargaDados():
 
     if tabGrupos>0 or tabGruposAtu>0 or atualizouSuperv or atualizou:
         try:
+            #cursor.execute("Insert Into Extracoes (Data) Values (%s)", (datetime.now(),))
             conn.commit()  
             logging.info("Registros Incluídos:")  
             logging.info(f"TDPFs: {tabTdpfs}")
@@ -639,7 +651,7 @@ def avisaUsuariosRegionais(conn): #avisamos usuários regionais dos TDPFs vincen
     if not AMBIENTE in ["PRODUÇÃO", "TESTE"]:
         return
     cursor = conn.cursor(buffered=True)
-    consultaULocais = """Select email, Usuarios.Orgao from Usuarios, Orgaos 
+    consultaULocais = """Select email, Usuarios.Orgao, Orgaos.Orgao from Usuarios, Orgaos 
                          Where Usuarios.Orgao Is Not Null and Usuarios.Orgao<>0 and Usuarios.Orgao=Orgaos.Codigo and email Is Not Null and Orgaos.Tipo='R' Order by email"""
     cursor.execute(consultaULocais)
     rows = cursor.fetchall()
@@ -649,7 +661,7 @@ def avisaUsuariosRegionais(conn): #avisamos usuários regionais dos TDPFs vincen
                   and Supervisores.Fim Is Null and Fiscais.Codigo=Supervisores.Fiscal and 
                   TDPFS.Emissao<cast((now() - interval 180 day) as date) and
                   (TDPFS.Vencimento>=cast((now() + interval 4 day) as date) and TDPFS.Vencimento<=cast((now() + interval 10 day) as date)) 
-                  Order by TDPFS.Grupo, TDPFS.Numero"""  #TDPFs que vencem de 4 a 10 dias (avisamos apenas uma vez, pois na próxima carga estará vencido, faltará menos de 4 dias ou terá sido renovado)
+                  Order by TDPFS.Grupo, TDPFS.Vencimento,TDPFS.Numero"""  #TDPFs que vencem de 4 a 10 dias (avisamos apenas uma vez, pois na próxima carga estará vencido, faltará menos de 4 dias ou terá sido renovado)
                                                          #mas somente TDPFs emitidos há mais de 180 dias (60 dias de margem), pois só nos interessa da 2a prorrogação em diante
     consultaAviso = "Select Codigo, Data from AvisosVencimentoDifis Where TDPF=%s"    
     insere = set()
@@ -662,6 +674,23 @@ def avisaUsuariosRegionais(conn): #avisamos usuários regionais dos TDPFs vincen
         equipeAnt = ""
         texto = ""
         i = 0
+        #planilha a ser encaminhada anexa ao e-mail
+        book = Workbook()
+        sheet = book.active  
+        sheet.cell(row=1, column=1).value = "Nº Ordem"
+        sheet.cell(row=1, column=2).value = "Nº Ord Equipe"
+        sheet.cell(row=1, column=3).value = "Equipe"
+        sheet.cell(row=1, column=4).value = "Supervisor"
+        sheet.cell(row=1, column=5).value = "TDPF"
+        sheet.cell(row=1, column=6).value = "Emissão"
+        sheet.cell(row=1, column=7).value = "Vencimento"
+        #sheet.row_dimensions[1].height = 42    
+        larguras = [13, 16, 20, 35, 20, 15, 15]
+        for col in range(len(larguras)):
+            sheet.column_dimensions[get_column_letter(col+1)].width = larguras[col]  
+            currentCell = sheet.cell(row=1, column=col+1)
+            currentCell.alignment = Alignment(horizontal='center', vertical='center', wrap_text=True)  
+            currentCell.font = Font(bold=True)       
         for tdpf in tdpfs:
             chaveTdpf = tdpf[0]
             numero = tdpf[1]            
@@ -681,22 +710,39 @@ def avisaUsuariosRegionais(conn): #avisamos usuários regionais dos TDPFs vincen
             if equipeAnt!=equipe:
                 equipeAnt = equipe
                 if texto!="":
-                    texto += "\n"
-                texto += "Equipe: "+equipe[:7]+"."+equipe[7:11]+equipe[11:]+" - Supervisor: "+nome+"\n"
+                    texto += "\n"                
+                texto += "Equipe: "+equipe[:7]+"."+equipe[7:11]+"."+equipe[11:]+" - Supervisor: "+nome+"\n"
                 i = 0
             total+=1
             i+=1
+            sheet.cell(row=total+1, column=1).value = total
+            sheet.cell(row=total+1, column=1).alignment = Alignment(horizontal='center', vertical='center', wrap_text=True) 
+            sheet.cell(row=total+1, column=2).value = i
+            sheet.cell(row=total+1, column=2).alignment = Alignment(horizontal='center', vertical='center', wrap_text=True)             
+            sheet.cell(row=total+1, column=3).value = equipe[:7]+"."+equipe[7:11]+"."+equipe[11:]  
+            sheet.cell(row=total+1, column=3).alignment = Alignment(horizontal='center', vertical='center', wrap_text=True)           
+            sheet.cell(row=total+1, column=4).value = nome
+            sheet.cell(row=total+1, column=5).value = numero[:7]+"."+numero[7:11]+"."+numero[11:]
+            sheet.cell(row=total+1, column=5).alignment = Alignment(horizontal='center', vertical='center', wrap_text=True)           
+            sheet.cell(row=total+1, column=6).value = emissao.strftime("%d/%m/%Y")
+            sheet.cell(row=total+1, column=6).alignment = Alignment(horizontal='center', vertical='center', wrap_text=True)           
+            sheet.cell(row=total+1, column=7).value = vencimento.strftime("%d/%m/%Y")
+            sheet.cell(row=total+1, column=8).alignment = Alignment(horizontal='center', vertical='center', wrap_text=True)           
             texto = texto +"  "+str(i)+") "+numero[:7]+"."+numero[7:11]+"."+numero[11:]+" - "+vencimento.strftime("%d/%m/%Y")+" - "+emissao.strftime("%d/%m/%Y")+"\n"
         if texto!="":
-            texto = "Sr. Usuário Regional,\n\nEstamos enviando abaixo a relação de TDPFs de sua região com vencimento entre 4 e 10 dias (Nº - Vencimento - Emissão):\n\n" + texto
+            texto = "Sr. Usuário Regional,\n\nEstamos enviando abaixo a relação de TDPFs de sua região com vencimento entre 4 e 10 dias (Nº - Vencimento - Emissão):\n\n"+texto
             texto += "\nTotal de TDPFs: "+str(total)+"\n"
-            texto += "\nDevido a restrições do DW, o vencimento no Ação Fiscal pode estar um pouco mais distante. Ressaltamos também que a carga de dados neste serviço ocorre semanalmente."
-            texto += "\n\nAtenciosamente,\n\nCofis/Disav"
-            if enviaEmail(email, texto, "TDPFs Vincendos Entre 4 e 10 Dias - Região")!=3:
+            texto =+ "\nSegue, em anexo, planilha Excel contendo relação destes TDPFs.\n"
+            texto += "\nDevido a restrições do DW, o vencimento no Ação Fiscal pode estar um pouco mais distante. Ressaltamos também que a carga de dados neste serviço ocorre semanalmente.\n"
+            texto += "\nAtenciosamente,\n\nCofis/Disav"
+            nomeArq = "Regiao_"+row[2].strip()+"_"+datetime.now().strftime("%Y_%m_%d_%H_%M_%S_%f")[:-3]+".xlsx"
+            book.save(nomeArq)              
+            if enviaEmail(email, texto, "TDPFs Vincendos Entre 4 e 10 Dias - Região", nomeArq)!=3:
                 print("Erro no envio do e-mail para usuário REGIONAL "+email)
                 if AMBIENTE!="PRODUÇÃO":
                     print(texto)
                 logging.info("Erro no envio do e-mail para usuário REGIONAL "+email) 
+            os.remove(nomeArq) 
     insereTuplas = []
     atualizaTuplas = []
     for chaveTdpf in insere:
@@ -1040,7 +1086,7 @@ schedule.every().day.at(hora4).do(realizaCargaIndicadores)
 termina = False
 threadDisparador = threading.Thread(target=disparador, daemon=True) #encerra thread quando sair do programa sem esperá-la
 threadDisparador.start()
-realizaCargaDados() #faz a primeira tentativa de carga das planilhas logo no acionamento do programa
+#realizaCargaDados() #faz a primeira tentativa de carga das planilhas logo no acionamento do programa
 #realizaCargaDCCs() #idem para os DCCs
 #realizaCargaCienciasPendentes() #ciencias pendentes de AI 
 #realizaCargaIndicadores() #carga de indicadores (parâmetros) dos TDPFs encerrados

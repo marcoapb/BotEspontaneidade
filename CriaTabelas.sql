@@ -337,3 +337,12 @@ CREATE TABLE `AvisosVencimentoDifis` (
   PRIMARY KEY (`Codigo`), 
   UNIQUE (`TDPF`)
 ) ENGINE=innodb DEFAULT CHARSET=utf8;
+
+DROP TABLE IF EXISTS `Extracoes`;
+
+CREATE TABLE `Extracoes` (
+  `Codigo` BIGINT NOT NULL AUTO_INCREMENT, 
+  `Data` DATETIME, 
+  PRIMARY KEY (`Codigo`), 
+  INDEX (`Data`)
+) ENGINE=innodb DEFAULT CHARSET=utf8;
