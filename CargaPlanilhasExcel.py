@@ -208,7 +208,7 @@ def realizaCargaDados():
     insereFisc = "Insert Into Fiscais (CPF, Nome) Values (%s, %s)"
 
     selectTDPF = "Select Codigo, Grupo, Encerramento, Vencimento from TDPFS Where Numero=%s"
-    insereTDPF = "Insert Into TDPFS (Numero, Grupo, Emissao, Nome, NI, Vencimento, Porte, Acompanhamento, Encerramento) Values (%s, %s, %s, %s, %s, %s, %s, %s, %s)"
+    insereTDPF = "Insert Into TDPFS (Numero, Grupo, Emissao, Nome, NI, Vencimento, Porte, Acompanhamento, Encerramento, CasoEspecial) Values (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)"
     atualizaTDPFEnc = "Update TDPFS Set Encerramento=%s Where Codigo=%s"
     atualizaTDPFGrupoVencto = "Update TDPFS Set Grupo=%s, Vencimento=%s Where Codigo=%s"
 
@@ -234,6 +234,9 @@ def realizaCargaDados():
     selectUsuario = "Select Codigo, CPF, email from Usuarios Where CPF=%s"
     insereUsuario = "Insert Into Usuarios (CPF, email) Values (%s, %s)"
     updateUsuario = "Update Usuarios Set email=%s Where Codigo=%s"
+
+    selectCaso = "Select Codigo from CasosEspeciais Where CasoEspecial=%s"
+    insereCaso = "Insert Into CasosEspeciais (CasoEspecial, Descricao) Values (%s, %s)"
                    
     logging.info(f"TDPFs: {dfTdpf.shape[0]} linhas e {dfTdpf.shape[1]} colunas")
     logging.info(f"AFRFBs Execução: {dfAloc.shape[0]} linhas e {dfAloc.shape[1]} colunas")
@@ -271,7 +274,27 @@ def realizaCargaDados():
         if porte==np.nan or pd.isna(porte) or porte=="":
             porte = None
         if acompanhamento==np.nan or pd.isna(acompanhamento) or acompanhamento=="":
-            acompanhamento = None      
+            acompanhamento = None    
+        #busca o caso especial, se houver, ou o insere     
+        casoEspecial = dfTdpf.iat[linha, 19]
+        if casoEspecial=="" or pd.isna(casoEspecial) or casoEspecial==None or casoEspecial==np.nan:
+            casoEspecialCod = None
+        else:
+            casoEspecialDesc = dfTdpf.iat[linha, 20].strip()
+            casoEspecial = int(casoEspecial)
+            cursor.execute(selectCaso, (casoEspecial, ))
+            linhaCaso = cursor.fetchone()
+            if linhaCaso:
+                casoEspecialCod = linhaCaso[0]
+            else:
+                cursor.execute(insereCaso, (casoEspecial, casoEspecialDesc))
+                cursor.execute(selectCaso, (casoEspecial, ))
+                linhaCaso = cursor.fetchone()
+                if linhaCaso:
+                    casoEspecialCod = linhaCaso[0]    
+                else:
+                    casoEspecialCod = 0            
+
         #comentei o trecho abaixo pq já vem certinho na planilha do Excel
         #tipo = str(type(porte)).upper()
         #if "STR" in tipo or "UNICODE" in tipo: 
@@ -326,7 +349,7 @@ def realizaCargaDados():
         if not regTdpf: #TDPF não consta da base
             tabTdpfs+=1
             atualizou = True
-            cursor.execute(insereTDPF, (tdpf, grupoAtu, distData, nome, ni, vencimento, porte, acompanhamento, paraData(encerramento)))
+            cursor.execute(insereTDPF, (tdpf, grupoAtu, distData, nome, ni, vencimento, porte, acompanhamento, paraData(encerramento), casoEspecialCod))
             cursor.execute(selectTDPF, (tdpf,))
             regTdpf = cursor.fetchone()   
             chaveTdpf = regTdpf[0]  #chave do registro do TDPF                      
@@ -727,12 +750,12 @@ def avisaUsuariosRegionais(conn): #avisamos usuários regionais dos TDPFs vincen
             sheet.cell(row=total+1, column=6).value = emissao.strftime("%d/%m/%Y")
             sheet.cell(row=total+1, column=6).alignment = Alignment(horizontal='center', vertical='center', wrap_text=True)           
             sheet.cell(row=total+1, column=7).value = vencimento.strftime("%d/%m/%Y")
-            sheet.cell(row=total+1, column=8).alignment = Alignment(horizontal='center', vertical='center', wrap_text=True)           
+            sheet.cell(row=total+1, column=7).alignment = Alignment(horizontal='center', vertical='center', wrap_text=True)           
             texto = texto +"  "+str(i)+") "+numero[:7]+"."+numero[7:11]+"."+numero[11:]+" - "+vencimento.strftime("%d/%m/%Y")+" - "+emissao.strftime("%d/%m/%Y")+"\n"
         if texto!="":
             texto = "Sr. Usuário Regional,\n\nEstamos enviando abaixo a relação de TDPFs de sua região com vencimento entre 4 e 10 dias (Nº - Vencimento - Emissão):\n\n"+texto
             texto += "\nTotal de TDPFs: "+str(total)+"\n"
-            texto =+ "\nSegue, em anexo, planilha Excel contendo relação destes TDPFs.\n"
+            texto += "\nSegue, em anexo, planilha Excel contendo relação destes TDPFs.\n"
             texto += "\nDevido a restrições do DW, o vencimento no Ação Fiscal pode estar um pouco mais distante. Ressaltamos também que a carga de dados neste serviço ocorre semanalmente.\n"
             texto += "\nAtenciosamente,\n\nCofis/Disav"
             nomeArq = "Regiao_"+row[2].strip()+"_"+datetime.now().strftime("%Y_%m_%d_%H_%M_%S_%f")[:-3]+".xlsx"
@@ -1055,6 +1078,96 @@ def realizaCargaIndicadores(): #carga dos indicadores obtidos do Ação Fiscal n
         logging.info("Nenhuma atualização de indicadores ocorreu.")
     return          
 
+def realizaCargaCasosEspeciais(): #atualização da tabela TDPFs com casos especiais - é para rodar somente uma vez, por conta da inclusão do campo e da respectiva tabela
+    global dirExcel, termina, hostSrv
+    if datetime.now().date()!=datetime.strptime("20/05/2021", "%d/%m/%Y").date():
+        print("Carga dos casos especiais deve ocorrer apenas em 20/05/2021")
+        return
+    try:
+        dfTdpf = pd.read_excel(dirExcel+"TDPFS.xlsx", dtype={'Porte':object, 'Acompanhamento':object, 'Receita Programada(Tributo) Código': int})
+    except:
+        print("Erro no acesso ao arquivo TDPFS.xlsx - realizaCargaCasosEspeciais")
+        logging.info("Erro no acesso ao arquivo TDPFS.xlsx - realizaCargaCasosEspeciais") 
+        return
+    MYSQL_DATABASE = os.getenv("MYSQL_DATABASE", "databasenormal")
+    MYSQL_USER = os.getenv("MYSQL_USER", "my_user")
+    MYSQL_PASSWORD = os.getenv("MYSQL_PASSWORD", "mypass1234") 
+    try:
+        logging.info("Conectando ao servidor de banco de dados ...")
+        logging.info(MYSQL_DATABASE)
+        logging.info(MYSQL_USER)
+
+        conn = mysql.connector.connect(user=MYSQL_USER, password=MYSQL_PASSWORD,
+                                    host=hostSrv,
+                                    database=MYSQL_DATABASE)
+        logging.info("Conexão efetuada com sucesso ao MySql!")                               
+    except mysql.connector.Error as err:
+        print("Erro na conexão com o BD - veja Log: "+datetime.now().strftime('%d/%m/%Y %H:%M'))
+        if err.errno == errorcode.ER_ACCESS_DENIED_ERROR:
+            logging.info("Usuário ou senha inválido(s).")
+        elif err.errno == errorcode.ER_BAD_DB_ERROR:
+            logging.error("Banco de dados não existe.")
+        else:
+            logging.error(err)
+            logging.error("Erro na conexão com o Banco de Dados")
+        return
+    print("Realizando carga dos Casos Especiais em "+datetime.now().strftime("%d/%m/%Y %H:%M"))
+    cursor = conn.cursor(buffered=True)
+
+    selectCaso = "Select Codigo from CasosEspeciais Where CasoEspecial=%s"
+    insereCaso = "Insert Into CasosEspeciais (CasoEspecial, Descricao) Values (%s, %s)"
+                   
+    if termina:
+        return
+    logging.info("Iniciando loop na carga.")
+    atualizou = 0
+    incluidos = 0
+    for linha in range(dfTdpf.shape[0]): #percorre os TDPFs das planilhas Excel
+        if (linha+1)%500==0:
+            print("Processando TDPF nº "+str(linha+1)+" de "+str(dfTdpf.shape[0]))
+        tdpfAux = dfTdpf.iat[linha,0]
+        if tdpfAux=='9999999.9999.99999': #última linha, referente à data de extração dos dados
+            break
+        tdpf = getAlgarismos(tdpfAux)  
+        #busca o caso especial, se houver, ou o insere     
+        casoEspecial = dfTdpf.iat[linha, 19]
+        if casoEspecial=="" or pd.isna(casoEspecial) or casoEspecial==None or casoEspecial==np.nan:
+            continue #não há o que atualizar (não há caso especial)
+        else:
+            casoEspecialDesc = dfTdpf.iat[linha, 20].strip()
+            casoEspecial = int(casoEspecial)
+            cursor.execute(selectCaso, (casoEspecial, ))
+            linhaCaso = cursor.fetchone()
+            if linhaCaso:
+                casoEspecialCod = linhaCaso[0]
+            else:
+                cursor.execute(insereCaso, (casoEspecial, casoEspecialDesc))
+                cursor.execute(selectCaso, (casoEspecial, ))
+                incluidos+=1
+                linhaCaso = cursor.fetchone()
+                if linhaCaso:
+                    casoEspecialCod = linhaCaso[0]    
+                else:
+                    casoEspecialCod = 0            
+        cursor.execute("Select Codigo from TDPFS Where Numero=%s", (tdpf,))
+        regTdpf = cursor.fetchone()  
+        if regTdpf: #TDPF consta da base
+            chaveTdpf = regTdpf[0]  #chave do registro do TDPF  - para poder atualizar o registro, se for necessário 
+        else:
+            continue #nào há o que atualizar - TDPF não existe na base
+        #atualiza a tabela de TDPFs com o caso especial                    
+        cursor.execute("Update TDPFS Set CasoEspecial=%s Where Codigo=%s", (casoEspecialCod, chaveTdpf))
+        atualizou+=1
+    try:
+        conn.commit()
+        print("Foram atualizados "+str(atualizou)+" TDPFs com o respectivo caso especial.")
+        print("Foram incluídos "+str(incluidos)+" na tabela CasosEspeciais")
+    except:
+        conn.rollback()
+        print("Ocorreu algum erro ao realizar o commit da carga dos casos especiais.")
+    return
+
+
 
 def disparador():
     global termina
@@ -1090,6 +1203,7 @@ threadDisparador.start()
 #realizaCargaDCCs() #idem para os DCCs
 #realizaCargaCienciasPendentes() #ciencias pendentes de AI 
 #realizaCargaIndicadores() #carga de indicadores (parâmetros) dos TDPFs encerrados
+realizaCargaCasosEspeciais()
 while not termina:
     entrada = input("Digite QUIT para terminar o serviço Carga BOT: ")
     if entrada:

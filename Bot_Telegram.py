@@ -7,6 +7,7 @@ Created on Thu Jul 16 11:21:16 2020
 from __future__ import unicode_literals
 from datetime import datetime, timedelta
 import re
+from mysql.connector.cursor import RE_SQL_ON_DUPLICATE
 import schedule
 import time
 from random import randint
@@ -1681,13 +1682,13 @@ def verificaUsuario(userId, bot): #verifica se o usuário está cadastrado e ati
         enviaMsgBot(bot, userId, text=response_message)
         return False
     cursor = conn.cursor(buffered=True)
-    comando = "Select CPF from Usuarios Where Saida Is Null and idTelegram=%s"
+    comando = "Select CPF from Usuarios Where Saida Is Null and BloqueiaTelegram='N' and idTelegram=%s"
     try:
         cursor.execute(comando, (userId,))
         row = cursor.fetchone()
         conn.close()
         if not row:
-            enviaMsgBot(bot, userId, text="Usuário não está registrado no serviço ou está inativo. "+textoRetorno)  
+            enviaMsgBot(bot, userId, text="Usuário não está registrado no serviço, comunicação via Telegram está bloqueada ou usuário está inativo. "+textoRetorno)  
             return False
         else:
             return True
@@ -2903,7 +2904,7 @@ def disparaAvisoUrgente(update, context): #avisos urgentes da Cofis disparados p
         logging.info(msgErro) 
         enviaMsgUpdater(userId, msgErro)        
         return
-    comando = "Select idTelegram from Usuarios Where Saida Is Null and idTelegram Is Not Null and idTelegram<>0 and Adesao Is Not Null"
+    comando = "Select idTelegram from Usuarios Where Saida Is Null and idTelegram Is Not Null and BloqueiaTelegram='N' and and idTelegram<>0 and Adesao Is Not Null"
     cursor.execute(comando)
     usuarios = cursor.fetchall()
     totalMsg = 0
@@ -2930,7 +2931,7 @@ def disparaAvisoUrgente(update, context): #avisos urgentes da Cofis disparados p
         conn.rollback()
     return
 
-def disparaMensagens(): #avisos diários (produção) ou de hora em hora (teste) contendo os alertas e mensagens da Cofis (não inclui alertas de juntadas)
+def disparaMensagens(): #avisos diários (produção) ou de hora em hora (teste) contendo os alertas e mensagens da Cofis (não inclui alertas de juntadas, nem de prorrogação pendente de assinatura)
     global updater, termina, ambiente
 		
     try:
@@ -2954,7 +2955,7 @@ def disparaMensagens(): #avisos diários (produção) ou de hora em hora (teste)
         msgCofis = msgCofis+mensagem[0]
     if msgCofis!="":
         msgCofis = "Mensagens Cofis:\n"+msgCofis+"."   #todos os usuários receberão essa mensagem na data informada pela Cofis, com ou sem alertas do dia 
-    comando = "Select idTelegram, CPF, d1, d2, d3, email from Usuarios Where Adesao Is Not Null and Saida Is Null and idTelegram Is Not Null and idTelegram<>0"
+    comando = "Select idTelegram, CPF, d1, d2, d3, email from Usuarios Where Adesao Is Not Null and BloqueiaTelegram='N' and Saida Is Null and idTelegram Is Not Null and idTelegram<>0"
     cursor.execute(comando)
     usuarios = cursor.fetchall()
     totalMsg = 0
@@ -2963,6 +2964,11 @@ def disparaMensagens(): #avisos diários (produção) ou de hora em hora (teste)
     tdpfsAvisadosInsert = set()
     tdpfsCienciasPendentes = set() #guarda os registros de tdpfs com ciências pendentes há 30 dias (aviso se repete de 15 em 15 dias) para avisar o supervisor
     cabecalho = "Alertas do dia (TDPF | Dias Restantes):" 
+    rodape = "\n\n(a) P/ recuperação da espontaneidade tributária."
+    rodape += "\n(b) P/ vencimento da atividade."            
+    rodape += "\n(c) P/ vencimento do TDPF no Ação Fiscal - pode ser inferior ao verificado no Ação Fiscal, pois as informações do serviço se baseiam"
+    rodape += " na data de distribuição, que pode ter ocorrido antes da emissão do TDPF."
+    rodape += "\n(d) Vence HOJE o prazo do contribuinte para atendimento da última intimação."    
     for usuario in usuarios: #percorremos os usuários ativos Telegram
         if termina: #programa foi informado de que é para encerrar (quit)
             if server:
@@ -2975,7 +2981,8 @@ def disparaMensagens(): #avisos diários (produção) ou de hora em hora (teste)
         #    continue
         #lista de ciências do usuário vencendo nos prazos por ele estabelecidos ou de TDPFs 
         #vencendo em prazo <= 8 dias (supondo que a extração ocorrerá a cada 7 dias)         
-        listaUsuario = "" #lista de TDPF com espontaneidade, atividade ou o próprio TDPF vencendo
+        listaUsuario = "" #lista de TDPF com espontaneidade, atividade ou o próprio TDPF vencendo (bot)
+        listaUsuarioEmail = "" #lista de TDPF com espontaneidade, atividade ou o próprio TDPF vencendo (e-mail)
         cpf = usuario[1]
         d1 = usuario[2]
         d2 = usuario[3]
@@ -2983,7 +2990,7 @@ def disparaMensagens(): #avisos diários (produção) ou de hora em hora (teste)
         email = usuario[5]
         #selecionamos os TDPFs do usuário em andamento e monitorados (ativos) pelo serviço
         comando = """
-                Select TDPFS.Numero, Supervisor, TDPFS.Codigo
+                Select TDPFS.Numero, Supervisor, TDPFS.Codigo, TDPFS.Nome
                 from CadastroTDPFs, TDPFS, Alocacoes, Fiscais
                 Where Fiscais.CPF=%s and CadastroTDPFs.Fiscal=Fiscais.Codigo and CadastroTDPFs.TDPF=TDPFS.Codigo and 
                 CadastroTDPFs.TDPF=Alocacoes.TDPF and  
@@ -3003,6 +3010,7 @@ def disparaMensagens(): #avisos diários (produção) ou de hora em hora (teste)
                 tdpf = fiscalizacao[0] 
                 tdpfFormatado = formataTDPF(tdpf)
                 supervisor = fiscalizacao[1]
+                nome = fiscalizacao[3].strip()[:75]
                 cursor.execute(comandoCiencias, (chaveTdpf,)) #buscamos as ciências do TDPF
                 ciencias = cursor.fetchall() #buscamos todas por questões técnicas do mysqlconnector
                 if len(ciencias)>0:   
@@ -3012,26 +3020,35 @@ def disparaMensagens(): #avisos diários (produção) ou de hora em hora (teste)
                     bPrazo = False          
                     if prazoRestante==d1 or prazoRestante==d2 or prazoRestante==d3:
                         if len(listaUsuario)==0:
-                            listaUsuario = cabecalho                       
+                            listaUsuario = cabecalho  
+                            listaUsuarioEmail = cabecalho  
+                        listaUsuarioEmail += "\n\n"+tdpfFormatado                 
                         if supervisor=='S':    
-                            tdpfFormatado2 = tdpfFormatado + '* (S)'
+                            tdpfFormatado2 = tdpfFormatado + '* (S)'   
+                            listaUsuarioEmail += + " (S)"                     
                         else:
                             tdpfFormatado2 = tdpfFormatado + '*'
-                        listaUsuario = listaUsuario+"\n\n*"+tdpfFormatado2+ " | "+str(prazoRestante)+" (a)"
+                        listaUsuario += "\n\n*"+tdpfFormatado2+ " | "+str(prazoRestante)+" (a)"
+                        listaUsuarioEmail += " - "+nome+" | "+str(prazoRestante)+" (a)"  #no email, vai o nome da empresa  
                         bPrazo = True
                     vencimentoIntimacao = cienciaReg[1]
                     if vencimentoIntimacao!=None:
                         if vencimentoIntimacao.date()==datetime.now().date(): #a intimação vence hoje
                             if not bPrazo: #não há aviso de prazo da recuperação da espontaneidade
                                 if len(listaUsuario)==0:
-                                    listaUsuario = cabecalho                                  
+                                    listaUsuario = cabecalho        
+                                    listaUsuarioEmail = cabecalho  
+                                listaUsuarioEmail += "\n\n"+tdpfFormatado                                                               
                                 if supervisor=='S':    
                                     tdpfFormatado2 = tdpfFormatado + '* (S)'
+                                    listaUsuarioEmail += " (S)"
                                 else:
                                     tdpfFormatado2 = tdpfFormatado + '*'
-                                listaUsuario = listaUsuario+"\n\n*"+tdpfFormatado2+" (d)"    
+                                listaUsuario += "\n\n*"+tdpfFormatado2+" (d)"    
+                                listaUsuarioEmail += " - "+nome+" (d)"    
                             else: #há aviso de prazo da recuperação da espontaneidade (bastante improvável, mas posssível)
-                                listaUsuario = listaUsuario+" (d)"                        
+                                listaUsuario += " (d)"  
+                                listaUsuarioEmail += " (d)"                          
            
                 #buscamos as atividades do TDPF    
                 cursor.execute(comandoAtividades, (chaveTdpf, dataAtual))
@@ -3041,13 +3058,16 @@ def disparaMensagens(): #avisos diários (produção) ou de hora em hora (teste)
                     if prazoRestante==0 or prazoRestante==d3: #para atividade, alertamos só no d3 (o menor) e no dia do vencimento (prazo restante == 0)
                         if len(listaUsuario)==0:
                             listaUsuario = cabecalho
-                        listaUsuario = listaUsuario+"\n\n*"+tdpfFormatado+"* | "+str(prazoRestante)+" (b)"
+                            listaUsuarioEmail = cabecalho
+                        listaUsuario += "\n\n*"+tdpfFormatado+"* | "+str(prazoRestante)+" (b)"
+                        listaUsuarioEmail += "\n\n"+tdpfFormatado+" - "+nome+" | "+str(prazoRestante)+" (b)"
                         #listaUsuario = listaUsuario+"\nAtividade: "+atividade[0]+"; Início: "+atividade[2].strftime("%d/%m/%Y")
-                        listaUsuario = listaUsuario+"\nAtividade: "+atividade[0]+"; Início: "+atividade[2].strftime("%d/%m/%Y")+"; Vencimento: "+atividade[1].strftime("%d/%m/%Y")
+                        listaUsuario += "\nAtividade: "+atividade[0]+"; Início: "+atividade[2].strftime("%d/%m/%Y")+"; Vencimento: "+atividade[1].strftime("%d/%m/%Y")
+                        listaUsuarioEmail += "\nAtividade: "+atividade[0]+"; Início: "+atividade[2].strftime("%d/%m/%Y")+"; Vencimento: "+atividade[1].strftime("%d/%m/%Y")
 
         #selecionamos as datas de vencimento dos TDPFs em que o usuário está alocado, mesmo que não monitorados
         comando = """
-                Select TDPFS.Numero, TDPFS.Vencimento, Supervisor, TDPFS.Codigo, Fiscais.Codigo from TDPFS, Alocacoes, Fiscais
+                Select TDPFS.Numero, TDPFS.Vencimento, Supervisor, TDPFS.Codigo, Fiscais.Codigo, TDPFS.Nome from TDPFS, Alocacoes, Fiscais
                 Where Fiscais.CPF=%s and Alocacoes.Fiscal=Fiscais.Codigo and TDPFS.Codigo=Alocacoes.TDPF and TDPFS.Encerramento Is Null and 
                 Alocacoes.Desalocacao Is Null
                 """        
@@ -3061,6 +3081,7 @@ def disparaMensagens(): #avisos diários (produção) ou de hora em hora (teste)
             supervisor = tdpfUsuario[2]
             chaveTdpf = tdpfUsuario[3]
             chaveFiscal = tdpfUsuario[4]
+            nome = tdpfUsuario[5].strip()[:75]
             if vencimento: #não deve ser nulo, mas garantimos ...
                 vencimento = vencimento.date()
                 prazoVenctoTDPF = (vencimento-dataAtual).days
@@ -3086,25 +3107,27 @@ def disparaMensagens(): #avisos diários (produção) ou de hora em hora (teste)
                 if podeAvisar: #verificar este prazos quando for colocar em produção
                     if len(listaUsuario)==0:
                         listaUsuario = "Alertas do dia (TDPF | Dias Restantes):"
+                        listaUsuarioEmail = "Alertas do dia (TDPF | Dias Restantes):"
                     if supervisor=='S':    
                         tdpfFormatado2 = tdpfFormatado + ' (S)'
                     else:
                         tdpfFormatado2 = tdpfFormatado                         
-                    listaUsuario = listaUsuario+"\n\n*"+tdpfFormatado2+ "* | "+str(prazoVenctoTDPF)+" (c)"                 
+                    listaUsuario += "\n\n*"+tdpfFormatado2+ "* | "+str(prazoVenctoTDPF)+" (c)"                 
+                    listaUsuarioEmail += "\n\n"+tdpfFormatado2+" - "+nome+" | "+str(prazoVenctoTDPF)+" (c)"                 
 
         if len(listaUsuario)>0 or msgCofis!="":
             if len(listaUsuario)>0:
-                listaUsuario = listaUsuario+"\n\n(a) P/ recuperação da espontaneidade tributária."
-                listaUsuario = listaUsuario+"\n(b) P/ vencimento da atividade."            
-                listaUsuario = listaUsuario+"\n(c) P/ vencimento do TDPF no Ação Fiscal - pode ser inferior ao verificado no Ação Fiscal, pois as informações do serviço se baseiam"
-                listaUsuario = listaUsuario+" na data de distribuição, que pode ter ocorrido antes da emissão do TDPF."
-                listaUsuario = listaUsuario+"\n(d) Vence HOJE o prazo do contribuinte para atendimento da última intimação."
+                listaUsuario += rodape
+                listaUsuarioEmail += rodape
             if msgCofis!="":
                 if len(listaUsuario)>0:
-                    listaUsuario = listaUsuario+"\n\n"
-                listaUsuario = listaUsuario+msgCofis
+                    listaUsuario += "\n\n"
+                    listaUsuarioEmail += "\n\n"
+                listaUsuario += msgCofis
+                listaUsuarioEmail += msgCofis
             if ambiente!="PRODUÇÃO":
-                listaUsuario = listaUsuario+"\n\nAmbiente: "+ambiente
+                listaUsuario += "\n\nAmbiente: "+ambiente
+                listaUsuarioEmail += "\n\nAmbiente: "+ambiente
             logging.info("Disparando mensagem para "+cpf)
             enviaMsgUpdater(usuario[0], text=limpaMarkdown(listaUsuario), parse_mode= 'MarkdownV2')  
 			#enviamos e-mail também, se houver um na tabela
@@ -3118,12 +3141,13 @@ def disparaMensagens(): #avisos diários (produção) ou de hora em hora (teste)
                     msg['Subject'] = "BotEspontaneidade - Avisos e Alertas do Dia"                    
                     msg['To'] = email			
 					# add in the message body
-                    msg.attach(MIMEText(listaUsuario.replace('*', ''), 'plain'))				
+                    msg.attach(MIMEText(listaUsuarioEmail, 'plain'))				
 					# send the message via the server.
                     try:
                         server.sendmail(msg['From'], msg['To'], msg.as_string())
                     except:
-                        logging.info("Erro no envio de email com os avisos do dia - "+email)							
+                        logging.info("Erro no envio de email com os avisos do dia - "+email)	                        
+                    #print(listaUsuarioEmail)
             #logging.info(listaUsuario)            
             totalMsg+=1
             msgDisparadas+=1
@@ -3167,6 +3191,8 @@ def disparaMensagens(): #avisos diários (produção) ou de hora em hora (teste)
                 msgDisparadas = 0
                 time.sleep(1) #a cada 30 mensagens, dormimos um segundo (limitação do Bot é 30 por seg - TESTE)                         
 
+    if server:
+        server.quit()  
 
     logging.info("Total de mensagens disparadas: "+str(totalMsg))    
 
@@ -3200,17 +3226,16 @@ def disparaMensagens(): #avisos diários (produção) ou de hora em hora (teste)
         except:
             logging.info("Erro ao tentar atualizar as datas de aviso na tabela AvisosVencimento.")
             conn.rollback()
-    if server:
-        server.quit()  
 
     #buscamos todos os TDPFs para os quais não foram registradas nenhuma data de ciência após 30 dias (exatos) de sua distribuição
-    # e avisamos o supervisor (não vai e-mail)
+    # e avisamos o supervisor
     comando = """
-              Select Distinctrow Fiscais.CPF, TDPFS.Numero, Usuarios.idTelegram, Supervisores.Equipe, TDPFS.Codigo
+              Select Distinctrow Fiscais.CPF, TDPFS.Numero, Usuarios.idTelegram, Supervisores.Equipe, TDPFS.Codigo, TDPFS.Emissao, Usuarios.email, TDPFS.Nome, Usuarios.BloqueiaTelegram
               From TDPFS, Usuarios, Supervisores, Fiscais
               Where Supervisores.Fim Is Null and Supervisores.Equipe=TDPFS.Grupo and TDPFS.Emissao=cast((now() - interval 30 day) as date) 
               and TDPFS.Encerramento Is Null and Supervisores.Fiscal=Fiscais.Codigo and Fiscais.CPF=Usuarios.CPF and Usuarios.idTelegram Is Not Null and 
-              Usuarios.idTelegram<>0 and Usuarios.Adesao Is Not Null and Usuarios.Saida Is Null and TDPFS.Codigo not in (Select TDPF from Ciencias Where Data Is Not Null)
+              Usuarios.idTelegram<>0 and Usuarios.Adesao Is Not Null and Usuarios.Saida Is Null and 
+              TDPFS.Codigo not in (Select TDPF from Ciencias Where Data Is Not Null)
               Order By Fiscais.CPF, Supervisores.Equipe, TDPFS.Numero
               """
     consultaFiscal = "Select Fiscais.Nome From TDPFS, Alocacoes, Fiscais Where TDPFS.Codigo=%s and TDPFS.Codigo=Alocacoes.TDPF and Alocacoes.Fiscal=Fiscais.Codigo and Alocacoes.Desalocacao Is Null Order By Alocacoes.Alocacao"
@@ -3221,18 +3246,62 @@ def disparaMensagens(): #avisos diários (produção) ou de hora em hora (teste)
     userId = 0 
     cabecalho = "TDPFs sem informação de início (ciência) do procedimento fiscal há 30 dias:"
     equipe = ""
+    texto = "Sr. Usuário,\n\nEnviamos, em anexo, planilha com relação de TDPFs sob sua supervisão sem ciência registrada há 30 dias da emissão.\n\nAtenciosamente,\n\nCofis/Disav"
+    if ambiente!="PRODUÇÃO":
+        texto = texto+"\n\nAmbiente: "+ambiente      
+    assunto = "TDPFs sem Ciência Registrada Há 30 Dias da Emissão"
     for linha in linhas:
         if cpfAnt=="":
+            i = 1
             cpfAnt = linha[0]
+            email = linha[6]
+            bloqueio = linha[8]
+            book = Workbook()
+            sheet = book.active
+            sheet.cell(row=1, column=1).value='Nº Ordem'
+            sheet.cell(row=1, column=2).value='Equipe'
+            sheet.cell(row=1, column=3).value='Nº TDPF'
+            sheet.cell(row=1, column=4).value='Nome'
+            sheet.cell(row=1, column=5).value='Fiscal'
+            sheet.cell(row=1, column=6).value='Emissão'
+            larguras = [13, 20, 20, 45, 35, 15]
+            for col in range(len(larguras)):
+                sheet.column_dimensions[get_column_letter(col+1)].width = larguras[col]
+                currentCell = sheet.cell(row=1, column=col+1)
+                currentCell.alignment = Alignment(horizontal='center', vertical='center', wrap_text=True)
+                currentCell.font = Font(bold=True)            
         if linha[0]!=cpfAnt:
             if msg!="":
                 msg = cabecalho+msg
                 if ambiente!="PRODUÇÃO":
-                    msg = msg+"\n"+"Ambiente: "+ambiente                
-                enviaMsgUpdater(userId, text=limpaMarkdown(msg), parse_mode= 'MarkdownV2')
+                    msg = msg+"\n"+"Ambiente: "+ambiente    
+                if bloqueio=='N':            
+                    enviaMsgUpdater(userId, text=limpaMarkdown(msg), parse_mode= 'MarkdownV2')
+                if not email in [None, ""] and server:
+                    nomeArq = "Ciencia30_"+str(userId)+"_"+datetime.now().strftime("%Y_%m_%d_%H_%M_%S_%f")[:-3]+".xlsx"
+                    book.save(nomeArq)
+                    if enviaEmail(email, texto, assunto, nomeArq)!=3:
+                        logging.info("Erro ao enviar email de TDPFs sem ciência registrada após 30 dias - "+email)
+                    os.remove(nomeArq)
+                i = 1
+                book = Workbook()
+                sheet = book.active
+                sheet.cell(row=1, column=1).value='Nº Ordem'
+                sheet.cell(row=1, column=2).value='Equipe'
+                sheet.cell(row=1, column=3).value='Nº TDPF'
+                sheet.cell(row=1, column=4).value='Nome'
+                sheet.cell(row=1, column=5).value='Fiscal'
+                sheet.cell(row=1, column=6).value='Emissão'
+                for col in range(len(larguras)):
+                    sheet.column_dimensions[get_column_letter(col+1)].width = larguras[col]
+                    currentCell = sheet.cell(row=1, column=col+1)
+                    currentCell.alignment = Alignment(horizontal='center', vertical='center', wrap_text=True)
+                    currentCell.font = Font(bold=True)
                 msg = ""
             equipe = ""    
-            cpfAnt = linha[0]    
+            cpfAnt = linha[0] 
+            email = linha[6]  
+            bloqueio = linha[8] 
         if linha[3]!=equipe:
             equipe = linha[3]
             msg = msg+"\nEquipe " + equipe[:7]+"."+equipe[7:11]+"."+equipe[11:] + ":"    
@@ -3244,13 +3313,31 @@ def disparaMensagens(): #avisos diários (produção) ou de hora em hora (teste)
         else:
             nomeFiscal = fiscal[0].strip()
         msg = msg + "\n  *"+formataTDPF(linha[1])+"* ("+nomeFiscal.split()[0]+")"+"\n"
-        userId = linha[2]   
+        userId = linha[2]  
+        i+=1
+        sheet.cell(row=i, column=1).value = i-1
+        sheet.cell(row=i, column=2).value = equipe[:7]+"."+equipe[7:11]+"."+equipe[11:]
+        sheet.cell(row=i, column=3).value = formataTDPF(linha[1])
+        sheet.cell(row=i, column=4).value = linha[7]
+        sheet.cell(row=i, column=5).value = nomeFiscal
+        sheet.cell(row=i, column=6).value = linha[5].strftime("%d/%m/%Y")
+        for col in range(len(larguras)):
+            if not col in [3, 4]:
+                currentCell = sheet.cell(row=i, column=col+1)
+                currentCell.alignment = Alignment(horizontal='center', vertical='center')#, wrap_text=True)
         
     if msg!="": #envia a mensagem para o último usuário
         msg = cabecalho+msg
         if ambiente!="PRODUÇÃO":
-            msg = msg+"\n"+"Ambiente: "+ambiente        
-        enviaMsgUpdater(userId, text=limpaMarkdown(msg), parse_mode= 'MarkdownV2')
+            msg = msg+"\n"+"Ambiente: "+ambiente  
+        if bloqueio=='N':      
+            enviaMsgUpdater(userId, text=limpaMarkdown(msg), parse_mode= 'MarkdownV2')
+        if not email in [None, ""] and server:
+            nomeArq = "Ciencia30_"+str(userId)+"_"+datetime.now().strftime("%Y_%m_%d_%H_%M_%S_%f")[:-3]+".xlsx"
+            book.save(nomeArq)
+            if enviaEmail(email, texto, assunto, nomeArq)!=3:
+                logging.info("Erro ao enviar email de TDPFs sem ciência registrada após 30 dias - "+email)
+            os.remove(nomeArq)        
 
     #avisamos os supervisores dos processos integrados e sem registro de ciência há mais de 30 dias (o aviso se repete a cada 15 dias, limitado a 60 dias da integração)  
     #(não vai e-mail)
@@ -3259,7 +3346,7 @@ def disparaMensagens(): #avisos diários (produção) ou de hora em hora (teste)
                 From TDPFS, AvisosCiencia, Fiscais, Supervisores, Usuarios
                 Where TDPFS.Codigo=AvisosCiencia.TDPF and TDPFS.Grupo=Supervisores.Equipe and Supervisores.Fim Is Null 
                 and Supervisores.Fiscal=Fiscais.Codigo and AvisosCiencia.Finalizado Is Null and Usuarios.CPF=Fiscais.CPF and 
-                Usuarios.idTelegram Is Not Null and Usuarios.idTelegram<>0 and Usuarios.Adesao Is Not Null and
+                Usuarios.idTelegram Is Not Null and Usuarios.idTelegram<>0 and Usuarios.Adesao Is Not Null and BloqueiaTelegram='N' and
                 (AvisosCiencia.Integracao=cast((now() - interval 30 day) as date) or 
                 (cast(AvisosCiencia.Aviso as date)=cast((now() - interval 15 day) as date) and AvisosCiencia.Integracao<=cast((now() - interval 60 day) as date))
                 or (AvisosCiencia.Aviso Is Null and AvisosCiencia.Integracao<cast((now() - interval 30 day) as date)))
@@ -3271,7 +3358,7 @@ def disparaMensagens(): #avisos diários (produção) ou de hora em hora (teste)
     cpfAnt = "" 
     userId = 0 
     cabecalho = "Processos sem registro de ciência há mais de 30 dias da integração(\*).\nTDPF | Processo | Data da Integração:\n"
-    equipe = ""    
+    equipe = ""     
     for linha in linhas:
         if userId==0:
             userId = linha[4]
@@ -3319,34 +3406,83 @@ def disparaMensagens(): #avisos diários (produção) ou de hora em hora (teste)
         conn.rollback()
         logging.info("Erro ao tentar atualizar as datas de aviso na tabela AvisosCiencia.")       
 
-    #buscamos todos os TDPFs que estão recuperando a espontaneidade em 15 dias exatos e avisamos o supervisor  (não vai e-mail)
+    #buscamos todos os TDPFs que estão recuperando a espontaneidade em 15 dias exatos e avisamos o supervisor
     comando = """
-              Select Distinctrow Fiscais.CPF, TDPFS.Numero, Usuarios.idTelegram, Supervisores.Equipe, TDPFS.Codigo
+              Select Distinctrow Fiscais.CPF, TDPFS.Numero, Usuarios.idTelegram, Supervisores.Equipe, TDPFS.Codigo, Usuarios.email, TDPFS.Nome, Usuarios.BloqueiaTelegram
               From TDPFS, Usuarios, Supervisores, Fiscais 
               Where Supervisores.Fim Is Null and Supervisores.Equipe=TDPFS.Grupo and TDPFS.Encerramento Is Null and
               Supervisores.Fiscal=Fiscais.Codigo and Fiscais.CPF=Usuarios.CPF and Usuarios.idTelegram Is Not Null and Usuarios.idTelegram<>0 and Usuarios.Adesao Is Not Null and 
               Usuarios.Saida Is Null and TDPFS.Codigo in (Select TDPF from Ciencias Where Data Is Not Null)
               Order By Fiscais.CPF, Supervisores.Equipe, TDPFS.Numero
-              """         
+              """          
     cursor.execute(comando)
     linhas = cursor.fetchall() 
     msg = ""  
     cpfAnt = "" 
     userId = 0 
-    consulta = "Select Data, Documento from Ciencias Where TDPF=%s Order By Data DESC"    
+    consulta = "Select Data, Documento, Vencimento from Ciencias Where TDPF=%s Order By Data DESC"    
     cabecalho = "TDPFs em andamento com espontaneidade tributária sendo recuperada em 15 dias (ciência em "+(dataAtual-timedelta(days=45)).strftime("%d/%m/%Y")+"):"
     equipe = ""
+    texto = "Sr. Usuário,\n\nEnviamos, em anexo, planilha com relação de TDPFs sob sua supervisão cuja espontaneidade o contribuinte recuperará em 15 dias.\n\nAtenciosamente,\n\nCofis/Disav"
+    if ambiente!="PRODUÇÃO":
+        texto = texto+"\n\nAmbiente: "+ambiente    
+    assunto = "TDPFs - Recuperação de Espontaneidade em 15 Dias"    
+    bloqueio = 'N'   
     for linha in linhas:
         tdpf = linha[1]               
         if cpfAnt=="":
             cpfAnt = linha[0]
+            i = 1
+            email = linha[5]
+            bloqueio = linha[7]
+            book = Workbook()
+            sheet = book.active
+            sheet.cell(row=1, column=1).value='Nº Ordem'
+            sheet.cell(row=1, column=2).value='Equipe'
+            sheet.cell(row=1, column=3).value='Nº TDPF'
+            sheet.cell(row=1, column=4).value='Nome'
+            sheet.cell(row=1, column=5).value='Fiscal'
+            sheet.cell(row=1, column=6).value='Última Ciência'
+            sheet.cell(row=1, column=7).value='Documento'
+            sheet.cell(row=1, column=8).value='Vencimento Intimação'
+            larguras = [13, 20, 20, 45, 35, 18, 35, 18]
+            for col in range(len(larguras)):
+                sheet.column_dimensions[get_column_letter(col+1)].width = larguras[col]
+                currentCell = sheet.cell(row=1, column=col+1)
+                currentCell.alignment = Alignment(horizontal='center', vertical='center', wrap_text=True)
+                currentCell.font = Font(bold=True)             
         if linha[0]!=cpfAnt:
             if msg!="":
                 msg = cabecalho+msg
                 if ambiente!="PRODUÇÃO":
-                    msg = msg+"\n"+"Ambiente: "+ambiente                
-                enviaMsgUpdater(userId, text=limpaMarkdown(msg), parse_mode= 'MarkdownV2')
+                    msg = msg+"\n"+"Ambiente: "+ambiente  
+                if bloqueio=='N':              
+                    enviaMsgUpdater(userId, text=limpaMarkdown(msg), parse_mode= 'MarkdownV2')
                 msg = ""
+                if not email in [None, ""] and server:
+                    nomeArq = "Ciencia15_"+str(userId)+"_"+datetime.now().strftime("%Y_%m_%d_%H_%M_%S_%f")[:-3]+".xlsx"
+                    book.save(nomeArq)
+                    if enviaEmail(email, texto, assunto, nomeArq)!=3:
+                        logging.info("Erro ao enviar email de TDPFs recuperando espontaneidade em 15 dias - "+email)
+                    os.remove(nomeArq)                  
+                i = 1
+                book = Workbook()
+                sheet = book.active
+                sheet.cell(row=1, column=1).value='Nº Ordem'
+                sheet.cell(row=1, column=2).value='Equipe'
+                sheet.cell(row=1, column=3).value='Nº TDPF'
+                sheet.cell(row=1, column=4).value='Nome'
+                sheet.cell(row=1, column=5).value='Fiscal'
+                sheet.cell(row=1, column=6).value='Última Ciência'
+                sheet.cell(row=1, column=7).value='Documento'
+                sheet.cell(row=1, column=8).value='Vencimento Intimação'
+                for col in range(len(larguras)):
+                    sheet.column_dimensions[get_column_letter(col+1)].width = larguras[col]
+                    currentCell = sheet.cell(row=1, column=col+1)
+                    currentCell.alignment = Alignment(horizontal='center', vertical='center', wrap_text=True)
+                    currentCell.font = Font(bold=True)  
+            email = linha[5]    
+            bloqueio = linha[7]            
             equipe = ""    
             cpfAnt = linha[0]    
         if linha[3]!=equipe:
@@ -3365,20 +3501,40 @@ def disparaMensagens(): #avisos diários (produção) ou de hora em hora (teste)
                 dataCiencia = cienciaReg[0].date()
                 prazoRestante = (dataCiencia+timedelta(days=60)-dataAtual).days                
                 if prazoRestante==15:
+                    i+=1                    
                     if msg=="":
                         msg = msg+"\nEquipe " + equipe[:7]+"."+equipe[7:11]+"."+equipe[11:] + ":"                                
                     msg = msg + "\n  *"+formataTDPF(tdpf)+"* ("+nomeFiscal.split()[0]+")"
                     if cienciaReg[1]: #documento informado
                         msg = msg +" - "+cienciaReg[1]+"\n"
+                        sheet.cell(row=i, column=7).value = cienciaReg[1]                        
                     else:
                         msg = msg + "\n"
+                    sheet.cell(row=i, column=1).value = i-1
+                    sheet.cell(row=i, column=2).value = equipe[:7]+"."+equipe[7:11]+"."+equipe[11:]
+                    sheet.cell(row=i, column=3).value = formataTDPF(linha[1])
+                    sheet.cell(row=i, column=4).value = linha[6]
+                    sheet.cell(row=i, column=5).value = nomeFiscal
+                    sheet.cell(row=i, column=6).value = cienciaReg[0].strftime("%d/%m/%Y")
+                    if cienciaReg[2]!=None:
+                        sheet.cell(row=1, column=7).value = cienciaReg[2].strftime("%d/%m/%Y")
+                    for col in range(len(larguras)):
+                        if not col in [3, 4]:
+                            currentCell = sheet.cell(row=i, column=col+1)
+                            currentCell.alignment = Alignment(horizontal='center', vertical='center') #, wrap_text=True)                        
         userId = linha[2]               
     if msg!="":
         msg = cabecalho+msg
         if ambiente!="PRODUÇÃO":
             msg = msg+"\n"+"Ambiente: "+ambiente
-        enviaMsgUpdater(userId, text=limpaMarkdown(msg), parse_mode= 'MarkdownV2')
-
+        if bloqueio=='N':
+            enviaMsgUpdater(userId, text=limpaMarkdown(msg), parse_mode= 'MarkdownV2')
+        if not email in [None, ""] and server:
+            nomeArq = "Ciencia15_"+str(userId)+"_"+datetime.now().strftime("%Y_%m_%d_%H_%M_%S_%f")[:-3]+".xlsx"
+            book.save(nomeArq)
+            if enviaEmail(email, texto, assunto, nomeArq)!=3:
+                logging.info("Erro ao enviar email de TDPFs recuperando espontaneidade em 15 dias - "+email)
+            os.remove(nomeArq)          
     conn.close()              
     return
 
@@ -3389,7 +3545,7 @@ def formataDCC(dcc):
         return dcc
     return dcc[:5]+"."+dcc[5:11]+"/"+dcc[11:15]+"-"+dcc[15:]
 
-def disparaMsgJuntada(): #alerta de juntada (não vai para o e-mail)
+def disparaMsgJuntada(): #alerta de juntada para fiscais alocados (não vai para o e-mail)
     global updater, termina, ambiente
     conn = conecta()
     if not conn:
@@ -3398,7 +3554,7 @@ def disparaMsgJuntada(): #alerta de juntada (não vai para o e-mail)
     logging.info("Acionado o disparo de mensagens Solic Juntada - "+datetime.now().strftime('%d/%m/%Y %H:%M'))
     cursor = conn.cursor(buffered=True)
     dataAtual = datetime.today().date()
-    comando = "Select idTelegram, CPF from Usuarios Where Adesao Is Not Null and Saida Is Null and idTelegram Is Not Null and idTelegram<>0"
+    comando = "Select idTelegram, CPF from Usuarios Where Adesao Is Not Null and Saida Is Null and idTelegram Is Not Null and idTelegram<>0 and BloqueiaTelegram='N'"
     cursor.execute(comando)
     usuarios = cursor.fetchall()
     totalMsg = 0
@@ -3459,7 +3615,7 @@ def disparaMsgJuntada(): #alerta de juntada (não vai para o e-mail)
     conn.close()
     return
 
-def disparaMsgProrrogacao(): #avisa sobre prorrogação pendente de assinatura ou de registro no RHAF
+def disparaMsgProrrogacao(): #avisa sobre prorrogação pendente de assinatura ou de registro no RHAF - apenas fiscais alocados (não vai para e-mail)
     global updater, termina, ambiente, dirLog
     #verificamos o dia e a hora da última pesquisa    
     try:
@@ -3476,7 +3632,7 @@ def disparaMsgProrrogacao(): #avisa sobre prorrogação pendente de assinatura o
     logging.info("Acionado o disparo de mensagens Prorrogação - "+datetime.now().strftime('%d/%m/%Y %H:%M'))
     cursor = conn.cursor(buffered=True)
     comando = """Select idTelegram, Fiscais.Codigo, Usuarios.CPF from Usuarios, Fiscais
-                 Where Adesao Is Not Null and Saida Is Null and idTelegram Is Not Null and idTelegram<>0 and Usuarios.CPF=Fiscais.CPF"""
+                 Where Adesao Is Not Null and Saida Is Null and idTelegram Is Not Null and idTelegram<>0 and Usuarios.CPF=Fiscais.CPF and Usuarios.BloqueiaTelegram='N' """
     cursor.execute(comando)
     usuarios = cursor.fetchall()
     totalMsg = 0
@@ -3640,7 +3796,7 @@ botTelegram()
 threadDisparador = threading.Thread(target=disparador, daemon=True) #encerra thread quando sair do programa sem esperá-la
 threadDisparador.start()
 print("Serviço iniciado [", datetime.now(), "]")
-#disparaMensagens()
+disparaMensagens()
 #disparaMsgJuntada
 #disparaMsgProrrogacao()
 while not termina:

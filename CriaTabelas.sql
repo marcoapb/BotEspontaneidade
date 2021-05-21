@@ -65,6 +65,7 @@ CREATE TABLE `TDPFS` (
   `Porte` VARCHAR(50),
   `Acompanhamento` VARCHAR(1),
   `TrimestrePrevisto` VARCHAR(6),
+  `CasoEspecial` BIGINT,
   PRIMARY KEY (`Codigo`), 
   UNIQUE (`Numero`), 
   UNIQUE (`Numero`, `Grupo`),
@@ -88,6 +89,7 @@ CREATE TABLE `Usuarios` (
   `Tentativas` INTEGER DEFAULT 0, 
   `DataEnvio` DATETIME,
   `Orgao` INTEGER DEFAULT 0,
+  `BloqueiaTelegram` CHAR(1) DEFAULT `N`,
   INDEX (`CPF`), 
   INDEX (`idTelegram`), 
   PRIMARY KEY (`Codigo`), 
@@ -162,7 +164,7 @@ CREATE TABLE `DiarioFiscalizacao` (
   `Fiscal` INTEGER,
   `TDPF` BIGINT,
   `Data` DATETIME, 
-  `Entrada` VARBINARY(16384),  
+  `Entrada` VARBINARY(65000),  
   `Extensao` VARCHAR(5),
   PRIMARY KEY (`Codigo`), 
   INDEX (`Fiscal`),
@@ -345,4 +347,14 @@ CREATE TABLE `Extracoes` (
   `Data` DATETIME, 
   PRIMARY KEY (`Codigo`), 
   INDEX (`Data`)
+) ENGINE=innodb DEFAULT CHARSET=utf8;
+
+DROP TABLE IF EXISTS `CasosEspeciais`;
+
+CREATE TABLE `CasosEspeciais` (
+  `Codigo` BIGINT NOT NULL AUTO_INCREMENT, 
+  `CasoEspecial` BIGINT(15),
+  `Descricao` VARCHAR(150),
+  PRIMARY KEY (`Codigo`), 
+  INDEX (`Caso`)
 ) ENGINE=innodb DEFAULT CHARSET=utf8;

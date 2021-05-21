@@ -20,6 +20,7 @@ from Crypto.PublicKey import RSA
 from Crypto.Cipher import PKCS1_OAEP
 from random import randint
 import calendar
+import schedule #para mandar e-mail com pontos do trimestre do fiscal e a média de sua equipe
 
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
@@ -219,13 +220,13 @@ def conectaRaw():
 def enviaRespostaSemFechar(resposta, c):
     #logging.info(resposta)    
     tam = len(resposta)
-    if tam>99999:
-        print("Mensagem ultrapassou o tamanho de 99999 bytes - ", c.getpeername())
+    if tam>999999: #tamanho máximo de uma resposta
+        print("Mensagem ultrapassou o tamanho de 999999 bytes - ", c.getpeername())
         print("Resposta: ", resposta[:2])
         logging.error("Mensagem ultrapassou o tamanho de 99999 bytes - "+str(c.getpeername())+" - Resposta: "+resposta[:2])
         return
     else:
-        tam = str(tam).rjust(5,"0").encode('utf-8')    
+        tam = str(tam).rjust(6,"0").encode('utf-8')    
     resposta = resposta.encode('utf-8')      
     try:    
         c.sendall(tam+resposta)
@@ -391,17 +392,17 @@ def estaoChavesValidas(addr):
 
 def buscaTipoOrgao(orgao, cursor):
     if orgao==0 or orgao==None:
-        return "L"
-    comando = "Select Tipo from Orgaos Where Codigo=%s"
+        return "L", ""
+    comando = "Select Tipo, Orgao from Orgaos Where Codigo=%s"
     cursor.execute(comando, (orgao,))
     row = cursor.fetchone()
     if row==None or len(row)==0:
-        return"L"
+        return "L", ""
     else:
         orgaoResp = row[0]
         if orgaoResp=="" or orgaoResp==None:
-            orgaoResp = "L"  
-        return orgaoResp 
+            orgaoResp = "L"
+        return orgaoResp, row[1].strip()
 
 def consultaPontuacao(cursor, chaveTdpf, tipoOrgaoUsuario, pediuParametros=False, bSupervisor=False):
     #pontuação de cada tributo (código) por porte [p, m, g]
@@ -748,7 +749,7 @@ def trataMsgRecebida(msgRecebida, c, addr): #c é o socket estabelecido com o cl
                     return                
                 if not estaoChavesValidas(addr): #meio difícil de ocorrer aqui, pq tem lá no servidor, mas ...
                     geraChaves(addr) 
-                versaoScript = "14d" #versão mínima do Script (X.XX, sem o ponto; colocar o zero ao final, se for o caso) - só informa na mensagem abaixo (não restringe nas requisições)
+                versaoScript = "150" #versão mínima do Script (X.XX, sem o ponto; colocar o zero ao final, se for o caso) - só informa na mensagem abaixo (não restringe nas requisições)
                 enviaRespostaSemFechar("0000"+chavesCripto[segmentoIP(addr)][2].strftime("%d/%m/%Y %H:%M:%S")+versaoScript+dataExtracao.strftime("%d/%m/%Y %H:%M"), c) #envia a validade da chave e a versão mínima exigida do Script
                 try:
                     msg = c.recv(1024).decode("utf-8") #só aguarda um 00
@@ -864,7 +865,7 @@ def trataMsgRecebida(msgRecebida, c, addr): #c é o socket estabelecido com o cl
         return  
 
         
-    if codigo<1 or (codigo>41 and codigo!=60): #número de requisições válidas
+    if codigo<1 or (codigo>43 and codigo!=60): #número de requisições válidas
         resposta = "99CÓD DA REQUISIÇÃO É INVÁLIDO (C)" 
         enviaResposta(resposta, c)          
         return     
@@ -937,7 +938,7 @@ def trataMsgRecebida(msgRecebida, c, addr): #c é o socket estabelecido com o cl
                 result = "3"
                 atualizaTentativas(row[0], tentativas, conn)
         orgao = row[11]
-        tipoOrgaoUsuario = buscaTipoOrgao(orgao, cursor)        
+        tipoOrgaoUsuario, nomeOrgao = buscaTipoOrgao(orgao, cursor)        
         if ativo:
             resposta = "0101"+tipoOrgaoUsuario+result #01 - status; 01 - ativo
         elif registrado:
@@ -950,7 +951,7 @@ def trataMsgRecebida(msgRecebida, c, addr): #c é o socket estabelecido com o cl
     
     
     #validamos a chave do contágil ligada àquele CPF (registro ativo) - serviços de 2 em diante
-    comando = "Select Codigo, Chave, ValidadeChave, Tentativas, email, d1, d2, d3, Orgao, Adesao, Saida from Usuarios Where CPF=%s"            
+    comando = "Select Codigo, Chave, ValidadeChave, Tentativas, email, d1, d2, d3, Orgao, Adesao, Saida, BloqueiaTelegram from Usuarios Where CPF=%s"            
     cursor.execute(comando, (cpf,))
     row = cursor.fetchone()   
     if not row or len(row)==0: #o usuário está inativo
@@ -958,11 +959,13 @@ def trataMsgRecebida(msgRecebida, c, addr): #c é o socket estabelecido com o cl
         enviaResposta(resposta, c)  
         conn.close()
         return
+    statusBloqueio = row[11]
     orgaoUsuario =  row[8]
-    tipoOrgaoUsuario = buscaTipoOrgao(orgaoUsuario, cursor) 
-    if (row[9]==None or row[10]!=None) and (tipoOrgaoUsuario=="L" or not codigo in [13, 24, 25, 28, 29]): #adesão nula ou inatividade
-                                                                                                          #só permitimos acesso para usuários nacionais e regionais ou para as 
-                                                                                                          #requisições listadas
+    email = row[4]
+    tipoOrgaoUsuario, nomeOrgao = buscaTipoOrgao(orgaoUsuario, cursor) 
+    if (row[9]==None or row[10]!=None) and (tipoOrgaoUsuario=="L" or not codigo in [13, 24, 28, 29, 31, 32, 41, 42]): #adesão nula ou inatividade
+                                                                                                                      #só permitimos acesso para usuários nacionais e regionais nas 
+                                                                                                                      #requisições listadas
         if row[9]==None:
             resposta = "90USUÁRIO NÃO SE REGISTROU NO BOT TELEGRAM OU OPÇÃO NÃO DISPONÍVEL PARA O TIPO DE USUÁRIO"
         else:
@@ -1075,7 +1078,7 @@ def trataMsgRecebida(msgRecebida, c, addr): #c é o socket estabelecido com o cl
     comando = "Select Fiscais.Codigo From Fiscais Where Fiscais.CPF=%s"          
     cursor.execute(comando, (cpf,))
     rowFiscal = cursor.fetchone()
-    if (not rowFiscal or len(rowFiscal)==0) and not codigo in [13, 24, 25, 28, 29]: #estes códigos podem ser utilizados por usuários Cofis ou Difis
+    if (not rowFiscal or len(rowFiscal)==0) and not codigo in [13, 24, 28, 29, 31, 32, 41, 42]: #estes códigos podem ser utilizados por usuários Cofis (nacionais) ou Difis (regionais)
         resposta = "97CPF NÃO FOI LOCALIZADO NA TABELA DE FISCAIS/SUPERVISORES"
         enviaResposta(resposta, c)  
         conn.close()
@@ -1574,7 +1577,7 @@ def trataMsgRecebida(msgRecebida, c, addr): #c é o socket estabelecido com o cl
             conn.close()
             return 
         #a variável row foi buscada na pequena rotina antes do código validador previo de 2 a 5
-        email = row[4]
+        #email = row[4]
         if email==None or email=="":
             resposta = "07N"
             enviaResposta(resposta, c)  
@@ -1638,17 +1641,22 @@ def trataMsgRecebida(msgRecebida, c, addr): #c é o socket estabelecido com o cl
             enviaResposta(resposta, c) 
             conn.close()
             return  
-        comando = "Update Usuarios Set email=Null Where CPF=%s and Saida Is Null"
-        try:
-            cursor.execute(comando, (cpf,))
-            conn.commit()
-            msg = "Email excluido"
-            msg = msg.ljust(100)
-            resposta = "09S"+msg
-        except:
-            msg = "Erro na atualização da tabela"
-            msg = msg.ljust(100)            
+        if statusBloqueio=='S': #comunicação via Telegram está bloqueada, não podemos permitir a exclusão do e-mail (statusBloqueio foi obtido acima)
+            msg = "Email não pode ser excluído porque a comunicação via Telegram está bloqueada".ljust(100)
             resposta = "09N"+msg
+        else:
+            comando = "Update Usuarios Set email=Null Where CPF=%s and Saida Is Null"
+            cursor.execute(comando, (cpf,))
+            try:
+                conn.commit()
+                msg = "Email excluido"
+                msg = msg.ljust(100)
+                resposta = "09S"+msg
+            except:
+                conn.rollback()
+                msg = "Erro na atualização da tabela"
+                msg = msg.ljust(100)            
+                resposta = "09N"+msg
         enviaResposta(resposta, c)
         conn.close()
         return
@@ -3329,10 +3337,11 @@ def trataMsgRecebida(msgRecebida, c, addr): #c é o socket estabelecido com o cl
                         conn.close()
                         logging.info("Erro de time out 28 - provavelmente cliente não respondeu no prazo. Abandonando operação.")
                         return 
+    #utilizado no código abaixo e no 42
+    mesTrimIni = {"1": "01", "2": "04", "3": "07", "4": "10"}
+    mesTrimFim = {"1": "03", "2": "06", "3": "09", "4": "12"}
 
     if codigo==29: #relaciona TDPFs encerrados em um período ou com previsão de encerramento nele sob supervisão do CPF
-        mesTrimIni = {"1": "01", "2": "04", "3": "07", "4": "10"}
-        mesTrimFim = {"1": "03", "2": "06", "3": "09", "4": "12"}
         qtdeRegistros = 50 #qtde de registros de tdpfs que enviamos por vez (se mudar aqui, tem que alterar o script)
         if len(msgRecebida)!=(25+tamChave):
             resposta = "99REQUISIÇÃO INVÁLIDA (29A)"
@@ -3478,7 +3487,7 @@ def trataMsgRecebida(msgRecebida, c, addr): #c é o socket estabelecido com o cl
         mensagens = ""
         for row in rows:
             i+=1
-            mensagens = mensagens + row[0].ljust(100)
+            mensagens = mensagens + row[0].ljust(200)
             if i==9:
                 break
         resposta = "32S"+str(i)+mensagens
@@ -3732,7 +3741,7 @@ def trataMsgRecebida(msgRecebida, c, addr): #c é o socket estabelecido com o cl
             if row:
                 email = row[0]
                 tdpfFormatado = formataTDPF(tdpf)
-                texto = "Sr. Chefe de Equipe,\n\nInformamos que a Prorrogação nº "+str(numero)+" do TDPF nº "+tdpfFormatado+" - "+nome+" está pendente de sua assinatura no script Alertas Fiscalização do ContÁgil.\n\nAtenciosamente,\n\nCofis/Disav"
+                texto = "Sr. Chefe de Equipe,\n\nInformamos que a Prorrogação nº "+str(numero)+" do TDPF nº "+tdpfFormatado+" - "+nome.strip()+" está pendente de sua assinatura no script Alertas Fiscalização do ContÁgil.\n\nAtenciosamente,\n\nCofis/Disav"
                 if ambiente!="PRODUÇÃO":
                     texto = texto + "\n\nAmbiente: "+ambiente
                 resultado = enviaEmail(email, texto, "Prorrogação Pendente de Assinatura - TDPF nº "+tdpfFormatado)
@@ -3945,7 +3954,7 @@ def trataMsgRecebida(msgRecebida, c, addr): #c é o socket estabelecido com o cl
                     if row:
                         email = row[0]
                         tdpfFormatado = formataTDPF(tdpf)
-                        texto = "Sr. Chefe de Equipe,\n\nInformamos que a Prorrogação nº "+str(numero)+" do TDPF nº "+tdpfFormatado+" - "+nome+" está pendente de sua assinatura no script Alertas Fiscalização do ContÁgil.\n\nAtenciosamente,\n\nCofis/Disav"
+                        texto = "Sr. Chefe de Equipe,\n\nInformamos que a Prorrogação nº "+str(numero)+" do TDPF nº "+tdpfFormatado+" - "+nome.strip()+" está pendente de sua assinatura no script Alertas Fiscalização do ContÁgil.\n\nAtenciosamente,\n\nCofis/Disav"
                         if ambiente!="PRODUÇÃO":
                             texto = texto + "\n\nAmbiente: "+ambiente                        
                         resultado = enviaEmail(email, texto, "Prorrogação Pendente de Assinatura - TDPF nº "+tdpfFormatado)
@@ -4014,12 +4023,15 @@ def trataMsgRecebida(msgRecebida, c, addr): #c é o socket estabelecido com o cl
                 resposta = resposta + "P" #a última prorrogação está pendente de assinatura
             elif row[2] == None:
                 resposta = resposta + "R" #a última prorrogação está pendente de registro no RHAF
+        consulta = "Select Vencimento, Emissao from TDPFS Where Codigo=%s"
+        cursor.execute(consulta, (chaveTdpf, ))
+        row = cursor.fetchone()                
         if len(resposta)==5: #não houve pendência - verificamos quando ocorre o vencimento
-            consulta = "Select Vencimento from TDPFS Where Codigo=%s"
-            cursor.execute(consulta, (chaveTdpf, ))
-            row = cursor.fetchone()
             if row[0].date()>(datetime.now()+timedelta(days=30)).date(): #vencimento do TDPF ocorre em mais de 30 dias da data atual - prorrogação não é possível
-                resposta = resposta + "T" #falta muito (T)tempo para o vencimento             
+                resposta = resposta + "T" #falta muito (T)tempo para o vencimento     
+            else:
+                resposta = resposta + " "
+        resposta = resposta + row[1].strftime("%d/%m/%Y")+row[0].strftime("%d/%m/%Y")        
         enviaResposta(resposta, c) 
         conn.close()
         return  
@@ -4168,7 +4180,7 @@ def trataMsgRecebida(msgRecebida, c, addr): #c é o socket estabelecido com o cl
         return  
 
     if codigo==41: #informações gerenciais de um período (mm/aaaa a mm/aaaa)
-        qtdeRegistros = 150 #qtde de registros de tdpfs que enviamos por vez - se alterar aqui, tem que alterar no script e vice-versa
+        qtdeRegistros = 200 #qtde de registros de tdpfs que enviamos por vez - se alterar aqui, tem que alterar no script e vice-versa
         if len(msgRecebida)!=(32+tamChave):
             resposta = "99REQUISIÇÃO INVÁLIDA (41A)"
             enviaResposta(resposta, c) 
@@ -4225,7 +4237,8 @@ def trataMsgRecebida(msgRecebida, c, addr): #c é o socket estabelecido com o cl
         else: #caso contrário, buscamos todos para informar a quantidade total que existe
              offsetReg = "Limit "+str(qtdeRegistros)+" Offset 0"
         logging.info("Offset: "+offsetReg) 
-        comando = """Select TDPFS.Codigo, TDPFS.Numero, TDPFS.Nome, TDPFS.Emissao, TDPFS.Encerramento, TDPFS.TrimestrePrevisto, TDPFS.Grupo, TDPFS.Porte, TDPFS.Acompanhamento """
+        comando = """Select TDPFS.Codigo, TDPFS.Numero, TDPFS.Nome, TDPFS.Emissao, TDPFS.Encerramento, TDPFS.TrimestrePrevisto, TDPFS.Grupo, TDPFS.Porte, 
+                     TDPFS.Acompanhamento, TDPFS.CasoEspecial """
         if tipoOrgaoUsuario=="L": #esta variável e orgaoUsuario vem de rotina comum de validação do usuário
             comando = comando + """ from TDPFS, Supervisores 
                                     Where Supervisores.Fiscal=%s and Supervisores.Fim Is Null and Supervisores.Equipe=TDPFS.Grupo
@@ -4344,8 +4357,23 @@ def trataMsgRecebida(msgRecebida, c, addr): #c é o socket estabelecido com o cl
             if porte==None or porte=="":
                 porte = "ND "
             if acompanhamento==None or acompanhamento=="":
-                acompanhamento = "N"            
-            #busca a primeira ciência e a última
+                acompanhamento = "N"     
+            casoEspecial = row[9]
+            if casoEspecial==None or casoEspecial==0:
+                casoEspecial = ""
+                casoEspecialDesc = " "
+            else:
+                cursor.execute("Select CasoEspecial, Descricao from CasosEspeciais Where Codigo=%s", (casoEspecial, )) 
+                linhaCaso = cursor.fetchone()
+                if not linhaCaso:
+                    casoEspecial = ""
+                    casoEspecialDesc = " "    
+                else:
+                    casoEspecial = str(linhaCaso[0])
+                    casoEspecialDesc = linhaCaso[1].strip()[:90]    
+            casoEspecial = casoEspecial.rjust(15,"0")
+            casoEspecialDesc = casoEspecialDesc.ljust(90)
+            #busca a primeira ciência
             comando = "Select Data, Documento from Ciencias Where TDPF=%s order by Data"
             cursor.execute(comando, (chaveTdpf,))
             cienciaReg = cursor.fetchone() #busca a data de ciência mais antiga (PRIMEIRA)
@@ -4353,6 +4381,21 @@ def trataMsgRecebida(msgRecebida, c, addr): #c é o socket estabelecido com o cl
                 primCiencia = dataTexto(cienciaReg[0]) 
             else:
                 primCiencia = "00/00/0000"
+            #busca os dados de programação
+            tributos = set()
+            periodoMin = datetime.strptime("01/01/2100", "%d/%m/%Y")
+            periodoMax = datetime.strptime("01/01/1900", "%d/%m/%Y")
+            comando = "Select Tributos.Tributo, PeriodoInicial, PeriodoFinal from Operacoes, Tributos Where Operacoes.TDPF=%s and Operacoes.Tributo=Tributos.Codigo"
+            cursor.execute(comando, (chaveTdpf,))
+            linhas = cursor.fetchall()
+            for linha in linhas:
+                if len(tributos)<7:
+                    tributos.add(linha[0])
+                periodoMin = min(periodoMin, linha[1])
+                periodoMax = max(periodoMax, linha[2])
+            tributosStr = ''.join([str(tributo).rjust(4,"0") for tributo in tributos]).ljust(28)
+            periodoMin = periodoMin.strftime("%m/%Y")
+            periodoMax = periodoMax.strftime("%m/%Y")
             #busca os fiscais com mais horas alocadas
             comando = """Select Fiscais.Nome, Alocacoes.Horas 
                          from Fiscais, Alocacoes 
@@ -4368,7 +4411,8 @@ def trataMsgRecebida(msgRecebida, c, addr): #c é o socket estabelecido com o cl
             regFiscais = ""
             for k in range(min(len(fiscais), 8)): #pega os dados dos primeiros 8 fiscais
                 regFiscais = regFiscais + fiscais[k][:50].ljust(50) + str(horasL[k]).rjust(4, "0")
-            registro = registro + tdpf + nome + emissao + trimestre + encerramento + primCiencia + porte + acompanhamento + equipe + pontos + horas + regFiscais
+            registro = registro + tdpf + nome + emissao + trimestre + encerramento + primCiencia + porte + acompanhamento + tributosStr + periodoMin + periodoMax + \
+                       casoEspecial + casoEspecialDesc + equipe + pontos + horas + regFiscais
             total+=1
             i+=1
             if i%qtdeRegistros==0 or total==tam: #de qtdeRegistros em qtdeRegistros ou no último registro enviamos a mensagem
@@ -4379,7 +4423,285 @@ def trataMsgRecebida(msgRecebida, c, addr): #c é o socket estabelecido com o cl
                 enviaResposta(resposta+registro, c)
                 return 
 
-        
+    if codigo==42: #solicita média de pontos
+        if len(msgRecebida)!=(25+tamChave):
+            resposta = "99REQUISIÇÃO INVÁLIDA (42A)"
+            enviaResposta(resposta, c) 
+            conn.close()
+            return   
+        trimInicial = msgRecebida[-12:-6]
+        trimFinal = msgRecebida[-6:]
+        anoInicial = trimInicial[:4]
+        anoFinal = trimFinal[:4]
+        trimIni = trimInicial[5:]
+        trimFim = trimFinal[5:]
+        if not anoInicial.isdigit() or not anoFinal.isdigit() or trimInicial[4:5]!="/" or trimFinal[4:5]!="/" or not trimIni.isdigit() or not trimFim.isdigit():
+            resposta = "99REQUISIÇÃO INVÁLIDA - TRIMESTRE INVÁLIDO (42B)"
+            enviaResposta(resposta, c) 
+            conn.close()
+            return 
+        if trimInicial>trimFinal:           
+            resposta = "99REQUISIÇÃO INVÁLIDA - TRIMESTRE INICIAL POSTERIOR AO FINAL (42C)"
+            enviaResposta(resposta, c) 
+            conn.close()
+            return
+        if anoInicial<"2021":
+            resposta = "99REQUISIÇÃO INVÁLIDA - TRIMESTRE INICIAL NÃO PODE SER ANTERIOR A 2021 (42D)"
+            enviaResposta(resposta, c) 
+            conn.close()
+            return    
+        if trimFim>"4":
+            resposta = "99REQUISIÇÃO INVÁLIDA - TRIMESTRE NÃO PODE SER SUPERIOR A 4 (42E)"
+            enviaResposta(resposta, c) 
+            conn.close()
+            return  
+        mesIni = mesTrimIni[trimIni]
+        mesFim = mesTrimFim[trimFim]
+        dataInicial = datetime.strptime("01/"+mesIni+"/"+anoInicial, "%d/%m/%Y")
+        dataFinal = datetime.strptime(str(calendar.monthrange(int(anoFinal), int(mesFim))[1])+"/"+mesFim+"/"+anoFinal, "%d/%m/%Y") #último dia do mês
+        if dataFinal.date().year>datetime.now().date().year:
+            resposta = "99REQUISIÇÃO INVÁLIDA -  ANO FINAL NÃO PODE SER FUTURO (42F)"
+            enviaResposta(resposta, c) 
+            conn.close()
+            return  
+        registro = ""    
+        dictMediaEquipes = dict()
+        equipes = set()   #guarda as equipes para as quais foram calculados pontos para não fazer esse calculo mais de uma vez
+        regioes = set()   #guarda as regiões para as quais foram calculadas médias para não fazer esse calculo mais de uma vez
+        if not chaveFiscal in [0, None]: #é fiscal supervisor ou que foi ou é alocado a TDPF - podemos fazer a pesquisa pessoal
+            #seleciona os TDPFs em que o CPF esteja alocado
+            comando1 = """Select TDPFS.Codigo, TDPFS.Grupo, Fiscais.CPF, Fiscais.Nome, TDPFS.Encerramento
+                          From TDPFS, Alocacoes, Fiscais
+                          Where Alocacoes.Fiscal=%s and Alocacoes.TDPF=TDPFS.Codigo and Alocacoes.Fiscal=Fiscais.Codigo and
+                          Encerramento Is Not Null and Encerramento>=%s and Encerramento<=%s
+                          Order by TDPFS.Grupo, Fiscais.CPF"""
+            #seleciona as equipes das quais o fiscal seja o supervisor e respectivos membros e TDPFs
+            comando2 = """Select TDPFS.Codigo, TDPFS.Grupo, Fiscais.CPF, Fiscais.Nome, TDPFS.Encerramento
+                          from TDPFS, Supervisores, Fiscais, Alocacoes
+                          Where Supervisores.Equipe=TDPFS.Grupo and Supervisores.Fiscal=%s and Supervisores.Fim Is Null and
+                          Alocacoes.TDPF=TDPFS.Codigo and Alocacoes.Fiscal=Fiscais.Codigo and
+                          ((Encerramento Is Not Null and Encerramento>=%s and Encerramento<=%s) or (Encerramento Is Null and TDPFS.Emissao<=%s))
+                          Order by TDPFS.Grupo, Fiscais.Nome"""
+            comandos = [comando1, comando2]  #consultamos os pontos do fiscal e de suas equipes, dos fiscais supervisionados e das respectivas equipes
+            i = 0
+            for comando in comandos:  
+                i+=1
+                if i==1:
+                    cursor.execute(comando, (chaveFiscal, dataInicial, dataFinal))
+                else:
+                    cursor.execute(comando, (chaveFiscal, dataInicial, dataFinal, dataFinal))
+                linhas = cursor.fetchall()
+                equipe = ""
+                cpfFiscal = ""
+                totalFiscal = float(0)            
+                for linha in linhas:
+                    if equipe=="":
+                        equipe = linha[1]
+                    if cpfFiscal=="":
+                        cpfFiscal = linha[2]
+                        nome = linha[3][:100].ljust(100)
+                    if cpfFiscal!=linha[2]:
+                        registro += "F"+cpfFiscal+nome+equipe.ljust(25)+str(int(totalFiscal)).rjust(7, "0")    
+                        cpfFiscal = linha[2]  
+                        nome = linha[3][:100].ljust(100)  
+                        totalFiscal = float(0)              
+                    if equipe!=linha[1]:              
+                        if not equipe in equipes:
+                            equipes.add(equipe) #para não recalcular pontos desta equipe mais de uma vez
+                            mediaEquipe = consultaMediaPontosEquipe(cursor, equipe, dataInicial, dataFinal)   
+                            dictMediaEquipes[equipe] = mediaEquipe  
+                            registro += "E"+equipe.ljust(25)+str(mediaEquipe).rjust(7, "0")
+                        equipe = linha[1]
+                    chaveTdpf = linha[0]
+                    if linha[4]==None: #não está encerrado - não gera pontos
+                        continue
+                    retorno = consultaPontuacao(cursor, chaveTdpf, "R", False, True) #fala que é orgão regional para retornar os pontos, mesmo sem informações prestadas
+                    if retorno==None:
+                        continue #não há o que ratear
+                    pontos = int(retorno[4:8])
+                    comando = "Select Sum(Alocacoes.Horas) from Alocacoes Where Alocacoes.TDPF=%s"
+                    cursor.execute(comando, (chaveTdpf,))     #busca as horas totais alocadas ao TDPF
+                    reg = cursor.fetchone()
+                    if reg:
+                        horas = reg[0]   
+                        if horas in [0, None]:
+                            continue 
+                    else:
+                        continue #não vai ter como calcular os pontos do fiscal, pois não há horas informadas no RHAF para o TDPF
+                    comando =  "Select Alocacoes.Horas from Alocacoes, Fiscais Where Alocacoes.TDPF=%s and Alocacoes.Fiscal=Fiscais.Codigo and Fiscais.CPF=%s"   
+                    cursor.execute(comando, (chaveTdpf, cpfFiscal))     #busca as horas alocadas ao TDPF pelo fiscal
+                    reg = cursor.fetchone()        
+                    if reg:
+                        horasFiscal = reg[0]    
+                    else:
+                        continue #fiscal não tem pontos neste TDPF, pois não possui horas alocadas  
+                    totalFiscal +=  float(pontos) * (float(horasFiscal)/float(horas))   #soma os pontos do TDPF 'devidos' ao fiscal ao total de pontos
+                #adicionamos os dados da última equipe do último fiscal
+                if cpfFiscal!="":
+                    registro += "F"+cpfFiscal+nome+equipe.ljust(25)+str(int(totalFiscal)).rjust(7, "0")               
+                if not equipe in equipes and equipe!="":
+                    equipes.add(equipe) #para não recalcular pontos desta equipe mais de uma vez
+                    mediaEquipe = consultaMediaPontosEquipe(cursor, equipe, dataInicial, dataFinal)
+                    dictMediaEquipes[equipe] = mediaEquipe    
+                    registro += "E"+equipe.ljust(25)+str(mediaEquipe).rjust(7, "0")  
+            if tipoOrgaoUsuario=="L": #calculamos a média de cada região do usuário
+                total = 0    
+                comando = """Select Distinctrow TDPFS.Grupo
+                             from TDPFS 
+                             Where TDPFS.Grupo Like %s and ((TDPFS.Encerramento Is Not Null and Encerramento>=%s and Encerramento<=%s) or 
+                             (Encerramento Is Null and TDPFS.Emissao<=%s))"""
+                equipesCopia = set()
+                for equipe in equipes:
+                    equipesCopia.add(equipe)
+                for equipe in equipesCopia: 
+                    if not equipe[:2] in regioes:
+                        regioes.add(equipe[:2])
+                        cursor.execute(comando, (equipe[:2]+"%", dataInicial, dataFinal, dataFinal))
+                        regEquipes = cursor.fetchall()
+                        for regEquipe in regEquipes:
+                            if regEquipe[0] in equipes:
+                                continue
+                            equipes.add(regEquipe[0])
+                            mediaEquipe = consultaMediaPontosEquipe(cursor, regEquipe[0], dataInicial, dataFinal) 
+                            dictMediaEquipes[regEquipe[0]] = mediaEquipe 
+                            #registro += "E"+regEquipe[0].ljust(25)+str(mediaEquipe).rjust(7, "0") 
+                for regiao in regioes:
+                    nEquipes = 0
+                    total = 0
+                    for equipe in dictMediaEquipes:
+                        if equipe[:2]==regiao:
+                            nEquipes += 1
+                            total += dictMediaEquipes[equipe]
+                    mediaRF = int(total / nEquipes)
+                    registro += "R"+regiao.ljust(25)+str(mediaRF).rjust(7, "0")
+             
+        if tipoOrgaoUsuario in ["R", "N"]:
+            if tipoOrgaoUsuario=="R": #temos que informar as médias de todas as equipes subordinadas ao órgão do usuário
+                comando = """Select Distinctrow Grupo 
+                             from Jurisdicao, TDPFS 
+                             Where Orgao=%s and TDPFS.Grupo=Equipe and ((TDPFS.Encerramento Is Not Null and Encerramento>=%s and Encerramento<=%s) or
+                             (Encerramento Is Null and TDPFS.Emissao<=%s))"""
+                cursor.execute(comando, (orgaoUsuario, dataInicial, dataFinal, dataFinal))
+            else: #órgão nacional - informamos as médias de TODAS as equipes   
+                comando = """Select Distinctrow Grupo 
+                             from TDPFS Where ((TDPFS.Encerramento Is Not Null and Encerramento>=%s and Encerramento<=%s) or
+                             (Encerramento Is Null and TDPFS.Emissao<=%s))"""
+                cursor.execute(comando, (dataInicial, dataFinal, dataFinal))
+            equipesReg = cursor.fetchall()
+            for equipeReg in equipesReg:
+                equipe = equipeReg[0]
+                if not equipe in equipes:
+                    equipes.add(equipe) #para não recalcular pontos desta equipe mais de uma vez
+                    mediaEquipe = consultaMediaPontosEquipe(cursor, equipe, dataInicial, dataFinal)   
+                    dictMediaEquipes[equipe] = mediaEquipe  
+                    registro += "E"+equipe.ljust(25)+str(mediaEquipe).rjust(7, "0")
+            #calculamos a média nacional ou regional
+            nEquipes = 0 
+            total = 0
+            for equipe in dictMediaEquipes:
+                nEquipes += 1
+                total += dictMediaEquipes[equipe]
+            mediaNR = int(total / nEquipes)
+            if tipoOrgaoUsuario=="R":
+                regiao = nomeOrgao.ljust(25) #esta variável é obtida quando verificamos o tipo do usuário
+            else:
+                regiao = ""
+            registro += tipoOrgaoUsuario+regiao+str(mediaNR).rjust(7, "0")   
+            if tipoOrgaoUsuario=="R": #neste caso, precisamos incluir as equipes do país e fazer a média NACIONAL
+                comando = """Select Distinctrow Grupo 
+                             from TDPFS Where ((TDPFS.Encerramento Is Not Null and Encerramento>=%s and Encerramento<=%s) or
+                             (Encerramento Is Null and TDPFS.Emissao<=%s))"""
+                cursor.execute(comando, (dataInicial, dataFinal, dataFinal))
+                equipesReg = cursor.fetchall()
+                for equipeReg in equipesReg:
+                    equipe = equipeReg[0]
+                    if not equipe in equipes:
+                        equipes.add(equipe) #para não recalcular pontos desta equipe mais de uma vez
+                        mediaEquipe = consultaMediaPontosEquipe(cursor, equipe, dataInicial, dataFinal)   
+                        dictMediaEquipes[equipe] = mediaEquipe  
+                        #registro += "E"+equipe.ljust(25)+str(mediaEquipe).rjust(7, "0")  #não enviamos equipes de outras regiões para o usuário regional
+                #calculamos a média nacional
+                nEquipes = 0 
+                total = 0
+                for equipe in dictMediaEquipes:
+                    nEquipes += 1
+                    total += dictMediaEquipes[equipe]
+                mediaNac = int(total / nEquipes)
+                registro += "N"+str(mediaNac).rjust(7, "0")                                       
+        tamMsg = len(registro)
+        if tamMsg>999989:
+            enviaRespostaSemFechar("42"+registro[:999989], c)
+            totalEnviado = 999989
+            while totalEnviado<tamMsg:
+                try:
+                    mensagemRec = c.recv(256)
+                    if mensagemRec!="4212345678909":
+                        resposta = "99REQUISIÇÃO INVÁLIDA (42H)"
+                        enviaResposta(resposta, c) 
+                        conn.close()
+                        return     
+                except:
+                    c.close()
+                    conn.close()
+                    logging.info("Erro de time out 42A - provavelmente cliente não respondeu no prazo. Abandonando operação.")
+                    return                 
+                enviaRespostaSemFechar(registro[totalEnviado:(totalEnviado+999999)], c)
+                totalEnviado += 999999
+            try:
+                mensagemRec = c.recv(256)
+                if mensagemRec!="4212345678909":
+                    resposta = "99REQUISIÇÃO INVÁLIDA (42I)"
+                    enviaResposta(resposta, c) 
+                    conn.close()
+                    return     
+            except:
+                c.close()
+                conn.close()
+                logging.info("Erro de time out 42B - provavelmente cliente não respondeu no prazo. Abandonando operação.")
+                return                  
+            enviaResposta("TERMINOU", c)
+        else:
+            enviaResposta("42"+registro+"TERMINOU", c)
+        conn.close()
+        return
+                     
+    if codigo==43: #bloqueia ou desbloqueia comunicação via Telegram ou mostra o status desta comunicação
+        if len(msgRecebida)!=(14+tamChave):
+            resposta = "99REQUISIÇÃO INVÁLIDA (43A)"
+            enviaResposta(resposta, c) 
+            conn.close()
+            return   
+        tipo = msgRecebida[-1:]
+        if not tipo in ["S", "B", "D"]: 
+            resposta = "99REQUISIÇÃO INVÁLIDA - TIPO SUBSERVIÇO(43B)"
+            enviaResposta(resposta, c) 
+            conn.close()
+            return        
+        if tipo=="S":
+            if statusBloqueio=="S":
+                enviaResposta("43B", c)
+            else:
+                enviaResposta("43D", c)
+        else:
+            if tipo=="D":
+                comando = "Update Usuarios Set BloqueiaTelegram='N' Where CPF=%s"
+            else:
+                if email in ["", None]: #email não pode estar vazio para bloquearmos a comunicação (email foi obtido ao início de trataMsgRecebida)
+                    enviaResposta("43E", c)
+                    conn.close()
+                    return
+                comando = "Update Usuarios Set BloqueiaTelegram='S' Where CPF=%s"
+            cursor.execute(comando, (cpf, ))
+            try:
+                conn.commit()
+                enviaResposta("43S", c)
+            except:
+                conn.rollback()
+                enviaResposta("43N", c)
+        conn.close()
+        return
+
+
     if codigo==60: #Solicita DCCs vinculados aos TDPFs em andamento (somente usuários autorizados - CPF1, CPF2 e CPF3 [variáveis de ambiente] - e demanda mais uma senha)
         if len(msgRecebida)!=(23+tamChave):
             resposta = "99REQUISIÇÃO INVÁLIDA (60A)"
@@ -4457,6 +4779,166 @@ def espera34(n, c, conn, addr):
         conn.close()
         logging.info("Erro de time out 34 "+n+" - provavelmente cliente não respondeu no prazo. Abandonando operação.")
         return False    
+
+def consultaMediaPontosEquipe(cursor, equipe, dataInicial, dataFinal): #retorna a média de pontos de uma equipe num certo período
+    #selecionamos todos os TDPFs da equipe encerrados no período e que tenham alguma quantidade de horas alocadas no RHAF
+    comando = """Select Distinctrow TDPFS.Codigo 
+                 from TDPFS, Alocacoes
+                 Where Grupo=%s and Encerramento Is Not Null and Encerramento>=%s and Encerramento<=%s and Alocacoes.TDPF=TDPFS.Codigo and
+                 Alocacoes.Horas Is Not Null and Alocacoes.Horas>0"""
+    cursor.execute(comando, (equipe, dataInicial, dataFinal))
+    tdpfsEquipe = cursor.fetchall()
+    total = 0
+    for tdpf in tdpfsEquipe:
+        chaveTdpf = tdpf[0]
+        retorno = consultaPontuacao(cursor, chaveTdpf, "R", False, True) #fala que é orgão regional para retornar os pontos, mesmo sem informações prestadas
+        if retorno!=None:
+            total += int(retorno[4:8])
+    #obtemos a quantidade de fiscais que foram alocados na equipe em algum momento no período
+    comando = """Select Count(Distinct Alocacoes.Fiscal) 
+                From Alocacoes, TDPFS 
+                Where Alocacoes.TDPF=TDPFS.Codigo and TDPFS.Grupo=%s and Alocacoes.Horas Is Not Null and Alocacoes.Horas>0 and
+                ((Encerramento Is Null and TDPFS.Emissao<=%s) or (Encerramento Is Not Null and Encerramento>=%s and Encerramento<=%s))"""
+    cursor.execute(comando, (equipe, dataFinal, dataInicial, dataFinal))
+    reg = cursor.fetchone()
+    if reg:
+        totalFiscais = reg[0]
+    else:
+        return 0
+    if totalFiscais!=0:
+        mediaEquipe = int(total / totalFiscais)
+    else:
+        mediaEquipe = 0   
+    return mediaEquipe
+
+def calculaPontosFiscal(cursor, chaveFiscal, dataInicial, dataFinal): #calcula os pontos do fiscal no período
+    #seleciona os TDPFs em que o usuário esteja alocado
+    comando = """Select TDPFS.Codigo, TDPFS.Grupo, TDPFS.Encerramento
+                    From TDPFS, Alocacoes, Fiscais
+                    Where Alocacoes.Fiscal=%s and Alocacoes.TDPF=TDPFS.Codigo and Alocacoes.Fiscal=Fiscais.Codigo and
+                    Encerramento Is Not Null and Encerramento>=%s and Encerramento<=%s
+                    Order by TDPFS.Grupo, Fiscais.CPF"""  
+    cursor.execute(comando, (chaveFiscal, dataInicial, dataFinal))
+    linhas = cursor.fetchall()
+    equipe = ""
+    totalFiscal = float(0)     
+    equipes = set()       
+    for linha in linhas:
+        if equipe=="":
+            equipe = linha[1]      
+        if equipe!=linha[1]:              
+            if not equipe in equipes:
+                equipes.add(equipe) #temos que informar as equipes que o fiscal faz parte 
+            equipe = linha[1]
+        chaveTdpf = linha[0]
+        if linha[2]==None: #não está encerrado - não gera pontos
+            continue
+        retorno = consultaPontuacao(cursor, chaveTdpf, "R", False, True) #fala que é orgão regional para retornar os pontos, mesmo sem informações prestadas
+        if retorno==None:
+            continue #não há o que ratear
+        pontos = int(retorno[4:8])
+        if pontos==0:
+            continue
+        comando = "Select Sum(Alocacoes.Horas) from Alocacoes Where Alocacoes.TDPF=%s"
+        cursor.execute(comando, (chaveTdpf,))     #busca as horas totais alocadas ao TDPF
+        reg = cursor.fetchone()
+        if reg:
+            horas = reg[0]   
+            if horas in [0, None]: #horas RHAF zeradas - vai para o próximo
+                continue 
+        else:
+            continue #não vai ter como calcular os pontos do fiscal, pois não há horas informadas no RHAF para o TDPF
+        comando =  "Select Alocacoes.Horas from Alocacoes Where Alocacoes.TDPF=%s and Alocacoes.Fiscal=%s"   
+        cursor.execute(comando, (chaveTdpf, chaveFiscal))     #busca as horas alocadas ao TDPF pelo fiscal
+        reg = cursor.fetchone()        
+        if reg:
+            horasFiscal = reg[0]    
+        else:
+            continue #fiscal não tem pontos neste TDPF, pois não possui horas alocadas  
+        totalFiscal +=  float(pontos) * (float(horasFiscal)/float(horas))   #soma os pontos do TDPF 'devidos' ao fiscal ao total de pontos
+    #adicionamos os dados da última equipe do fiscal               
+    if not equipe in equipes and equipe!="":
+        equipes.add(equipe) #mais uma equipe que o fiscal faz parte
+    return totalFiscal, equipes
+
+def disparaMediaPontos():
+    #diaMes = datetime.now().strftime("%d/%m")
+    #if not diaMes in ["25/04", "25/07", "25/10", "25/01"]: #só enviamos os e-mails nestas datas
+    #    return
+    conn = conecta() 
+    if conn==None:      
+        logging.info("Erro ao conectar ao BD para enviar e-mails com média de pontos.")  
+        return        
+    ano = datetime.now().year
+    mes = datetime.now().month - 4
+    if mes<=0:
+        ano -= 1
+        mes += 12
+    dataIni = datetime(ano, mes, 1)
+    ano = datetime.now().year
+    mes = datetime.now().month - 1
+    if mes<=0:
+        ano -= 1
+        mes += 12
+    dataFim = datetime(ano, mes, calendar.monthrange(ano, mes)[1]) #último dia do último mês do trimestre anterior
+    cursor = conn.cursor(buffered=True)
+    regioes = dict()
+    dictMediaEquipes = dict()    
+    dataIni = datetime(2021, 1, 1) #apagar
+    dataFim = datetime(2021, 5, 31) #apagar
+    #calculamos a média de pontos de todas as equipes
+    comando = """Select Distinctrow Grupo 
+                 from TDPFS 
+                 Where (TDPFS.Encerramento Is Not Null and Encerramento>=%s and Encerramento<=%s) or
+                 (Encerramento Is Null and TDPFS.Emissao<=%s)"""
+    cursor.execute(comando, (dataIni, dataFim, dataFim))    
+    equipesReg = cursor.fetchall()
+    for equipeReg in equipesReg:
+        equipe = equipeReg[0]
+        if dictMediaEquipes.get(equipe, -1)==-1: #não foi calculada a média desta equipe
+            mediaEquipe = consultaMediaPontosEquipe(cursor, equipe, dataIni, dataFim)   
+            dictMediaEquipes[equipe] = mediaEquipe 
+    for regiao in ["01", "02", "03", "04", "05", "06", "07", "08", "09", "10"]:
+        totalRF = 0
+        nEquipes = 0
+        for equipe in dictMediaEquipes:
+            if equipe[:2]==regiao:
+                totalRF += dictMediaEquipes[equipe]  
+                nEquipes += 1
+        regioes[regiao]= int(totalRF/nEquipes)
+    mediaNacional = int(sum([dictMediaEquipes[equipe] for equipe in dictMediaEquipes])/len(dictMediaEquipes))
+    comando = """Select email, Fiscais.Codigo From Usuarios, Fiscais 
+                 Where email!='' and email Is Not Null and Adesao Is Not Null and Saida Is Null and idTelegram!=0 and Usuarios.CPF=Fiscais.CPF"""
+    cursor.execute(comando)    
+    linhas = cursor.fetchall()
+    cabecalho = "Sr. Usuário,\n\nEstamos encaminhando algumas informações sobre as pontuações da fiscalização calculadas conforme Portaria Cofis nº 46/2020.\n\n"
+    periodo = "Período de Referência: de "+dataIni.strftime("%d/%m/%Y")+" a "+dataFim.strftime("%d/%m/%Y")+"\n\n"
+    rodape = "Atenciosamente,\n\nCofis/Disav"
+    for linha in linhas:
+        email = linha[0]        
+        if not "@rfb.gov.br" in email: #por algum acaso, não é email institucional - não enviamos
+            continue
+        chaveFiscal = linha[1]
+        #otimizar a função abaixo para não recalcular o que já foi calculado - ver como fazer para obter isso de dictMediaEquipes e regioes (está como set lá)
+        pontosFiscal, equipes = calculaPontosFiscal(cursor, chaveFiscal, dataIni, dataFim)
+        texto = "Pontos do Fiscal: "+str(pontosFiscal)+"\n\n"
+        texto += "Média de Pontos de Suas Equipes:\n\n"
+        for equipe in equipes:
+            equipe = equipe.strip()
+            texto += " Equipe "+equipe[:7]+"."+equipe[7:11]+"."+equipe[11:]+": "+str(dictMediaEquipes[equipe])+"\n\n"
+        texto += "Média de Pontos Nacional: "+str(mediaNacional)+"\n\n"
+        texto = cabecalho+periodo+texto+rodape
+        if enviaEmail(email, texto, "Informações sobre pontuação do trimestre - Fiscalização")!=3:
+            logging.info("Erro ao enviar e-mail com dados sobre pontos - "+email)
+    return
+
+def disparador(): #para disparar a tarefa agendada (schedule)
+    logging.info("Disparador (thread) iniciado ...")
+    while True:
+        schedule.run_pending() 
+        logging.info("Disparador (thread) indo 'dormir' às "+datetime.now().strftime("%d/%m/%Y %H:%M"))
+        time.sleep(24*60*60) #dorme por 24 h
+    return 
 
 def servidor(): 
     global  threads, s, pubKey
@@ -4537,7 +5019,6 @@ CPF2 = os.getenv("CPF2", None)
 CPF3 = os.getenv("CPF3", None)
 token = os.getenv("TOKEN", "ERRO")
 ambiente = os.getenv("AMBIENTE", "TESTE")
-
 conn = conecta() #testa a conexão com o BD 
 if conn!=None:
     #contém as chaves [0], a função de descriptografia [1] e a data/hora de vencimento [2] para cada segmento IP (resto da divisão da soma das partes do IP por 10 ou 20; 10/20 segmentos)
@@ -4555,11 +5036,15 @@ if conn!=None:
     else:
         dataExtracao = datetime.strptime("01/01/2021", "%d/%m/%Y")
     conn.close()
+    diaAtual = datetime.now().date() #será utilizado para criar um arquivo de Log p/ cada dia    
     ultimaVerificacao = datetime.now() #buscamos a última data de extração dos dados agora; só fazemos uma nova pesquisa daqui a uma hora
     threads = list() 
     threadServ = threading.Thread(target=servidor, daemon=True) #ativa o servidor
-    #threadServ.daemon = True #mata a thread quando sair do programa
     threadServ.start()
+    schedule.every().day.at("23:00").do(disparaMediaPontos) #a função verificará se estamos no dia 25 do primeiro mês do trimestre para buscar as informações do trimestre anterior
+    #força a execução das tarefas agendadas
+    threadDisparador = threading.Thread(target=disparador, daemon=True) #encerra thread quando sair do programa sem esperá-la
+    threadDisparador.start()    
     while True:
         sair = input("Digite QUIT quando quiser sair: ")
         if sair:
@@ -4574,5 +5059,5 @@ if conn!=None:
             thread.join()     #terminarem antes de encerrar o programa (fechar conexões)
     logging.info(str(i) + " threads estavam em andamento.")
 else:
-    print("Não foi possível conectar ao MySQL. Corrija o problema do Banco de Dados e reinicie este serviço.")
+    print("Não foi possível conectar ao MySQL. Corrija o problema do Banco de Dados e reinicie este serviço (ELSE).")
     logging.info("Erro ao tentar conectar ao BD - Saindo ...")
