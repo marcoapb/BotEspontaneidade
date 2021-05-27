@@ -353,8 +353,24 @@ DROP TABLE IF EXISTS `CasosEspeciais`;
 
 CREATE TABLE `CasosEspeciais` (
   `Codigo` BIGINT NOT NULL AUTO_INCREMENT, 
-  `CasoEspecial` BIGINT(15),
+  `CasoEspecial` BIGINT,
   `Descricao` VARCHAR(150),
   PRIMARY KEY (`Codigo`), 
   INDEX (`Caso`)
+) ENGINE=innodb DEFAULT CHARSET=utf8;
+
+DROP TABLE IF EXISTS `ControlePostal`;
+
+CREATE TABLE `ControlePostal` (
+  `Codigo` BIGINT NOT NULL AUTO_INCREMENT, 
+  `TDPF` BIGINT,
+  `Documento` VARCHAR(70),
+  `Data` DATETIME,
+  `CodRastreamento` VARCHAR(15),
+  `DataEnvio` DATETIME,
+  `SituacaoAtual` VARCHAR(100),
+  `DataSituacao` DATETIME,
+  PRIMARY KEY (`Codigo`), 
+  INDEX (`TDPF`),
+  INDEX (`CodRastreamento`)
 ) ENGINE=innodb DEFAULT CHARSET=utf8;

@@ -21,6 +21,8 @@ from Crypto.Cipher import PKCS1_OAEP
 from random import randint
 import calendar
 import schedule #para mandar e-mail com pontos do trimestre do fiscal e a média de sua equipe
+import requests #para pesquisar situação de correspondências
+import pandas as pd #para converter o html em tabelas
 
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
@@ -438,7 +440,7 @@ def consultaPontuacao(cursor, chaveTdpf, tipoOrgaoUsuario, pediuParametros=False
         if row[3]=="S":
             acompanhamento = "S"
     #contamos as operações do TDPF
-    comando = "Select Count(Distinct Operacao) from Operacoes Where TDPF=%s"
+    comando = "Select Count(Distinct Operacao, Tributo) from Operacoes Where TDPF=%s" #podem haver operações idênticas para vários tributos
     cursor.execute(comando, (chaveTdpf,))
     row = cursor.fetchone()
     if not row or len(row)==0:
@@ -459,6 +461,7 @@ def consultaPontuacao(cursor, chaveTdpf, tipoOrgaoUsuario, pediuParametros=False
     if row:
         qtdeCofins = row[0]
     qtdeOperacoes = qtdeOperacoes - min(qtdePis, qtdeCofins)
+    print(qtdeOperacoes)
     #contamos os anos programados do TDPF     
     comando = "Select Min(PeriodoInicial), Max(PeriodoFinal) from Operacoes Where TDPF=%s"
     cursor.execute(comando, (chaveTdpf,))
@@ -492,6 +495,7 @@ def consultaPontuacao(cursor, chaveTdpf, tipoOrgaoUsuario, pediuParametros=False
     else:
         pontosTrib = pontosTribPF
         baseMultiplicador = pontosOutrosPF[posicao]
+    print(baseMultiplicador)
     #vemos qual tributo programado oferece a maior pontuação
     listaTributos = []
     operacao40111 = 'N'
@@ -513,9 +517,9 @@ def consultaPontuacao(cursor, chaveTdpf, tipoOrgaoUsuario, pediuParametros=False
                 #desde que não seja aquele que utilizamos em pontosTrib e nem IRPJ (221) com CSLL (694) e vice-versa ou PIS (3880) com Cofins (6121) e vice versa
                 continue
             acrescimo = max(acrescimo, acrescimos.get(tributo[0],0))
-    #print("Pontos Iniciais", pontos)
+    print("Pontos Iniciais", pontos)
     pontosTribPrincipal = pontos
-    #print("Acréscimo", acrescimo)
+    print("Acréscimo", acrescimo)
     pontos = pontos * (1.0+acrescimo)
     #vemos qual a operação programada tem o maior valor, independente do tributo
     comando = """Select OperacoesFiscais.Operacao, OperacoesFiscais.Valor 
@@ -533,7 +537,7 @@ def consultaPontuacao(cursor, chaveTdpf, tipoOrgaoUsuario, pediuParametros=False
         opPrincipal = 0              
 
     pontos = pontos * float(multOp) #anexo único da Portaria Cofis 46/2020
-    #print("Pontos", pontos)            
+    print("Pontos", pontos)            
     #buscamos os parâmetros para cálculo do multiplicador (se existirem) e não foi pedido apenas o parâmetro
     if not pediuParametros:
         comando = """Select Arrolamentos, MedCautelar, RepPenais, Inaptidoes, Baixas, ExcSimples, SujPassivos, DigVincs, Situacao11, Interposicao,
@@ -721,9 +725,9 @@ def consultaPontuacao(cursor, chaveTdpf, tipoOrgaoUsuario, pediuParametros=False
         if creditoExt=="S" and (3880 in listaTributos or 6121 in listaTributos or 1011 in listaTributos): #situação 23 só se aplica a PIS, Cofins e IPI
             multiplicador+=0.15 
             multPar.append("Crédito Extemp: 0.15")   
-        #print("Multiplicador", multiplicador)  
-        totalPontos = str(int(pontos+baseMultiplicador*multiplicador)).rjust(4,"0")
-        #print("Total Pontos "+totalPontos)
+        print("Multiplicador", multiplicador)  
+        totalPontos = str(round(pontos+baseMultiplicador*multiplicador)).rjust(4,"0")
+        print("Total Pontos "+totalPontos)
         return "24E"+encerrado+totalPontos+parametros  
     else:
         if pediuParametros:
@@ -865,7 +869,7 @@ def trataMsgRecebida(msgRecebida, c, addr): #c é o socket estabelecido com o cl
         return  
 
         
-    if codigo<1 or (codigo>43 and codigo!=60): #número de requisições válidas
+    if codigo<1 or (codigo>46 and codigo!=60): #número de requisições válidas
         resposta = "99CÓD DA REQUISIÇÃO É INVÁLIDO (C)" 
         enviaResposta(resposta, c)          
         return     
@@ -893,15 +897,6 @@ def trataMsgRecebida(msgRecebida, c, addr): #c é o socket estabelecido com o cl
             dataExtracao = datetime.strptime("01/01/2021", "%d/%m/%Y")
         ultimaVerificacao = datetime.now()
 
-    if codigo!=18 and ambiente!="TESTE": #fazemos o log no ambiente de produção, exceto para envio de entrada do diário da fiscalização 
-                                         #e solicitação de chave pública (acima - cód = 00)
-        comando = "Insert Into Log (IP, Requisicao, Mensagem, Data) Values (%s, %s, %s, %s)"
-        try:
-            cursor.execute(comando, (c.getpeername()[0], codigo, msgRecebida[2:], datetime.now()))
-            conn.commit()
-        except:
-            logging.info("Falhou o log - IP: "+c.getpeername()[0]+"; Msg: "+msgRecebida)
-            conn.rollback()
 
     if codigo==1: #status do usuário 
         comando = "Select Codigo, CPF, Adesao, Saida, d1, d2, d3, email, Chave, ValidadeChave, Tentativas, Orgao from Usuarios Where CPF=%s"
@@ -949,6 +944,15 @@ def trataMsgRecebida(msgRecebida, c, addr): #c é o socket estabelecido com o cl
         conn.close()
         return    
     
+    if codigo!=18 and ambiente=="PRODUÇÃO": #fazemos o log no ambiente de produção, exceto para envio de entrada do diário da fiscalização,
+                                         #solicitação de status e solicitação de chave pública (acima - cód = 00) e de status (acima - cód = 01)
+        comando = "Insert Into Log (IP, Requisicao, Mensagem, Data) Values (%s, %s, %s, %s)"
+        try:
+            cursor.execute(comando, (c.getpeername()[0], codigo, msgRecebida[2:], datetime.now()))
+            conn.commit()
+        except:
+            logging.info("Falhou o log - IP: "+c.getpeername()[0]+"; Msg: "+msgRecebida)
+            conn.rollback()    
     
     #validamos a chave do contágil ligada àquele CPF (registro ativo) - serviços de 2 em diante
     comando = "Select Codigo, Chave, ValidadeChave, Tentativas, email, d1, d2, d3, Orgao, Adesao, Saida, BloqueiaTelegram from Usuarios Where CPF=%s"            
@@ -1088,113 +1092,120 @@ def trataMsgRecebida(msgRecebida, c, addr): #c é o socket estabelecido com o cl
     else:
         chaveFiscal = 0
 
-    if codigo in [2, 3, 4, 5, 14, 15, 16, 17, 18, 19, 20, 21, 23, 24, 27, 28, 30, 31, 33, 34, 35, 36, 38, 40]: 
+    if codigo in [2, 3, 4, 5, 14, 15, 16, 17, 18, 19, 20, 21, 23, 24, 27, 28, 30, 31, 33, 34, 35, 36, 38, 40, 44, 45, 46]: 
     #verificações COMUNS relativas ao TDPF - TDPF existe, em andamento (p/ alguns), cpf está alocado nele
         if len(msgRecebida)<(29+tamChave):
             resposta = "99REQUISIÇÃO INVÁLIDA (D)"
             enviaResposta(resposta, c)  
             conn.close()
-            return                   
-        tdpf = msgRecebida[(tamChave+13):(tamChave+29)] #obtemos o TDPF que será utilizado em todas as requisições acima elencadas
-        if not tdpf.isdigit():
-            resposta = "99REQUISIÇÃO INVÁLIDA - TDPF DEVE SER NUMÉRICO"
-            enviaResposta(resposta, c)  
-            conn.close()
-            return            
-        comando = "Select Codigo, Encerramento, Nome, Emissao, Vencimento, Grupo, NI, DCC, Porte, Acompanhamento, TrimestrePrevisto from TDPFS Where Numero=%s"        
-        cursor.execute(comando, (tdpf,))
-        row = cursor.fetchone()
-        if row:
-            chaveTdpf = row[0] #<-- chave do TDPF que será utilizado nas requisições aqui tratadas
-            encerramento = row[1]
-            emissao = row[3] #<-- data de emissão fica disponível
-            nome = row[2] #<-- nome do fiscalizado tb
-            if nome==None or nome=="":
-                nome = "NOME INDISPONÍVEL"
-            nome = nome[:tamNome].ljust(tamNome)
-            if encerramento!=None and not codigo in [4, 15, 19, 21, 23, 24, 27, 28, 30, 31, 34]: #nestes códigos podemos listar ciências, atividades, entradas do diário, informar DCC,
-                                                                                 #incluir/listar pontuação de TDPFs encerrados, incluir trimestre de encerramento previsto,
-                                                                                 # mostrar fiscais alocados ou informar se é supervisor do tdpf (mesmo encerrado), dados do TDPF tb
-                                                                                 #listar prorrogações
-                msg = "TDPF encerrado"
-                msg = msg.ljust(tamMsg)
-                resposta = codigoStr+(("N"+msg+nome) if (2<=codigo<=5) else msg) #o código 27 estava aqui antes de colocar na lista acima
-                if codigo in [33, 35, 36, 38, 40]:
-                    resposta = codigoStr+"E"
-                enviaResposta(resposta, c) 
-                conn.close()
-                return               
-        else: 
-            msg = "TDPF NÃO foi localizado ou foi encerrado há muito tempo e não colocado na base deste serviço"
-            msg = msg.ljust(tamMsg)          
-            if codigo in [30, 31, 33, 35, 36, 38, 40]:
-                resposta = codigoStr+"I"
-            else:
-                resposta = codigoStr+(("I"+msg) if (2<=codigo<=5 or codigo in [23, 24, 27, 28]) else msg)
-            enviaResposta(resposta, c) 
-            conn.close()
             return  
-        rowTdpf = row #para utilizarmos na requisição 31            
-        comando = "Select Alocacoes.Desalocacao from Alocacoes Where Alocacoes.Fiscal=%s and Alocacoes.TDPF=%s"
-        cursor.execute(comando, (chaveFiscal, chaveTdpf))
-        row = cursor.fetchone()    
-        bSupervisor = False 
-        if codigo in [4, 15, 21, 23, 24, 27, 28, 31, 34, 35, 36]: #supervisor pode relacionar ciências (4), atividades (15) de TDPF, incluir ou lista pontuação (23, 24),
-                                                  #incluir DCC (21), informar trimestre da meta (27) ou listar fiscais alocados (28) ou dados do TDPF (31) e apagar/assinar prorrogação
-                                                  #listar prorrogações
-            if tipoOrgaoUsuario=="N" and codigo in [24, 28, 31]: #nestes códigos, usuário Cofis pode fazer consulta (#para os fins destas requisições, é supervisor)
-                bSupervisor = True
-            elif tipoOrgaoUsuario=="R" and codigo in [24, 28, 31]: #nestes códigos, usuário Difis pode fazer consulta (#para os fins destas requisições, é supervisor)
-                comando = "Select TDPFS.Numero from TDPFS Where TDPFS.Codigo=%s and TDPFS.Grupo in (Select Equipe from Jurisdicao Where Orgao=%s)"
-                cursor.execute(comando, (chaveTdpf, orgaoUsuario))
-                rowSuperv = cursor.fetchone()
-                if rowSuperv:
-                    bSupervisor = True
-            if not bSupervisor:
-                bSupervisor, _ = verificaSupervisao(conn, cpf, tdpf)   
-        if codigo==30: #a requisição é uma pergunta se o cpf é do supervisor do tdpf ou está alocado nele    
-            bSupervisor, _ = verificaSupervisao(conn, cpf, tdpf)       
-            if row!=None: #fiscal esteve ou está alocado do tdpf
-                if row[0]==None: #fiscal está ainda alocado ao tdpf
-                    alocado = "S"
-                else:
-                    alocado = "N"                    
+        if codigo!=46:                 
+            tdpf = msgRecebida[(tamChave+13):(tamChave+29)] #obtemos o TDPF que será utilizado em todas as requisições acima elencadas
+        else:
+            if msgRecebida[tamChave+13:tamChave+14]=="T": #para solicitação de informações sobre controle postal, há que se ter esse indicador
+                tdpf = msgRecebida[(tamChave+14):(tamChave+30)]
             else:
-                alocado = "N"
-            if bSupervisor:
-                supervisor = "S"
-            else:
-                supervisor = "N"           
-            resposta = "30"+alocado+supervisor
-            enviaResposta(resposta, c)   
-            conn.close()
-            return  
-        if not bSupervisor and codigo==27: #só supervisor pode incluir trimestre da meta 
-            msg = "Usuário NÃO é supervisor do TDPF"
-            resposta = "27"+msg.ljust(tamMsg)            
-            enviaResposta(resposta, c)   
-            conn.close()
-            return              
-        achou = False
-        if row and not bSupervisor:
-            achou = True
-            if row[0]!=None and not codigo in [28, 31]: #fiscal desalocado pode consultar TDPFs em que participou (28 - lista fiscais alocados no TDPF; 31 - dados do TDPF; no script não terá como num primeiro momento)
-                msg = "CPF NÃO está mais alocado ao TDPF ou não é supervisor, em requisições em que isso seria relevante"
-                msg = msg.ljust(tamMsg)                
-                resposta = codigoStr+(("N"+msg+nome) if (2<=codigo<=5 or codigo==23) else msg)
+                tdpf = None
+        if tdpf!=None: #se for None/Null, indica que é uma solicitação de informações sobre controle postal com base em período e não em TDPF
+            if not tdpf.isdigit():
+                resposta = "99REQUISIÇÃO INVÁLIDA - TDPF DEVE SER NUMÉRICO"
                 enviaResposta(resposta, c)  
                 conn.close()
-                return                         
-        if not achou and not bSupervisor:
-            msg = "CPF NÃO está alocado ao TDPF ou não é supervisor, em requisições em que isso seria relevante"
-            msg = msg.ljust(tamMsg)   
-            if codigo in [31, 33, 34, 35, 36, 38, 40]:
-                resposta = codigoStr+"N"
-            else:
-                resposta = codigoStr+(("N"+msg+nome) if (2<=codigo<=5 or codigo in [23, 24]) else msg)     
-            enviaResposta(resposta, c)   
-            conn.close()
-            return    
+                return            
+            comando = "Select Codigo, Encerramento, Nome, Emissao, Vencimento, Grupo, NI, DCC, Porte, Acompanhamento, TrimestrePrevisto from TDPFS Where Numero=%s"        
+            cursor.execute(comando, (tdpf,))
+            row = cursor.fetchone()
+            if row:
+                chaveTdpf = row[0] #<-- chave do TDPF que será utilizado nas requisições aqui tratadas
+                encerramento = row[1]
+                emissao = row[3] #<-- data de emissão fica disponível
+                nome = row[2] #<-- nome do fiscalizado tb
+                if nome==None or nome=="":
+                    nome = "NOME INDISPONÍVEL"
+                nome = nome[:tamNome].ljust(tamNome)
+                if encerramento!=None and not codigo in [4, 15, 19, 21, 23, 24, 27, 28, 30, 31, 34, 46]: #nestes códigos podemos listar ciências, atividades, entradas do diário, informar DCC,
+                                                                                    #incluir/listar pontuação de TDPFs encerrados, incluir trimestre de encerramento previsto,
+                                                                                    # mostrar fiscais alocados ou informar se é supervisor do tdpf (mesmo encerrado), dados do TDPF tb
+                                                                                    #listar prorrogações e listar controle postal 
+                    msg = "TDPF encerrado"
+                    msg = msg.ljust(tamMsg)
+                    resposta = codigoStr+(("N"+msg+nome) if (2<=codigo<=5) else msg) #o código 27 estava aqui antes de colocar na lista acima
+                    if codigo in [33, 35, 36, 38, 40, 45]:
+                        resposta = codigoStr+"E"
+                    enviaResposta(resposta, c) 
+                    conn.close()
+                    return               
+            else: 
+                msg = "TDPF NÃO foi localizado ou foi encerrado há muito tempo e não colocado na base deste serviço"
+                msg = msg.ljust(tamMsg)          
+                if codigo in [30, 31, 33, 35, 36, 38, 40, 44, 45, 46]:
+                    resposta = codigoStr+"I"
+                else:
+                    resposta = codigoStr+(("I"+msg) if (2<=codigo<=5 or codigo in [23, 24, 27, 28]) else msg)
+                enviaResposta(resposta, c) 
+                conn.close()
+                return  
+            rowTdpf = row #para utilizarmos na requisição 31            
+            comando = "Select Alocacoes.Desalocacao from Alocacoes Where Alocacoes.Fiscal=%s and Alocacoes.TDPF=%s"
+            cursor.execute(comando, (chaveFiscal, chaveTdpf))
+            row = cursor.fetchone()    
+            bSupervisor = False 
+            if codigo in [4, 15, 21, 23, 24, 27, 28, 31, 34, 35, 36, 44, 45, 46]: #supervisor pode relacionar ciências (4), atividades (15) de TDPF, incluir ou lista pontuação (23, 24),
+                                                    #incluir DCC (21), informar trimestre da meta (27) ou listar fiscais alocados (28) ou dados do TDPF (31) e apagar/assinar prorrogação
+                                                    #listar prorrogações, incluir e excluir postagem e listar controle postal
+                if tipoOrgaoUsuario=="N" and codigo in [24, 28, 31]: #nestes códigos, usuário Cofis pode fazer consulta (#para os fins destas requisições, é supervisor)
+                    bSupervisor = True
+                elif tipoOrgaoUsuario=="R" and codigo in [24, 28, 31]: #nestes códigos, usuário Difis pode fazer consulta (#para os fins destas requisições, é supervisor)
+                    comando = "Select TDPFS.Numero from TDPFS Where TDPFS.Codigo=%s and TDPFS.Grupo in (Select Equipe from Jurisdicao Where Orgao=%s)"
+                    cursor.execute(comando, (chaveTdpf, orgaoUsuario))
+                    rowSuperv = cursor.fetchone()
+                    if rowSuperv:
+                        bSupervisor = True
+                if not bSupervisor:
+                    bSupervisor, _ = verificaSupervisao(conn, cpf, tdpf)   
+            if codigo==30: #a requisição é uma pergunta se o cpf é do supervisor do tdpf ou está alocado nele    
+                bSupervisor, _ = verificaSupervisao(conn, cpf, tdpf)       
+                if row!=None: #fiscal esteve ou está alocado do tdpf
+                    if row[0]==None: #fiscal está ainda alocado ao tdpf
+                        alocado = "S"
+                    else:
+                        alocado = "N"                    
+                else:
+                    alocado = "N"
+                if bSupervisor:
+                    supervisor = "S"
+                else:
+                    supervisor = "N"           
+                resposta = "30"+alocado+supervisor
+                enviaResposta(resposta, c)   
+                conn.close()
+                return  
+            if not bSupervisor and codigo==27: #só supervisor pode incluir trimestre da meta 
+                msg = "Usuário NÃO é supervisor do TDPF"
+                resposta = "27"+msg.ljust(tamMsg)            
+                enviaResposta(resposta, c)   
+                conn.close()
+                return              
+            achou = False
+            if row and not bSupervisor:
+                achou = True
+                if row[0]!=None and not codigo in [28, 31]: #fiscal desalocado pode consultar TDPFs em que participou (28 - lista fiscais alocados no TDPF; 31 - dados do TDPF; no script não terá como num primeiro momento)
+                    msg = "CPF NÃO está mais alocado ao TDPF ou não é supervisor, em requisições em que isso seria relevante"
+                    msg = msg.ljust(tamMsg)                
+                    resposta = codigoStr+(("N"+msg+nome) if (2<=codigo<=5 or codigo==23) else msg)
+                    enviaResposta(resposta, c)  
+                    conn.close()
+                    return                         
+            if not achou and not bSupervisor:
+                msg = "CPF NÃO está alocado ao TDPF ou não é supervisor, em requisições em que isso seria relevante"
+                msg = msg.ljust(tamMsg)   
+                if codigo in [31, 33, 34, 35, 36, 38, 40, 44, 45, 46]:
+                    resposta = codigoStr+"N"
+                else:
+                    resposta = codigoStr+(("N"+msg+nome) if (2<=codigo<=5 or codigo in [23, 24]) else msg)     
+                enviaResposta(resposta, c)   
+                conn.close()
+                return    
 
     if codigo==31: #pediu as informações do registro do tdpf na tabela TDPFS - todas as verificações foram feitas acima e o resultado está em rowTdpf
         grupo = rowTdpf[5]
@@ -4180,7 +4191,7 @@ def trataMsgRecebida(msgRecebida, c, addr): #c é o socket estabelecido com o cl
         return  
 
     if codigo==41: #informações gerenciais de um período (mm/aaaa a mm/aaaa)
-        qtdeRegistros = 200 #qtde de registros de tdpfs que enviamos por vez - se alterar aqui, tem que alterar no script e vice-versa
+        qtdeRegistros = 125 #qtde de registros de tdpfs que enviamos por vez - se alterar aqui, tem que alterar no script e vice-versa
         if len(msgRecebida)!=(32+tamChave):
             resposta = "99REQUISIÇÃO INVÁLIDA (41A)"
             enviaResposta(resposta, c) 
@@ -4217,7 +4228,12 @@ def trataMsgRecebida(msgRecebida, c, addr): #c é o socket estabelecido com o cl
                 resposta = "99PERÍODO FINAL INVÁLIDO (41E)"
                 enviaResposta(resposta, c) 
                 conn.close()
-                return                                   
+                return                                
+        if ((perFinal.year - perInicial.year)*12+(perFinal.month-perInicial.month))>12: #máximo de 12 meses
+            resposta = "99PERÍODO de 12 MESES NO MÁXIMO (41E1)"
+            enviaResposta(resposta, c) 
+            conn.close()
+            return                
         regInicial = msgRecebida[-5:]
         if not regInicial.isdigit():
             resposta = "99REQUISIÇÃO INVÁLIDA - REGISTRO INICIAL (41F)"
@@ -4445,8 +4461,8 @@ def trataMsgRecebida(msgRecebida, c, addr): #c é o socket estabelecido com o cl
             enviaResposta(resposta, c) 
             conn.close()
             return
-        if anoInicial<"2021":
-            resposta = "99REQUISIÇÃO INVÁLIDA - TRIMESTRE INICIAL NÃO PODE SER ANTERIOR A 2021 (42D)"
+        if anoInicial<"2020":
+            resposta = "99REQUISIÇÃO INVÁLIDA - TRIMESTRE INICIAL NÃO PODE SER ANTERIOR A 2020 (42D)"
             enviaResposta(resposta, c) 
             conn.close()
             return    
@@ -4464,6 +4480,11 @@ def trataMsgRecebida(msgRecebida, c, addr): #c é o socket estabelecido com o cl
             enviaResposta(resposta, c) 
             conn.close()
             return  
+        if ((dataFinal.year - dataInicial.year)*12+(dataFinal.month-dataInicial.month))>12: #máximo de 12 meses
+            resposta = "99PERÍODO DE 12 MESES NO MÁXIMO (42E1)"
+            enviaResposta(resposta, c) 
+            conn.close()
+            return              
         registro = ""    
         dictMediaEquipes = dict()
         equipes = set()   #guarda as equipes para as quais foram calculados pontos para não fazer esse calculo mais de uma vez
@@ -4701,7 +4722,221 @@ def trataMsgRecebida(msgRecebida, c, addr): #c é o socket estabelecido com o cl
         conn.close()
         return
 
+    if codigo==44: #informa termo emitido e respectivos dados de controle POSTAL            
+        if len(msgRecebida)!=(13+tamChave+121):
+            resposta = "99TAMANHO DA MENSAGEM INVÁLIDA (44B)"
+            enviaResposta(resposta, c) 
+            conn.close()
+            return                             
+        #criticamos os campos - já foi verificado se o TDPF existe, se ele está em andamento e se o CPF é de fiscal ou supervisor
+        registroAtual = msgRecebida[13+tamChave:]
+        documento = registroAtual[16:86].strip()
+        if len(documento)<3:
+            resposta = "44M"
+            enviaResposta(resposta, c) 
+            conn.close()
+            return 
+        documento = documento.upper()                  
+        erroData = True
+        data = registroAtual[86:96]
+        if isDate(data):
+            try:
+                data = datetime.strptime(data, "%d/%m/%Y")
+                erroData = False
+            except:
+                pass
+        if erroData:
+            resposta = "44D"
+            enviaResposta(resposta, c) 
+            conn.close()
+            return                  
+        rastreamento = registroAtual[96:111].strip().upper()
+        if len(rastreamento)<13:
+            resposta = "44C"
+            enviaResposta(resposta, c) 
+            conn.close()
+            return                  
+        envio = registroAtual[111:121]            
+        erroData = True
+        if isDate(envio):
+            try:
+                envio = datetime.strptime(envio, "%d/%m/%Y")
+                erroData = False
+            except:
+                pass
+        if erroData:
+            resposta = "44V"
+            enviaResposta(resposta, c) 
+            conn.close()
+            return     
+        if envio<data or envio.date()>datetime.now().date():
+            resposta = "44V"
+            enviaResposta(resposta, c) 
+            conn.close()
+            return                   
+        if data<emissao: #data de emissão do termo anterior à de emissão do TDPF
+            resposta = "44D"
+            enviaResposta(resposta, c) 
+            conn.close()
+            return                   
+        consulta = "Select Data from ControlePostal Where TDPF=%s Order By Data DESC" #buscamos a última data de emissão - a agora enviada não pode ser anterior
+        cursor.execute(consulta, (chaveTdpf, ))
+        linha = cursor.fetchone()
+        if linha:
+            if linha[0].date()>data.date(): #data de emissão desse termo não pode ser anterior ao do último enviado
+                resposta = "44D"
+                enviaResposta(resposta, c) 
+                conn.close()
+                return                       
+        consulta = "Select Codigo from ControlePostal Where CodRastreamento=%s and DataEnvio>cast((now() - interval 90 day) as date)" 
+        cursor.execute(consulta, (rastreamento, ))  
+        linhaRastreamento = cursor.fetchone()                
+        if linhaRastreamento!=None:
+            resposta = "44C"+tdpf
+            enviaResposta(resposta, c) 
+            conn.close()
+            return    
+        cursor.execute("Insert Into ControlePostal (TDPF, Documento, Data, CodRastreamento, DataEnvio) Values (%s, %s, %s, %s, %s)", (chaveTdpf, documento, data, rastreamento, envio))
+        try:
+            conn.commit()
+            resposta = "44S"           
+        except:
+            conn.rollback()
+            resposta = "44F"
+        enviaResposta(resposta, c) 
+        conn.close()
+        return
 
+    if codigo==45: #exclui informação de postagem; já foi verificado ao início se TDPF existe, está em andamento e se cpf é de fiscal ou supervisor
+        if len(msgRecebida)!=(44+tamChave):
+            resposta = "99REQUISIÇÃO INVÁLIDA (45A)"
+            enviaResposta(resposta, c) 
+            conn.close()
+            return
+        rastreamento = msgRecebida[-15:].strip()
+        if len(rastreamento)<13:
+            resposta = "99TAMANHO DO CÓDIGO DE RASTREAMENTO DEVE SER IGUAL OU SUPERIOR A 13 (45B)"
+            enviaResposta(resposta, c) 
+            conn.close()
+            return            
+        comando = consulta = "Select Codigo from ControlePostal Where CodRastreamento=%s and TDPF=%s" #consultamos o código de rastreamento para o TDPF 
+        cursor.execute(comando, (rastreamento, chaveTdpf))
+        linha = cursor.fetchone()
+        if not linha:
+            resposta = "45P"
+            enviaResposta(resposta, c) 
+            conn.close()
+            return         
+        codigo = linha[0]
+        cursor.execute("Delete ControlePostal Where Codigo=%s", (codigo, ))
+        try:
+            conn.commit()
+            resposta = "45S"
+        except:
+            conn.rollback()    
+            resposta = "45F"
+        enviaResposta(resposta, c) 
+        conn.close()
+        return 
+
+    if codigo==46: #solicita informações sobre postagens
+        if not len(msgRecebida) in [30+tamChave, 34+tamChave]:
+            resposta = "99REQUISIÇÃO INVÁLIDA (46A)"
+            enviaResposta(resposta, c) 
+            conn.close()
+            return 
+        tipo = msgRecebida[tamChave+13:tamChave+14]
+        if tipo=="T": #com base em TDPF - já foi verificado se o TDPF existe e se o CPF é de fiscal ou supervisor
+            comando = "Select TDPFS.Numero, TDPFS.Nome, Documento, Data, CodRastreamento, DataEnvio, SituacaoAtual, DataSituacao From ControlePostal, TDPFS Where TDPFS.Codigo=%s and TDPFS.Codigo=ControlePostal.TDPF Order by Data"
+            cursor.execute(comando, (chaveTdpf, ))
+        elif tipo in ["D", "P"]: #por período/data
+            dataIni = msgRecebida[-20:-10]
+            dataFim = msgRecebida[-10:]
+            try:
+                dataIni = datetime.strptime(dataIni, "%d/%m/%Y")
+                dataFim = datetime.strptime(dataFim, "%d/%m/%Y")
+                if dataIni>dataFim:
+                    resposta = "99DATA INICIAL POSTERIOR À FINAL (46B)"
+                    enviaResposta(resposta, c) 
+                    conn.close()
+                    return                     
+                if dataIni.date()>datetime.now().date():
+                    resposta = "99DATA INICIAL NÃO PODE SER FUTURA (46C)"
+                    enviaResposta(resposta, c) 
+                    conn.close()
+                    return                     
+            except:
+                resposta = "99PERÍODO INVÁLIDO (46D)"
+                enviaResposta(resposta, c) 
+                conn.close()
+                return  
+            comando = """Select TDPFS.Numero, TDPFS.Nome, Documento, Data, CodRastreamento, DataEnvio, SituacaoAtual, DataSituacao 
+                         From ControlePostal, TDPFS, Alocacoes 
+                         Where Alocacoes.Fiscal=%s and Alocacoes.Desalocacao Is Null and Alocacoes.TDPF=TDPFS.Codigo and 
+                         TDPFS.Codigo=ControlePostal.TDPF and Data>=%s and Data<=%s and TDPFS.Encerramento Is Null
+                         UNION
+                         Select TDPFS.Numero, TDPFS.Nome, Documento, Data, CodRastreamento, DataEnvio, SituacaoAtual, DataSituacao 
+                         From ControlePostal, TDPFS, Supervisores 
+                         Where Supervisores.Fiscal=%s and Supervisores.Fim Is Null and Supervisores.Equipe=TDPFS.Grupo and 
+                         TDPFS.Codigo=ControlePostal.TDPF and Data>=%s and Data<=%s and TDPFS.Encerramento Is Null
+                         Order by Data """ 
+            cursor.execute(comando, (chaveFiscal, dataIni, dataFim, chaveFiscal, dataIni, dataFim))
+        else:
+            resposta = "99REQUISIÇÃO INVÁLIDA (46D)"
+            enviaResposta(resposta, c) 
+            conn.close()
+            return  
+        linhas = cursor.fetchall()        
+        if not linhas:           
+            nnn = 0
+        elif len(linhas)>999:
+            nnn = 999
+        else:
+            nnn = len(linhas)
+        resposta = "46"+str(nnn).rjust(3, "0")
+        if nnn==0:
+            enviaResposta(resposta, c) 
+            conn.close()
+            return 
+        total = 0
+        registro = ""
+        for linha in linhas:
+            total+=1
+            tdpf = linha[0]
+            nome = linha[1][:100].ljust(100)
+            documento = linha[2].ljust(70)
+            data = dataTexto(linha[3])
+            rastreamento = linha[4].ljust(15)
+            envio = dataTexto(linha[5])
+            situacao = linha[6]
+            if situacao==None:
+                situacao = ""
+            situacao = situacao.ljust(100)
+            dataSituacao = dataTexto(linha[7])
+            registro += tdpf + nome + documento + data + rastreamento + envio + situacao + dataSituacao
+            if total%50==0 or total==nnn: #enviamos de 50 em 50 registros ou no final
+                if total<nnn:
+                    enviaRespostaSemFechar(resposta+registro, c)
+                    resposta = "46"
+                    registro = ""
+                    try:
+                        mensagemRec = c.recv(256)
+                        if mensagemRec!="4612345678909":
+                            resposta = "99REQUISIÇÃO INVÁLIDA (46E)"
+                            enviaResposta(resposta, c) 
+                            conn.close()
+                            return     
+                    except:
+                        c.close()
+                        conn.close()
+                        logging.info("Erro de time out 46A - provavelmente cliente não respondeu no prazo. Abandonando operação.")
+                        return                      
+                else:
+                    enviaResposta(resposta+registro, c) 
+                    conn.close()
+                    return  
+        return  #não chega aqui, mas ...
+               
     if codigo==60: #Solicita DCCs vinculados aos TDPFs em andamento (somente usuários autorizados - CPF1, CPF2 e CPF3 [variáveis de ambiente] - e demanda mais uma senha)
         if len(msgRecebida)!=(23+tamChave):
             resposta = "99REQUISIÇÃO INVÁLIDA (60A)"
@@ -4861,10 +5096,11 @@ def calculaPontosFiscal(cursor, chaveFiscal, dataInicial, dataFinal): #calcula o
         equipes.add(equipe) #mais uma equipe que o fiscal faz parte
     return totalFiscal, equipes
 
-def disparaMediaPontos():
-    #diaMes = datetime.now().strftime("%d/%m")
-    #if not diaMes in ["25/04", "25/07", "25/10", "25/01"]: #só enviamos os e-mails nestas datas
-    #    return
+def disparaMediaPontos(): #nas datas abaixo (dia 25 do mês posterior ao final do trimestre) manda e-mails para os fiscais informando suas pontuações
+    global ambiente
+    diaMes = datetime.now().strftime("%d/%m")
+    if not diaMes in ["25/04", "25/07", "25/10", "25/01"]: #só enviamos os e-mails nestas datas
+        return
     conn = conecta() 
     if conn==None:      
         logging.info("Erro ao conectar ao BD para enviar e-mails com média de pontos.")  
@@ -4883,9 +5119,9 @@ def disparaMediaPontos():
     dataFim = datetime(ano, mes, calendar.monthrange(ano, mes)[1]) #último dia do último mês do trimestre anterior
     cursor = conn.cursor(buffered=True)
     regioes = dict()
-    dictMediaEquipes = dict()    
-    dataIni = datetime(2021, 1, 1) #apagar
-    dataFim = datetime(2021, 5, 31) #apagar
+    dictMediaEquipes = dict()  
+    start = time.time()
+    print("Calculando os pontos das equipes e respectivas regiões ...")  
     #calculamos a média de pontos de todas as equipes
     comando = """Select Distinctrow Grupo 
                  from TDPFS 
@@ -4907,14 +5143,21 @@ def disparaMediaPontos():
                 nEquipes += 1
         regioes[regiao]= int(totalRF/nEquipes)
     mediaNacional = int(sum([dictMediaEquipes[equipe] for equipe in dictMediaEquipes])/len(dictMediaEquipes))
-    comando = """Select email, Fiscais.Codigo From Usuarios, Fiscais 
-                 Where email!='' and email Is Not Null and Adesao Is Not Null and Saida Is Null and idTelegram!=0 and Usuarios.CPF=Fiscais.CPF"""
+    end = time.time()
+    print("Tempo decorrido no cálculo dos pontos das equipes e regiões: "+str(end-start)[:7])
+    start = time.time()
+    print("Calculando pontos de cada fiscal e enviando e-mails ...")
+    comando = """Select Distinctrow email, Fiscais.Codigo From Usuarios, Fiscais, Alocacoes 
+                 Where email!='' and email Is Not Null and Adesao Is Not Null and Saida Is Null and idTelegram!=0 and 
+                 Usuarios.CPF=Fiscais.CPF and Alocacoes.Fiscal=Fiscais.Codigo and Alocacoes.Desalocacao Is Null""" #somente usuários ativos que estejam alocados em
+                                                                                                                   #pelo menos um TDPF
     cursor.execute(comando)    
     linhas = cursor.fetchall()
     cabecalho = "Sr. Usuário,\n\nEstamos encaminhando algumas informações sobre as pontuações da fiscalização calculadas conforme Portaria Cofis nº 46/2020.\n\n"
-    periodo = "Período de Referência: de "+dataIni.strftime("%d/%m/%Y")+" a "+dataFim.strftime("%d/%m/%Y")+"\n\n"
+    periodo = "Período de Referência (Trimestre): de "+dataIni.strftime("%d/%m/%Y")+" a "+dataFim.strftime("%d/%m/%Y")+"\n\n"
     rodape = "Atenciosamente,\n\nCofis/Disav"
     for linha in linhas:
+        regioesUser = dict()
         email = linha[0]        
         if not "@rfb.gov.br" in email: #por algum acaso, não é email institucional - não enviamos
             continue
@@ -4926,10 +5169,133 @@ def disparaMediaPontos():
         for equipe in equipes:
             equipe = equipe.strip()
             texto += " Equipe "+equipe[:7]+"."+equipe[7:11]+"."+equipe[11:]+": "+str(dictMediaEquipes[equipe])+"\n\n"
+            if regioesUser.get(equipe[:2], -1)==-1: 
+                regioesUser[equipe[:2]] = regioes[equipe[:2]] #incluímos a região da equipe para informarmos o usuário
+        if len(regioesUser)>0:
+            texto += "Média de Pontos das RFs de Suas Equipes:\n\n"
+            for regiao in regioesUser:
+                texto += " RF"+regiao+": "+str(int(regioesUser[regiao]))+"\n\n"
         texto += "Média de Pontos Nacional: "+str(mediaNacional)+"\n\n"
         texto = cabecalho+periodo+texto+rodape
-        if enviaEmail(email, texto, "Informações sobre pontuação do trimestre - Fiscalização")!=3:
-            logging.info("Erro ao enviar e-mail com dados sobre pontos - "+email)
+        if ambiente=="PRODUÇÃO": #enviamos e-mails somente no ambiente de produção
+            if enviaEmail(email, texto, "Informações sobre pontuação do trimestre - Fiscalização")!=3:
+                logging.info("Erro ao enviar e-mail com dados sobre pontos - "+email)
+        else:
+            print(email)
+            print(texto)
+            print("-------------------------------------------------------------------------------")
+    print("Finalizado envio de e-mails ...")
+    end = time.time()
+    print("Tempo decorrido no cálculo dos pontos dos fiscais e envio de e-mails: "+str(end-start)[:7])    
+    return
+
+def consultaCorreios(): #faz a atualização da situação nos correios dos termos postados    
+    url = "https://www2.correios.com.br/sistemas/rastreamento/ctrl/ctrlRastreamento.cfm?"
+    comando = """Select ControlePostal.Codigo, CodRastreamento, SituacaoAtual, DataSituacao
+                 from ControlePostal, TDPFS
+                 Where TDPFS.Encerramento Is Null and ControlePostal.TDPF=TDPFS.Codigo and DataEnvio>cast((now() - interval 75 day) as date)""" 
+                 #consultamos a situação somente dos enviados há até 75 dias e de TDPFs em andamento
+    conn = conecta() 
+    if conn==None:      
+        logging.info("Erro ao conectar ao BD para consultar os correios.")  
+        return 
+    cursor = conn.cursor(buffered=True)
+    cursor.execute(comando)    
+    linhas = cursor.fetchall()
+    i = 0
+    f = open("RastreamentoResultado.txt", "w")
+    tentativas = 0
+    atualizou = False
+    print("Iniciando a atualização do controle postal. Total de registros a serem verificados: ", len(linhas))
+    while i<len(linhas):
+        qtdeRastreamento = 0
+        rastreamento = ""
+        while qtdeRastreamento<50 and (i+qtdeRastreamento)<len(linhas): #podemos consultar o site dos correios de 50 em 50 códigos, no máximo
+            linha = linhas[i+qtdeRastreamento]
+            if qtdeRastreamento>=1:
+                rastreamento += ";"
+            rastreamento += linha[1].strip()
+            chave = linha[0]
+            qtdeRastreamento+=1
+        payload = {"acao": "tracks", "objetos": rastreamento, "btnPesq": "Buscar"} #consulta em lote (no máximo 50 códigos)
+        #payload = {"Form Data": "", "acao": "track", "objetos": rastreamento, "btnPesq": "Buscar"} #consulta individual
+        resultado = requests.post(url, data=payload)
+        if resultado==None:
+            tentativas+=1      
+            if tentativas>20: #fazemos 20 tentativas
+                conn.close()
+                logging.info("Site dos correios não está respondendo")
+                print("Site dos correios não está respondendo")
+                f.close()
+                return
+            print("Site dos correios não está respondendo - Aguardando 2 s e tentando novamente")
+            time.sleep(2)
+            continue              
+        if "TEMPORARIAMENTE INDISPONÍVEL" in resultado.text.upper() or "SERVICE UNAVAILABLE" in resultado.text.upper():
+            tentativas+=1
+            if tentativas>20: #fazemos 20 tentativas
+                conn.close()
+                logging.info("Serviço de rastreamento dos correios está fora do ar")
+                print("Serviço de rastreamento dos correios está fora do ar")
+                f.close()
+                return
+            print("Serviço de rastreamento dos correios está fora do ar - Aguardando 10 s e tentado novamente")
+            time.sleep(10) #se o serviço estiver temporariamente indisponível, esperamos 10 segundos
+            continue
+        tentativas = 0
+        try:
+            df_list = pd.read_html(resultado.text) # this parses all the tables in webpages to a list
+        except:
+            df_list = None
+        if df_list:  
+            df = df_list[0]
+            df.to_excel("TabelaRastreamento.xlsx")
+            for j in range(qtdeRastreamento):
+                rastreamento = df.iat[j, 0]
+                if rastreamento==None:
+                    rastreamento = "VAZIO"
+                rastreamento = rastreamento.replace(" ","")
+                situacao = df.iat[j,1]
+                if situacao!=None:
+                    situacao = situacao.strip()[:100].strip()
+                else:
+                    situacao = ""
+                dataSituacao = df.iat[j,2]
+                if dataSituacao!=None:
+                    dataSituacao = dataSituacao.strip()
+                else:
+                    dataSituacao = ""
+                if len(dataSituacao)>=10 and len(situacao)>=5: #deve ser uma data seguido de um local
+                    try:
+                        f.write(rastreamento+" - "+dataSituacao[:10]+" - "+situacao+"\n")                          
+                        dataSituacao = datetime.strptime(dataSituacao[:10], "%d/%m/%Y") 
+                        linha = linhas[i+j]
+                        if linha[1].strip()==rastreamento: #testamos para ver se os registros estão correspondendo
+                            if situacao!=linha[2] or dataSituacao>linha[3]: #só atualizamos se a situação foi alterada ou a data é posterior
+                                chave = linha[0]    
+                                cursor.execute("Update ControlePostal Set SituacaoAtual=%s, DataSituacao=%s Where Codigo=%s", (situacao, dataSituacao, chave))   
+                                atualizou = True                 
+                    except:
+                        print(rastreamento, "Falhou a conversão da data (2)")
+                        logging.info("Falhou a conversão da data (2) - "+rastreamento)
+                else:
+                    print(rastreamento, "Data ou situação inválida")                    
+                    logging.info("Data ou situação inválida - "+rastreamento)                        
+        else:
+            print("Não há informação de rastreamento para as linhas de "+str(i)+" em diante ...")
+            logging.info("Não há informação de rastreamento para as linhas de "+str(i)+" em diante ...")
+        i+=50  
+    if atualizou:
+        try:
+            conn.commit()
+        except:
+            conn.rollback()
+            logging.info("Falhou a atualizão do controle postal")
+            print("Falhou a atualização do controle postal")    
+    else:
+        print("Não houve atualização do controle postal")     
+    f.close()
+    conn.close()
     return
 
 def disparador(): #para disparar a tarefa agendada (schedule)
@@ -4937,7 +5303,7 @@ def disparador(): #para disparar a tarefa agendada (schedule)
     while True:
         schedule.run_pending() 
         logging.info("Disparador (thread) indo 'dormir' às "+datetime.now().strftime("%d/%m/%Y %H:%M"))
-        time.sleep(24*60*60) #dorme por 24 h
+        time.sleep(2*60*60) #dorme por 2 h
     return 
 
 def servidor(): 
@@ -5021,6 +5387,7 @@ token = os.getenv("TOKEN", "ERRO")
 ambiente = os.getenv("AMBIENTE", "TESTE")
 conn = conecta() #testa a conexão com o BD 
 if conn!=None:
+    #consultaCorreios()
     #contém as chaves [0], a função de descriptografia [1] e a data/hora de vencimento [2] para cada segmento IP (resto da divisão da soma das partes do IP por 10 ou 20; 10/20 segmentos)
     chavesCripto = dict()
     print("Gerando chaves criptográficas ...")
@@ -5042,6 +5409,7 @@ if conn!=None:
     threadServ = threading.Thread(target=servidor, daemon=True) #ativa o servidor
     threadServ.start()
     schedule.every().day.at("23:00").do(disparaMediaPontos) #a função verificará se estamos no dia 25 do primeiro mês do trimestre para buscar as informações do trimestre anterior
+    schedule.every().day.at("03:00").do(consultaCorreios) #atualiza a situação dos termos enviados por via postal
     #força a execução das tarefas agendadas
     threadDisparador = threading.Thread(target=disparador, daemon=True) #encerra thread quando sair do programa sem esperá-la
     threadDisparador.start()    

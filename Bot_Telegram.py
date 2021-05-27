@@ -3104,50 +3104,138 @@ def disparaMensagens(): #avisos diários (produção) ou de hora em hora (teste)
                         tdpfsAvisadosUpdate.add(codigo)                        
                     else:
                         podeAvisar = False                      
-                if podeAvisar: #verificar este prazos quando for colocar em produção
+                if podeAvisar: #verificar estes prazos quando for colocar em produção
                     if len(listaUsuario)==0:
-                        listaUsuario = "Alertas do dia (TDPF | Dias Restantes):"
-                        listaUsuarioEmail = "Alertas do dia (TDPF | Dias Restantes):"
+                        listaUsuario = cabecalho
+                        listaUsuarioEmail = cabecalho
                     if supervisor=='S':    
                         tdpfFormatado2 = tdpfFormatado + ' (S)'
                     else:
                         tdpfFormatado2 = tdpfFormatado                         
                     listaUsuario += "\n\n*"+tdpfFormatado2+ "* | "+str(prazoVenctoTDPF)+" (c)"                 
-                    listaUsuarioEmail += "\n\n"+tdpfFormatado2+" - "+nome+" | "+str(prazoVenctoTDPF)+" (c)"                 
-
-        if len(listaUsuario)>0 or msgCofis!="":
+                    listaUsuarioEmail += "\n\n"+tdpfFormatado2+" - "+nome+" | "+str(prazoVenctoTDPF)+" (c)" 
+                    
+        tdpfUsuarios = None
+        if len(listaUsuario)>0:
             if len(listaUsuario)>0:
                 listaUsuario += rodape
-                listaUsuarioEmail += rodape
+                listaUsuarioEmail += rodape      
+
+        #avisamos o fiscal (monitora TDPF)/supervisor de suas postagens enviadas há 21/28 dias ou na mesma situação há 7/14 dias e NÃO Entregues
+        #avisamos também o fiscal que monitora o TDPF que sua correspondência foi entregue ontem ao destinatário 
+        #se a correspondência será devolvida por fato verificado ONTEM, também avisamos ao fiscal que monitora o TDPF
+        #nestes dois últimos casos, não pego a data do dia, pois podemos rodar essa rotina de manhã e os correios atualizarem à tarde, p ex
+        comando = """
+                    Select TDPFS.Numero, TDPFS.Nome, Documento, DataEnvio, DataSituacao, SituacaoAtual
+                    from TDPFS, ControlePostal, Fiscais, Alocacoes, CadastroTDPFs
+                    Where Fiscais.CPF=%s and Alocacoes.Fiscal=Fiscais.Codigo and TDPFS.Codigo=Alocacoes.TDPF and TDPFS.Encerramento Is Null and 
+                    Alocacoes.Desalocacao Is Null and ControlePostal.TDPF=TDPFS.Codigo and CadastroTDPFs.Fiscal=Fiscais.Codigo and CadastroTDPFs.TDPF=TDPFS.Codigo and
+                    (DataEnvio=cast((now() - interval 21 day) as date) or DataEnvio=cast((now() - interval 28 day) as date) or 
+                    DataSituacao=cast((now() - interval 7 day) as date) or DataSituacao=cast((now() - interval 14 day) as date)) and 
+                    Upper(SituacaoAtual) Not Like '%ENTREGUE%'
+                    UNION
+                    Select TDPFS.Numero, TDPFS.Nome, Documento, DataEnvio, DataSituacao, SituacaoAtual
+                    from TDPFS, ControlePostal, Fiscais, Alocacoes, CadastroTDPFs
+                    Where Fiscais.CPF=%s and Alocacoes.Fiscal=Fiscais.Codigo and TDPFS.Codigo=Alocacoes.TDPF and TDPFS.Encerramento Is Null and 
+                    Alocacoes.Desalocacao Is Null and ControlePostal.TDPF=TDPFS.Codigo and CadastroTDPFs.Fiscal=Fiscais.Codigo and CadastroTDPFs.TDPF=TDPFS.Codigo and
+                    DataSituacao=cast((now() - interval 1 day) as date) and Upper(SituacaoAtual) Like '%ENTREGUE AO DESTINATÁRIO%'                    
+                    UNION
+                    Select TDPFS.Numero, TDPFS.Nome, Documento, DataEnvio, DataSituacao, SituacaoAtual
+                    from TDPFS, ControlePostal, Fiscais, Alocacoes, CadastroTDPFs
+                    Where Fiscais.CPF=%s and Alocacoes.Fiscal=Fiscais.Codigo and TDPFS.Codigo=Alocacoes.TDPF and TDPFS.Encerramento Is Null and 
+                    Alocacoes.Desalocacao Is Null and ControlePostal.TDPF=TDPFS.Codigo and CadastroTDPFs.Fiscal=Fiscais.Codigo and CadastroTDPFs.TDPF=TDPFS.Codigo and
+                    DataSituacao=cast((now() - interval 1 day) as date) and Upper(SituacaoAtual) Like '%SERÁ DEVOLVIDO AO REMETENTE%'                    
+                    UNION                    
+                    Select TDPFS.Numero, TDPFS.Nome, Documento, DataEnvio, DataSituacao, SituacaoAtual
+                    from TDPFS, ControlePostal, Fiscais, Supervisores
+                    Where Fiscais.CPF=%s and Supervisores.Fiscal=Fiscais.Codigo and TDPFS.Grupo=Supervisores.Equipe and  
+                    Supervisores.Fim Is Null and TDPFS.Encerramento Is Null and ControlePostal.TDPF=TDPFS.Codigo and 
+                    (DataEnvio=cast((now() - interval 21 day) as date) or DataEnvio=cast((now() - interval 28 day) as date) or 
+                    DataSituacao=cast((now() - interval 7 day) as date) or DataSituacao=cast((now() - interval 14 day) as date)) and 
+                    Upper(SituacaoAtual) Not Like '%ENTREGUE%'                    
+                """     
+        bAlertaPostagem = False   
+        cursor.execute(comando, (cpf, cpf, cpf, cpf))    
+        linhas = cursor.fetchall()
+        for linha in linhas:
+            tdpf = linha[0]
+            tdpfFormatado = formataTDPF(tdpf)  
+            nome = linha[1][:100].strip()
+            documento = linha[2].strip()
+            envio = linha[3].strftime("%d/%m/%Y")            
+            dataSituacao = linha[4]
+            bOntem = False
+            if dataSituacao==None:
+                dataSituacao = "ND"
+            else:
+                if dataSituacao.date()==datetime.now().date()-timedelta(days=1): #é uma entrega ontem
+                    bOntem = True
+                dataSituacao = dataSituacao.strftime("%d/%m/%Y")     
+            situacao = linha[5]       
+            if situacao==None:
+                situacao = "ND"
+            else:
+                situacao = situacao.strip()
+            if len(listaUsuario)==0:
+                listaUsuario = "Alertas do dia - Postagens (TDPF | Documento | Dt Envio | Dt Situação | Situação):" 
+                listaUsuarioEmail = "Alertas do dia - Postagens (TDPF | Documento | Dt Envio | Dt Situação | Situação):" 
+            elif bAlertaPostagem==False: #só antes do primeiro TDPF
+                listaUsuario += "\n\nAlertas do dia - Postagens (TDPF | Documento | Dt Envio | Dt Situação | Situação):" 
+                listaUsuarioEmail += "\n\nAlertas do dia - Postagens (TDPF | Documento | Dt Envio | Dt Situação | Situação):" 
+            listaUsuario += "\n\n*"+tdpfFormatado+ "* | "+documento[:50].strip()+" | "+envio+" | "+dataSituacao
+            listaUsuarioEmail += "\n\n"+tdpfFormatado+" - "+nome+" | "+documento+" | "+envio+" | "+dataSituacao
+            if bOntem:
+                if "ENTREGUE AO DESTINATÁRIO" in situacao.upper():
+                    listaUsuario += " | (E) "+situacao[:50].strip()
+                    listaUsuarioEmail += " | (E) "+situacao
+                else: #objeto será devolvido ao remetente
+                    listaUsuario += " | (D) "+situacao[:50].strip()
+                    listaUsuarioEmail += " | (D) "+situacao                    
+            else:                
+                listaUsuario += " | (A) "+situacao[:50].strip()
+                listaUsuarioEmail += " | (A) "+situacao
+            bAlertaPostagem = True            
+        if bAlertaPostagem: #se houve alerta de postagem, colocamos uma explicação
+            listaUsuario += "\n\nA - Postagens enviadas há 21 ou 28 dias ou na mesma situação há 7 ou 14 (atraso), e não entregues"
+            listaUsuarioEmail += "\n\nA - Postagens enviadas há 21 ou 28 dias ou na mesma situação há 7 ou 14 (atraso), e não entregues"
+            listaUsuario +="\nE - Entregue ao destinatário ONTEM"
+            listaUsuarioEmail +="\nE - Entregue ao destinatário ONTEM"
+            listaUsuario +="\nD - Correspondência será devolvida por causa de fato verificado ONTEM"
+            listaUsuarioEmail +="\nD - Correspondência será devolvida por causa de fato verificado ONTEM"
+
+        if len(listaUsuario)>0 or msgCofis!="":
             if msgCofis!="":
                 if len(listaUsuario)>0:
                     listaUsuario += "\n\n"
                     listaUsuarioEmail += "\n\n"
                 listaUsuario += msgCofis
-                listaUsuarioEmail += msgCofis
+                listaUsuarioEmail += msgCofis              
             if ambiente!="PRODUÇÃO":
                 listaUsuario += "\n\nAmbiente: "+ambiente
                 listaUsuarioEmail += "\n\nAmbiente: "+ambiente
             logging.info("Disparando mensagem para "+cpf)
-            enviaMsgUpdater(usuario[0], text=limpaMarkdown(listaUsuario), parse_mode= 'MarkdownV2')  
-			#enviamos e-mail também, se houver um na tabela
-            if email!=None and server!=None:
-                email = email.strip()
-                if email!="":
-                    # create message object instance
-                    msg = MIMEMultipart()               
-                    # setup the parameters of the e-mail message
-                    msg['From'] = "botespontaneidade@rfb.gov.br"
-                    msg['Subject'] = "BotEspontaneidade - Avisos e Alertas do Dia"                    
-                    msg['To'] = email			
-					# add in the message body
-                    msg.attach(MIMEText(listaUsuarioEmail, 'plain'))				
-					# send the message via the server.
-                    try:
-                        server.sendmail(msg['From'], msg['To'], msg.as_string())
-                    except:
-                        logging.info("Erro no envio de email com os avisos do dia - "+email)	                        
-                    #print(listaUsuarioEmail)
+            if ambiente=="HOMOLOGAÇÃO" and cpf!="53363833172": #só envio mensagens para mim no ambiente de homologação
+                print(listaUsuarioEmail)
+            else:
+                enviaMsgUpdater(usuario[0], text=limpaMarkdown(listaUsuario), parse_mode= 'MarkdownV2')  
+                #enviamos e-mail também, se houver um na tabela
+                if email!=None and server!=None:
+                    email = email.strip()
+                    if email!="":
+                        # create message object instance
+                        msg = MIMEMultipart()               
+                        # setup the parameters of the e-mail message
+                        msg['From'] = "botespontaneidade@rfb.gov.br"
+                        msg['Subject'] = "BotEspontaneidade - Avisos e Alertas do Dia"                    
+                        msg['To'] = email			
+                        # add in the message body
+                        msg.attach(MIMEText(listaUsuarioEmail, 'plain'))				
+                        # send the message via the server.
+                        try:
+                            server.sendmail(msg['From'], msg['To'], msg.as_string())
+                        except:
+                            logging.info("Erro no envio de email com os avisos do dia - "+email)	                        
+                        #print(listaUsuarioEmail)
             #logging.info(listaUsuario)            
             totalMsg+=1
             msgDisparadas+=1
@@ -3643,7 +3731,7 @@ def disparaMsgProrrogacao(): #avisa sobre prorrogação pendente de assinatura o
                    AssinaturaFiscal.Fiscal=%s and AssinaturaFiscal.DataAssinatura Is Null"""    
     consulta2 = """Select TDPFS.Numero, Prorrogacoes.Codigo, AssinaturaFiscal.Codigo From Prorrogacoes, AssinaturaFiscal, TDPFS 
                    Where Prorrogacoes.DataAssinatura Is Not Null and Prorrogacoes.DataAssinatura>%s and Prorrogacoes.TDPF=TDPFS.Codigo and AssinaturaFiscal.Fiscal=%s
-                   and Prorrogacoes.Codigo=AssinaturaFiscal.Prorrogacao and Prorrogacoes.RegistroRHAF Is Null"""                    
+                   and Prorrogacoes.Codigo=AssinaturaFiscal.Prorrogacao and Prorrogacoes.RegistroRHAF Is Null and AssinaturaFiscal.DataAssinatura Is Not Null"""                    
     for usuario in usuarios: #percorremos os usuários ativos Telegram
         if termina: #programa foi informado de que é para encerrar (quit)
             return
@@ -3796,7 +3884,7 @@ botTelegram()
 threadDisparador = threading.Thread(target=disparador, daemon=True) #encerra thread quando sair do programa sem esperá-la
 threadDisparador.start()
 print("Serviço iniciado [", datetime.now(), "]")
-disparaMensagens()
+#disparaMensagens()
 #disparaMsgJuntada
 #disparaMsgProrrogacao()
 while not termina:
