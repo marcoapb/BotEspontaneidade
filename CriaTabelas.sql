@@ -66,6 +66,9 @@ CREATE TABLE `TDPFS` (
   `Acompanhamento` VARCHAR(1),
   `TrimestrePrevisto` VARCHAR(6),
   `CasoEspecial` BIGINT,
+  `Pontos` DECIMAL(8,2),
+  `DataPontos` DATETIME, 
+  `SemExame` CHAR(1),
   PRIMARY KEY (`Codigo`), 
   UNIQUE (`Numero`), 
   UNIQUE (`Numero`, `Grupo`),
@@ -152,6 +155,7 @@ CREATE TABLE `Supervisores` (
   `Fiscal` INTEGER,
   `Inicio` DATETIME, 
   `Fim` DATETIME, 
+  `Titular` INTEGER, 
   PRIMARY KEY (`Codigo`), 
   INDEX (`Fiscal`),
   INDEX (`Equipe`)

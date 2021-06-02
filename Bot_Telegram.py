@@ -1307,7 +1307,109 @@ def anulaCiencia(update, context): #anula (apaga) a última data de ciência do 
             mostraMenuPrincipal(update, context)
             return
     enviaMsgBot(bot, userId, text=response_message)  
-    return          
+    return  
+
+def formataEquipe(equipe):
+    if equipe==None:
+        return None
+    if len(equipe)<14:
+        return equipe
+    return equipe[:7]+"."+equipe[7:11]+"."+equipe[11:].strip()
+
+def relacionaPostagens (update, context): #relaciona as postagens do usuários feitas de uma quantidade de dias para trás até hoje
+    global pendencias, textoRetorno
+    userId = update.message.from_user.id   
+    bot = update.effective_user.bot
+    msg = update.message.text    
+    parametros = getParametros(msg)
+    mensagem = "Envie a quantidade de dias (máximo de 90) para considerar na pesquisa e, separado por espaço, a indicação se considera (S) ou não (N) sua eventual qualidade de supervisor para pesquisar as postagens da equipe."
+    if not len(parametros) in [1, 2]:
+        response_message = "Quantidade de parâmetros inválida. "+mensagem
+        response_message = response_message+textoRetorno      
+    else:
+        dias = parametros[0]
+        if len(parametros)==2:
+            qualidade = parametros[1].upper()
+        else:
+            qualidade = "N"
+        if not len(dias) in [1, 2] or not dias.isdigit():
+            response_message = "Quantidade de dias inválida. "+mensagem
+            response_message = response_message+textoRetorno
+        else: 
+            dias = int(dias)
+            if dias<0 or dias>90:
+                response_message = "Quantidade de dias inválida (2). "+mensagem
+                response_message = response_message+textoRetorno  
+            else:
+                if not qualidade in ["S", "SIM", "N", "NÃO", "NAO"]:
+                    response_message = "Indicador de qualidade de supervisor inválido. "+mensagem
+                    response_message = response_message+textoRetorno 
+                else: #tudo ok - fazemos a consulta
+                    eliminaPendencia(userId) #apaga a pendência de informação do usuário
+                    conn = conecta()
+                    if not conn: #não conectamos ao BD
+                        response_message = "Erro na conexão com o banco de dados."
+                        response_message = response_message
+                        enviaMsgBot(bot, userId, text=response_message) 
+                        mostraMenuPrincipal(update, context)
+                        return                            
+                    cursor = conn.cursor(buffered=True)                        
+                    qualidade = qualidade[:1]       
+                    consulta = """
+                                Select TDPFS.Numero, 'U', TDPFS.Grupo as Equipe1, Documento, ControlePostal.DataEnvio as DtEnvio, SituacaoAtual, DataSituacao
+                                from TDPFS, ControlePostal, Usuarios, Fiscais, Alocacoes
+                                Where Usuarios.idTelegram=%s and Usuarios.CPF=Fiscais.CPF and Fiscais.Codigo=Alocacoes.Fiscal and Alocacoes.Desalocacao Is Null and
+                                Alocacoes.TDPF=TDPFS.Codigo and TDPFS.Codigo=ControlePostal.TDPF and ControlePostal.DataEnvio>=cast((now() - interval %s day) as date)
+                                """
+                    if qualidade=="S": #é para pesquisar as postagens da equipe - considera o usuário um supervisor tb
+                        consulta += """UNION
+                                       Select TDPFS.Numero, 'S', TDPFS.Grupo as Equipe1, Documento, ControlePostal.DataEnvio as DtEnvio, SituacaoAtual, DataSituacao
+                                       from TDPFS, ControlePostal, Usuarios, Fiscais, Supervisores
+                                       Where Usuarios.idTelegram=%s and Usuarios.CPF=Fiscais.CPF and Fiscais.Codigo=Supervisores.Fiscal and Supervisores.Fim Is Null and
+                                       Supervisores.Equipe=TDPFS.Grupo and TDPFS.Codigo=ControlePostal.TDPF and ControlePostal.DataEnvio>=cast((now() - interval %s day) as date)
+                                       Order by DtEnvio, Equipe1, Numero
+                                    """
+                        cursor.execute(consulta, (userId, dias, userId, dias))
+                    else:
+                        consulta += "Order by DtEnvio, Numero"
+                        cursor.execute(consulta, (userId, dias)) 
+                    linhas = cursor.fetchall()
+                    resultado = ""
+                    bSuperv = False
+                    equipe = ""
+                    for linha in linhas:
+                        if linha[1]=="S" and not bSuperv:
+                            bSuperv = True
+                            resultado += "\n\nTDPFs sob sua supervisão:\n"                                    
+                        else:
+                            resultado += "\n"
+                        if linha[1]=="S" and linha[2]!=equipe: #mudou a equipe e é supervisor
+                            resultado += "\nEquipe "+ formataEquipe(linha[2])+":\n"
+                            equipe = linha[2]
+                        resultado += "*"+formataTDPF(linha[0])+"* | "
+                        resultado += linha[3][:50].strip()+" | "
+                        resultado += linha[4].strftime("%d/%m/%Y")+" | "
+                        situacao = linha[5]
+                        if situacao==None:
+                            situacao = "ND"
+                        dataSituacao = linha[6]
+                        if dataSituacao==None:
+                            dataSituacao = "ND"
+                        else:
+                            dataSituacao = dataSituacao.strftime("%d/%m/%Y")
+                        resultado += situacao[:50].strip()+" | "
+                        resultado += dataSituacao+"\n"
+                    if resultado!="":
+                        resultado = "Relação de Postagens (TDPF | Documento | Envio | Situação Atual | Data):\n"+resultado
+                    else:
+                        resultado = "Não foram encontradas postagens de documentos relativos a TDPFs sob sua responsabilidade"                                
+                    enviaMsgBot(bot, userId, text=limpaMarkdown(resultado), parse_mode= 'MarkdownV2')
+                    mostraMenuPrincipal(update, context)
+                    conn.close()
+                    return     
+    enviaMsgBot(bot, userId, text=response_message) 
+    return             
+        
 
 def efetivaFinalizacao(userId, tdpf=""): #finaliza monitoramento de um tdpf ou de todos do usuário (campo Fim da tabela CadastroTDPFs)
     conn = conecta()
@@ -1555,7 +1657,7 @@ def mostraMenuTDPF(update, context):
     #        ['Mostra TDPFs Monitorados', 'Mostra TDPFs Supervisionados'],
     #        ['Monitora TDPF(s)', 'Finaliza Monitoramento de TDPF'], 
     #        ['Menu Principal']]
-    menu = [['Espontaneidade e Atividades Relativas a TDPF'],
+    menu = [['Espontaneidade e Atividades', 'Relaciona Postagens'],
             ['Monitora TDPF(s)', 'Finaliza Monitoramento de TDPF'], 
             ['Mostra TDPFs Monitorados', 'Supervisão'],            
             ['Menu Principal']]
@@ -2817,6 +2919,23 @@ def opcaoEMail(update, context): #cadastra e-mail para o recebimento de avisos
     enviaMsgBot(bot, userId, text=limpaMarkdown(response_message), parse_mode= 'MarkdownV2')  
     return  
 
+def opcaoRelacionaPostagens(update, context): #relaciona postagens do usuário no prazo em dias informado por ele (máximo de 90 dias)
+    global pendencias   
+    if update.effective_user.is_bot:
+        return #não atendemos bots       
+    userId = update.effective_user.id
+    bot = update.effective_user.bot     
+    eliminaPendencia(userId)  
+    achou = verificaUsuario(userId, bot)       
+    if achou:   
+        pendencias[userId] = 'relacionaPostagens' #usuário agora tem uma pendência de informação
+        response_message = "Envie /menu para ver o menu principal.\nEnvie agora uma *quantidade de dias (um ou dois dígitos; máximo de 90)* que serão consideradas para pesquisar no passado, por data de envio, suas postagens e, separado por espaço, o *indicador se considera (S) ou não (N)* sua eventual qualidade de supervisor na pesquisa:"
+        enviaMsgBot(bot, userId, text=limpaMarkdown(response_message), parse_mode= 'MarkdownV2')
+    else:
+        mostraMenuPrincipal(update, context)         
+    return    
+
+
 ############################# Handlers #########################################
 def error_handler(_, update, error):
     #try:
@@ -2841,7 +2960,8 @@ def botTelegram():
     updater.dispatcher.add_handler(MessageHandler(Filters.regex('Cadastros'), mostraMenuCadastro))
     updater.dispatcher.add_handler(MessageHandler(Filters.regex('TDPF - Monitoramento'), mostraMenuTDPF))
     updater.dispatcher.add_handler(MessageHandler(Filters.regex('Menu TDPF - Monitoramento'), mostraMenuTDPF))
-    updater.dispatcher.add_handler(MessageHandler(Filters.regex('Espontaneidade e Atividades Relativas a TDPF'), mostraMenuCienciasAtividades))    
+    updater.dispatcher.add_handler(MessageHandler(Filters.regex('Espontaneidade e Atividades Relativas a TDPF'), mostraMenuCienciasAtividades))  
+    updater.dispatcher.add_handler(MessageHandler(Filters.regex('Relaciona Postagens'), opcaoRelacionaPostagens))  
     updater.dispatcher.add_handler(MessageHandler(Filters.regex('Prazos Para Receber Avisos'), opcaoPrazos))
     updater.dispatcher.add_handler(MessageHandler(Filters.regex('Registra Usuário'), opcaoUsuario))
     updater.dispatcher.add_handler(MessageHandler(Filters.regex('Solicita Chave de Registro e do ContÁgil'), solicitaChaveRegistro))
@@ -3122,6 +3242,7 @@ def disparaMensagens(): #avisos diários (produção) ou de hora em hora (teste)
                 listaUsuarioEmail += rodape      
 
         #avisamos o fiscal (monitora TDPF)/supervisor de suas postagens enviadas há 21/28 dias ou na mesma situação há 7/14 dias e NÃO Entregues
+        #avisamos também ambas pessoas que não ocorreu movimentação para a postagem em 7 dias após seu envio
         #avisamos também o fiscal que monitora o TDPF que sua correspondência foi entregue ontem ao destinatário 
         #se a correspondência será devolvida por fato verificado ONTEM, também avisamos ao fiscal que monitora o TDPF
         #nestes dois últimos casos, não pego a data do dia, pois podemos rodar essa rotina de manhã e os correios atualizarem à tarde, p ex
@@ -3130,9 +3251,9 @@ def disparaMensagens(): #avisos diários (produção) ou de hora em hora (teste)
                     from TDPFS, ControlePostal, Fiscais, Alocacoes, CadastroTDPFs
                     Where Fiscais.CPF=%s and Alocacoes.Fiscal=Fiscais.Codigo and TDPFS.Codigo=Alocacoes.TDPF and TDPFS.Encerramento Is Null and 
                     Alocacoes.Desalocacao Is Null and ControlePostal.TDPF=TDPFS.Codigo and CadastroTDPFs.Fiscal=Fiscais.Codigo and CadastroTDPFs.TDPF=TDPFS.Codigo and
-                    (DataEnvio=cast((now() - interval 21 day) as date) or DataEnvio=cast((now() - interval 28 day) as date) or 
+                    (((DataEnvio=cast((now() - interval 21 day) as date) or DataEnvio=cast((now() - interval 28 day) as date) or 
                     DataSituacao=cast((now() - interval 7 day) as date) or DataSituacao=cast((now() - interval 14 day) as date)) and 
-                    Upper(SituacaoAtual) Not Like '%ENTREGUE%'
+                    Upper(SituacaoAtual) Not Like '%ENTREGUE%') or (DataSituacao Is Null and DataEnvio=cast((now() - interval 7 day) as date)))
                     UNION
                     Select TDPFS.Numero, TDPFS.Nome, Documento, DataEnvio, DataSituacao, SituacaoAtual
                     from TDPFS, ControlePostal, Fiscais, Alocacoes, CadastroTDPFs
@@ -3150,9 +3271,9 @@ def disparaMensagens(): #avisos diários (produção) ou de hora em hora (teste)
                     from TDPFS, ControlePostal, Fiscais, Supervisores
                     Where Fiscais.CPF=%s and Supervisores.Fiscal=Fiscais.Codigo and TDPFS.Grupo=Supervisores.Equipe and  
                     Supervisores.Fim Is Null and TDPFS.Encerramento Is Null and ControlePostal.TDPF=TDPFS.Codigo and 
-                    (DataEnvio=cast((now() - interval 21 day) as date) or DataEnvio=cast((now() - interval 28 day) as date) or 
+                    (((DataEnvio=cast((now() - interval 21 day) as date) or DataEnvio=cast((now() - interval 28 day) as date) or 
                     DataSituacao=cast((now() - interval 7 day) as date) or DataSituacao=cast((now() - interval 14 day) as date)) and 
-                    Upper(SituacaoAtual) Not Like '%ENTREGUE%'                    
+                    Upper(SituacaoAtual) Not Like '%ENTREGUE%') or (DataSituacao Is Null and DataEnvio=cast((now() - interval 7 day) as date)))
                 """     
         bAlertaPostagem = False   
         cursor.execute(comando, (cpf, cpf, cpf, cpf))    
@@ -3190,7 +3311,10 @@ def disparaMensagens(): #avisos diários (produção) ou de hora em hora (teste)
                     listaUsuarioEmail += " | (E) "+situacao
                 else: #objeto será devolvido ao remetente
                     listaUsuario += " | (D) "+situacao[:50].strip()
-                    listaUsuarioEmail += " | (D) "+situacao                    
+                    listaUsuarioEmail += " | (D) "+situacao   
+            elif dataSituacao=="ND" and linha[3].date()==datetime.now().date()-timedelta(days=7): #correspondência sem qualquer movimentação 7 dias após o envio                  
+                listaUsuario += " | (M)"
+                listaUsuarioEmail += " | (M)"
             else:                
                 listaUsuario += " | (A) "+situacao[:50].strip()
                 listaUsuarioEmail += " | (A) "+situacao
@@ -3202,6 +3326,9 @@ def disparaMensagens(): #avisos diários (produção) ou de hora em hora (teste)
             listaUsuarioEmail +="\nE - Entregue ao destinatário ONTEM"
             listaUsuario +="\nD - Correspondência será devolvida por causa de fato verificado ONTEM"
             listaUsuarioEmail +="\nD - Correspondência será devolvida por causa de fato verificado ONTEM"
+            listaUsuario +="\nM - Correspondência sem qualquer Movimentação 7 dias após o envio"
+            listaUsuarioEmail +="\nD - Correspondência sem qualquer Movimentação 7 dias após o envio"
+
 
         if len(listaUsuario)>0 or msgCofis!="":
             if msgCofis!="":
@@ -3392,7 +3519,7 @@ def disparaMensagens(): #avisos diários (produção) ou de hora em hora (teste)
             bloqueio = linha[8] 
         if linha[3]!=equipe:
             equipe = linha[3]
-            msg = msg+"\nEquipe " + equipe[:7]+"."+equipe[7:11]+"."+equipe[11:] + ":"    
+            msg = msg+"\nEquipe " + formataEquipe(equipe) +":"
         chaveTdpf = linha[4]    
         cursor.execute(consultaFiscal, (chaveTdpf,))              
         fiscal = cursor.fetchone()
@@ -3404,7 +3531,7 @@ def disparaMensagens(): #avisos diários (produção) ou de hora em hora (teste)
         userId = linha[2]  
         i+=1
         sheet.cell(row=i, column=1).value = i-1
-        sheet.cell(row=i, column=2).value = equipe[:7]+"."+equipe[7:11]+"."+equipe[11:]
+        sheet.cell(row=i, column=2).value = formataEquipe(equipe)
         sheet.cell(row=i, column=3).value = formataTDPF(linha[1])
         sheet.cell(row=i, column=4).value = linha[7]
         sheet.cell(row=i, column=5).value = nomeFiscal
@@ -3461,7 +3588,7 @@ def disparaMensagens(): #avisos diários (produção) ou de hora em hora (teste)
             userId = linha[4]    
         if linha[3]!=equipe:
             equipe = linha[3]
-            msg = msg+"\nEquipe " + equipe[:7]+"."+equipe[7:11]+"."+equipe[11:] + ":"    
+            msg = msg+"\nEquipe " + formataEquipe(equipe) + ":"    
         chaveTdpf = linha[6]    
         cursor.execute(consultaFiscal, (chaveTdpf,))              
         fiscal = cursor.fetchone()
@@ -3591,7 +3718,7 @@ def disparaMensagens(): #avisos diários (produção) ou de hora em hora (teste)
                 if prazoRestante==15:
                     i+=1                    
                     if msg=="":
-                        msg = msg+"\nEquipe " + equipe[:7]+"."+equipe[7:11]+"."+equipe[11:] + ":"                                
+                        msg = msg+"\nEquipe " + formataEquipe(equipe) + ":"                                
                     msg = msg + "\n  *"+formataTDPF(tdpf)+"* ("+nomeFiscal.split()[0]+")"
                     if cienciaReg[1]: #documento informado
                         msg = msg +" - "+cienciaReg[1]+"\n"
@@ -3599,7 +3726,7 @@ def disparaMensagens(): #avisos diários (produção) ou de hora em hora (teste)
                     else:
                         msg = msg + "\n"
                     sheet.cell(row=i, column=1).value = i-1
-                    sheet.cell(row=i, column=2).value = equipe[:7]+"."+equipe[7:11]+"."+equipe[11:]
+                    sheet.cell(row=i, column=2).value = formataEquipe(equipe)
                     sheet.cell(row=i, column=3).value = formataTDPF(linha[1])
                     sheet.cell(row=i, column=4).value = linha[6]
                     sheet.cell(row=i, column=5).value = nomeFiscal
@@ -3864,7 +3991,7 @@ dispatch = { 'registra': registra, 'ciencia': ciencia, 'prazos': prazos, 'acompa
              'atividade': atividade, 'anulaAtividade': anulaAtividade, 
              'atividadeTexto': atividadeTexto, 'cienciaTexto': cienciaTexto, 'envioChave': envioChave, 
              'mostraSuperv': mostraSupervisionados, 'informaTerminoAtividade': terminoAtividade,
-             'supervisorEspontaneidade': mostraSupervisorEspontaneidade, 'informaHorasAtividade': informaHorasAtividade}
+             'supervisorEspontaneidade': mostraSupervisorEspontaneidade, 'informaHorasAtividade': informaHorasAtividade, 'relacionaPostagens': relacionaPostagens}
 textoRetorno = "\nEnvie /menu para retornar ao menu principal"
 updater = None #para ser acessível ao disparador de mensagens
 #schedule.every().day.at("07:30").do(disparaMensagens)

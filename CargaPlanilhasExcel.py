@@ -192,24 +192,15 @@ def realizaCargaDados():
     #    cursor.execute("Delete from AvisosVencimento")
     #    cursor.execute("Delete from CadastroTDPFs")
     #    conn.commit()
-    logging.info(dfTdpf.head())
-    logging.info(dfAloc.head())
-    logging.info(dfFiscais.head())
-    logging.info(dfSupervisores.head())
-    logging.info(dfOperacoes.head())
 
-    logging.info(dfTdpf.dtypes)
-    logging.info(dfAloc.dtypes)
-    logging.info(dfFiscais.dtypes)
-    logging.info(dfSupervisores.dtypes)
-    logging.info(dfOperacoes.dtypes)
 
     selectFisc = "Select Codigo, CPF, Nome from Fiscais Where CPF=%s"
     insereFisc = "Insert Into Fiscais (CPF, Nome) Values (%s, %s)"
 
-    selectTDPF = "Select Codigo, Grupo, Encerramento, Vencimento from TDPFS Where Numero=%s"
-    insereTDPF = "Insert Into TDPFS (Numero, Grupo, Emissao, Nome, NI, Vencimento, Porte, Acompanhamento, Encerramento, CasoEspecial) Values (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)"
-    atualizaTDPFEnc = "Update TDPFS Set Encerramento=%s Where Codigo=%s"
+    selectTDPF = "Select Codigo, Grupo, Encerramento, Vencimento, SemExame from TDPFS Where Numero=%s"
+    insereTDPF = "Insert Into TDPFS (Numero, Grupo, Emissao, Nome, NI, Vencimento, Porte, Acompanhamento, Encerramento, CasoEspecial, SemExame, Pontos, DataPontos) Values (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)"
+    atualizaTDPFEnc = "Update TDPFS Set Encerramento=%s, SemExame=%s Where Codigo=%s"
+    atualizaTDPFEncSemExame = "Update TDPFS Set Encerramento=%s, SemExame=%s, Pontos=0, DataPontos=%s Where Codigo=%s"
     atualizaTDPFGrupoVencto = "Update TDPFS Set Grupo=%s, Vencimento=%s Where Codigo=%s"
 
     selectAloc = "Select Codigo, Desalocacao, Supervisor from Alocacoes Where TDPF=%s and Fiscal=%s"
@@ -221,7 +212,9 @@ def realizaCargaDados():
     selectCiencias = "Select * from Ciencias Where TDPF=%s" 
     insereCiencia = "Insert Into Ciencias (TDPF, Data, Documento) Values (%s, %s, %s)"
 
-    selectOperacoes = "Select Operacoes.Codigo, OperacoesFiscais.Operacao, PeriodoInicial, PeriodoFinal, Tributos.Tributo from Operacoes, OperacoesFiscais, Tributos Where Operacoes.TDPF=%s and Operacoes.Operacao=OperacoesFiscais.Codigo and Operacoes.Tributo=Tributos.Codigo"
+    selectOperacoes = """Select Operacoes.Codigo, OperacoesFiscais.Operacao, PeriodoInicial, PeriodoFinal, Tributos.Tributo, Operacoes.Operacao, Operacoes.Tributo
+                         from Operacoes, OperacoesFiscais, Tributos 
+                         Where Operacoes.TDPF=%s and Operacoes.Operacao=OperacoesFiscais.Codigo and Operacoes.Tributo=Tributos.Codigo"""
     insereOperacao = "Insert Into Operacoes (TDPF, Operacao, PeriodoInicial, PeriodoFinal, Tributo) Values (%s, %s, %s, %s, %s)"
     apagaOperacao = "Delete from Operacoes Where Codigo=%s"
 
@@ -237,6 +230,24 @@ def realizaCargaDados():
 
     selectCaso = "Select Codigo from CasosEspeciais Where CasoEspecial=%s"
     insereCaso = "Insert Into CasosEspeciais (CasoEspecial, Descricao) Values (%s, %s)"
+
+    #tentei criar um trigger, mas não deu certo (Grasiella está de licença) - 14 %s
+    apagaTDPF = """
+                Delete from Alocacoes Where TDPF=%s;
+                Delete from Atividades Where TDPF=%s;
+                Delete from AvisosCiencia Where TDPF=%s;
+                Delete from AvisosVencimento Where TDPF=%s;
+                Delete from CadastroTDPFs Where TDPF=%s;
+                Delete from Ciencias Where TDPF=%s;
+                Delete from ControlePostal Where TDPF=%s;
+                Delete from DiarioFiscalizacao Where TDPF=%s;
+                Delete from Juntadas Where TDPF=%s;
+                Delete from Operacoes Where TDPF=%s;
+                Delete from AssinaturaFiscal Where Prorrogacao In (Select Prorrogacoes.Codigo From Prorrogacoes Where Prorrogacoes.TDPF=%s);
+                Delete From Prorrogacoes Where Prorrogacoes.TDPF=%s;
+                Delete from Resultados Where TDPF=%s;
+                Delete from TDPFS Where Codigo=%s
+                """
                    
     logging.info(f"TDPFs: {dfTdpf.shape[0]} linhas e {dfTdpf.shape[1]} colunas")
     logging.info(f"AFRFBs Execução: {dfAloc.shape[0]} linhas e {dfAloc.shape[1]} colunas")
@@ -266,7 +277,15 @@ def realizaCargaDados():
                                             #<- a assinatura revelou-se pior que a distribuição - voltei a usar esta
         inicio = dfTdpf.iat[linha, 11]
         encerramento = dfTdpf.iat[linha, 12]
-        #situacao = dfTdpf.iloc[linha, 13]
+        situacao = dfTdpf.iat[linha, 15]
+        if situacao!=None:
+            situacao = situacao.upper()
+        if "SEM EXAME" in situacao:
+            tipoEnc = "S"
+        elif 'COM EXAME' in situacao:
+            tipoEnc = "N"        
+        else:
+            tipoEnc = None
         ni = dfTdpf.iat[linha, 17]
         nome = dfTdpf.iat[linha, 18]
         porte = dfTdpf.iat[linha, 27]
@@ -287,6 +306,7 @@ def realizaCargaDados():
             if linhaCaso:
                 casoEspecialCod = linhaCaso[0]
             else:
+                atualizou = True
                 cursor.execute(insereCaso, (casoEspecial, casoEspecialDesc))
                 cursor.execute(selectCaso, (casoEspecial, ))
                 linhaCaso = cursor.fetchone()
@@ -305,13 +325,30 @@ def realizaCargaDados():
         cursor.execute(selectTDPF, (tdpf,))
         regTdpf = cursor.fetchone()  
         #precisamos incluir os TDPFs encerrados a partir do ano de entrada em produção (2021)
-        if not regTdpf and encerramento!="SD" and encerramento!="" and paraData(encerramento)!=None:    
+        if not regTdpf and encerramento!="SD" and encerramento!="" and paraData(encerramento)!=None:    #TDPF não existe
             if paraData(encerramento).year<2021: #se foi encerrado antes de 2021 (entrada em produção), desprezamos
                 continue
+            if "CANCELADA" in situacao or tipoEnc=='S': #não devemos cadastrar TDPFs que não constem da base, mas que já estão cancelados ou foram encerrados sem exame
+                continue            
         if regTdpf: #TDPF consta da base
-            chaveTdpf = regTdpf[0]  #chave do registro do TDPF  - para poder atualizar o registro, se for necessário          
-            if regTdpf[2]!=None:
-                continue #TDPF já encerrado na base - não há interesse em atualizar
+            chaveTdpf = regTdpf[0]  #chave do registro do TDPF  - para poder atualizar o registro, se for necessário   
+            if "CANCELADA" in situacao: #TDPF existe, mas foi cancelado - devemos apagar tudo a respeito dele
+                parametrosApaga = [chaveTdpf for i in range(14)]
+                print("Apagando ", tdpfAux, situacao)
+                for result in cursor.execute(apagaTDPF, tuple(parametrosApaga), multi=True):
+                    pass                
+                #conn.commit()
+                cursor.close()   #se não fecho, dá erro de "out of sync"
+                cursor = conn.cursor(buffered=True)
+                continue #apagamos - vamos ao próximo TDPF
+            if regTdpf[2]!=None: #TDPF já estava encerrado
+                #if regTdpf[4]==None: #está encerrado, mas sem sinalizar se é sem exame ou com <--manter na produção
+                if tipoEnc=='S':
+                    cursor.execute("Update TDPFS Set SemExame=%s, Pontos=0, DataPontos=%s Where Codigo=%s", (tipoEnc, datetime.now(), chaveTdpf))
+                else:
+                    cursor.execute("Update TDPFS Set SemExame=%s Where Codigo=%s", (tipoEnc, chaveTdpf))
+                atualizou = True
+                continue #TDPF já encerrado na base - não há interesse em atualizar as demais tabelas
         else: #TDPF não existe na base - pedi para ajustar o relatório do gerencial para incluir os encerrados a partir de 2021 (o problema abaixo não deve ocorrer)
             if porte==None or acompanhamento==None: #porte ou acompanhamento especial não foram obtidos do gerencial Ação Fiscal no DW - significa que não há necessidade de 
                                                     #incluir o TDPF na base pois já está encerrado (por isso não consta do gerencial)
@@ -320,6 +357,14 @@ def realizaCargaDados():
         df = dfAloc.loc[dfAloc['Número do RPF Expresso']==tdpfAux] #selecionamos as alocações do TDPF
         if df.shape[0]==0:
             logging.info(f"TDPFs: {tdpfAux} não tem fiscal alocado - TDPF foi desprezado.")
+            #mas temos que atualizar o status de encerramento dele, caso tenha sido (relatório de alocações não foi atualizado com TDPFs encerrados sem exame ou cancelados)
+            if regTdpf[2]==None and encerramento!="SD" and encerramento!="" and paraData(encerramento)!=None: #TDPF existia na base em andamento, agora é encerrado
+                tabTdpfsAtu+=1
+                atualizou = True
+                if tipoEnc=="S": #Sem exame - zeramos os pontos
+                    cursor.execute(atualizaTDPFEncSemExame, (paraData(encerramento), tipoEnc, datetime.now(), chaveTdpf))            
+                else: #com exame
+                    cursor.execute(atualizaTDPFEnc, (paraData(encerramento), tipoEnc, chaveTdpf))                        
             continue
         if distribuicao: #calculamos a data de vencimento a partir da data de distribuição - o ideal seria calcular a partir da data de emissão, mas o DW não tem a informação
             distData = paraData(distribuicao) 
@@ -349,7 +394,13 @@ def realizaCargaDados():
         if not regTdpf: #TDPF não consta da base
             tabTdpfs+=1
             atualizou = True
-            cursor.execute(insereTDPF, (tdpf, grupoAtu, distData, nome, ni, vencimento, porte, acompanhamento, paraData(encerramento), casoEspecialCod))
+            if tipoEnc=='S' and encerramento!="SD" and encerramento!="" and paraData(encerramento)!=None:
+                pontos = 0
+                dataPontos = datetime.now()
+            else:
+                pontos = None
+                dataPontos = None    
+            cursor.execute(insereTDPF, (tdpf, grupoAtu, distData, nome, ni, vencimento, porte, acompanhamento, paraData(encerramento), casoEspecialCod, tipoEnc, pontos, dataPontos))
             cursor.execute(selectTDPF, (tdpf,))
             regTdpf = cursor.fetchone()   
             chaveTdpf = regTdpf[0]  #chave do registro do TDPF                      
@@ -360,7 +411,10 @@ def realizaCargaDados():
         elif regTdpf[2]==None and encerramento!="SD" and encerramento!="" and paraData(encerramento)!=None: #TDPF existia na base em andamento, agora é encerrado
             tabTdpfsAtu+=1
             atualizou = True
-            cursor.execute(atualizaTDPFEnc, (paraData(encerramento), chaveTdpf))
+            if tipoEnc=="S": #Sem exame - zeramos os pontos
+                cursor.execute(atualizaTDPFEncSemExame, (paraData(encerramento), tipoEnc, datetime.now(), chaveTdpf))              
+            else:
+                cursor.execute(atualizaTDPFEnc, (paraData(encerramento), tipoEnc, chaveTdpf))
         elif regTdpf[1]!=grupoAtu or regTdpf[3].date()<datetime.now().date(): #mudou o grupo e/ou TDPF está vencido, mas, em ambos os casos, NÃO encerrado - atualiza grupo e vencimento
             gruposAtu+=1
             atualizou = True
@@ -441,26 +495,39 @@ def realizaCargaDados():
                 atualizou = True 
         #percorremos as operações do TDPF - excluímos as que não mais existirem e incluímos as que não existirem
         dfOp = dfOperacoes.loc[dfOperacoes['Número do RPF Expresso']==tdpfAux] #selecionamos as operações do TDPF
+        #Operacoes.Codigo, OperacoesFiscais.Operacao, PeriodoInicial, PeriodoFinal, Tributos.Tributo, Operacoes.Operacao, Operacoes.Tributo
         cursor.execute(selectOperacoes, (chaveTdpf,))
         regOperacoes = cursor.fetchall()
         opExistentes = []
-        for regOperacao in regOperacoes: #atualizamos as operações que mudaram algo no período ou excluímos aquelas que não existem mais
-            operacao = regOperacao[1]
-            codigoOperacao = regOperacao[0]
-            perInicial = regOperacao[2]
-            perFinal = regOperacao[3]
-            tributo = regOperacao[4]
-            operTrib = str(operacao).rjust(6, "0")+str(tributo).rjust(5, "0")
-            dfOpAux = dfOp.loc[dfOp['Operação Fiscal Atual Código']==operacao]
-            if dfOpAux.shape[0]>0: #operação existe no TDPF - temos que ver se há alguma divergência no período (aumentou ou diminuiu)
-                opExistentes.append(operTrib)
-                menorMes = paraData(dfOpAux.loc[dfOpAux['Mês Início'].idxmin()]["Mês Início"])
-                maiorMes = paraData(dfOpAux.loc[dfOpAux['Mês Fim'].idxmax()]["Mês Fim"])
-                if maiorMes!=perFinal or menorMes!=perInicial:
-                    comando = "Update Operacoes Set PeriodoInicial=%s, PeriodoFinal=%s Where Codigo=%s"
-                    cursor.execute(comando, (menorMes, maiorMes, codigoOperacao))
-            else:
-                cursor.execute(apagaOperacao, (codigoOperacao,)) #operação foi removida do TDPF - removemos ela da base
+        if dfOp.shape[0]>0: #desde que tenhamos localizado alguma operação do TDPF (se não, o problema está na planilha de operações)
+            for regOperacao in regOperacoes: #atualizamos as operações que mudaram algo no período ou excluímos aquelas que não existem mais
+                operacao = regOperacao[1]
+                codigoOperacao = regOperacao[0]
+                perInicial = regOperacao[2]
+                perFinal = regOperacao[3]
+                tributo = regOperacao[4]
+                operTrib = str(operacao).rjust(6, "0")+str(tributo).rjust(5, "0")
+                dfOpAux = dfOp.loc[(dfOp['Operação Fiscal Atual Código']==operacao) & (dfOp['Receita Programada(Tributo) Código']==tributo)]
+                if dfOpAux.shape[0]>0: #operação/tributo existe no TDPF - temos que ver se há alguma divergência no período (aumentou ou diminuiu)
+                    if not operTrib in opExistentes: #não foi atualizada/incluída
+                        opExistentes.append(operTrib)
+                        menorMes = paraData(dfOpAux.loc[dfOpAux['Mês Início'].idxmin()]["Mês Início"])
+                        maiorMes = paraData(dfOpAux.loc[dfOpAux['Mês Fim'].idxmax()]["Mês Fim"])
+                        if maiorMes!=perFinal or menorMes!=perInicial:
+                            print(tdpfAux, codigoOperacao, operacao, tributo, menorMes, maiorMes)
+                            comando = "Update Operacoes Set PeriodoInicial=%s, PeriodoFinal=%s Where Codigo=%s"
+                            try:
+                                cursor.execute(comando, (menorMes, maiorMes, codigoOperacao))
+                            except: #provavelmente já existe um outro registro para este tdpf com esta Operacao/Tributo
+                                apaga = "Delete From Operacoes Where Codigo!=%s, TDPF=%s, Operacao=%s, Tributo=%s"
+                                cursor.execute(apaga, (codigoOperacao, chaveTdpf, regOperacao[5], regOperacao[6])) #apagamos os demais registros
+                                #tentamos novamente atualizar
+                                cursor.execute(comando, (menorMes, maiorMes, codigoOperacao))
+                    else: #como já foi incluída, apagamos da tabela, pq senão ficará uma operação repetida
+                        comando = "Delete From Operacoes Where Codigo=%s"
+                        cursor.execute(comando, (codigoOperacao, ))                            
+                else:
+                    cursor.execute(apagaOperacao, (codigoOperacao,)) #operação foi removida do TDPF - removemos ela da base
         #incluímos as operações do TDPF (as que não tiverem sido cadastradas)
         for linha2 in range(dfOp.shape[0]):
             operacao = int(dfOp.iat[linha2, 8])
@@ -488,7 +555,7 @@ def realizaCargaDados():
                 rowOperacao = cursor.fetchone()
             codOperacao = rowOperacao[0]
             #inserimos a operação vinculada ao TDPF
-            dfOpAux = dfOp.loc[dfOp['Operação Fiscal Atual Código']==operacao]
+            dfOpAux = dfOp.loc[(dfOp['Operação Fiscal Atual Código']==operacao) & (dfOp['Receita Programada(Tributo) Código']==tributo)]
             #selecionamos o menor e o maior mês do período da operação deste TDPF            
             if dfOpAux.shape[0]>0:
                 perInicial = paraData(dfOpAux.loc[dfOpAux['Mês Início'].idxmin()]["Mês Início"])
@@ -534,18 +601,19 @@ def realizaCargaDados():
                     bAchou = False
                 #print(bAchou)    
                 if not bAchou: #ainda não consta da tabela de Supervisores
-                    comando = "Insert Into Supervisores (Equipe, Fiscal, Inicio) Values (%s, %s, %s)"
-                    tabGrupos+=1
-                    cursor.execute(comando, (grupoRow[0], chaveFiscal, paraData(dataIni)))
                     #verificamos se este grupo não tem outro supervisor ativo - se tiver, colocamos a data final - fazemos isso para garantir caso haja uma descontinuidade
                     #não obtida pelo else abaixo
-                    comando = "Select Codigo from Supervisores Where Equipe=%s and Fiscal<>%s and Fim Is Null"
-                    cursor.execute(comando, (grupoRow[0], chaveFiscal))                    
+                    comando = "Select Codigo from Supervisores Where Equipe=%s and Fim Is Null"
+                    cursor.execute(comando, (grupoRow[0], ))                    
                     supervisoresRows = cursor.fetchall()
                     if supervisoresRows!=None:
-                        if len(supervisoresRows)>0:
-                            comando = "Update Supervisores Set Fim=%s Where Equipe=%s and Fiscal<>%s and Fim Is Null" #"matamos" os antigos supervisores
-                            cursor.execute(comando, (datetime.now().date(), grupoRow[0], chaveFiscal))
+                        if len(supervisoresRows)>0: #há supervisores (antigos) ativos da equipe
+                            comando = "Update Supervisores Set Fim=%s Where Equipe=%s and Fim Is Null" #"matamos" os antigos supervisores
+                            cursor.execute(comando, (datetime.now().date(), grupoRow[0]))                    
+                    comando = "Insert Into Supervisores (Equipe, Fiscal, Inicio) Values (%s, %s, %s)" #inserimos o novo supervisor
+                    tabGrupos+=1
+                    cursor.execute(comando, (grupoRow[0], chaveFiscal, paraData(dataIni)))
+
                 #verificamos se este supervisor consta da tabela de usuários
                 dfFiscal = dfFiscais.loc[dfFiscais['CPF']==cpf]
                 email = None
@@ -571,8 +639,10 @@ def realizaCargaDados():
                     bAchou = False
                 elif len(supervisoresRows)==0:
                     bAchou = False
-                if bAchou:
-                    comando = "Update Supervisores Set Fim=%s Where Codigo=%s"
+                if bAchou: #colocamos um final na supervisão do titular e do substituto (o substituto sempre termina quando o titular acaba tb)
+                    comando = "Update Supervisores Set Fim=%s Where Codigo=%s" #titular
+                    cursor.execute(comando,(paraData(dataFim), supervisoresRows[0][0]))
+                    comando = "Update Supervisores Set Fim=%s Where Titular=%s" #substituto
                     cursor.execute(comando,(paraData(dataFim), supervisoresRows[0][0]))
                     tabGruposAtu+=1
         else:
@@ -1203,7 +1273,7 @@ threadDisparador.start()
 #realizaCargaDCCs() #idem para os DCCs
 #realizaCargaCienciasPendentes() #ciencias pendentes de AI 
 #realizaCargaIndicadores() #carga de indicadores (parâmetros) dos TDPFs encerrados
-realizaCargaCasosEspeciais()
+#realizaCargaCasosEspeciais() #só vai executar no dia 20/05/2021
 while not termina:
     entrada = input("Digite QUIT para terminar o serviço Carga BOT: ")
     if entrada:
