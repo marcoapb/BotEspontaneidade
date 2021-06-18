@@ -137,6 +137,9 @@ def calculaDVCPF(cpfPar):
 
 def realizaCargaDados():
     global dirExcel, termina, hostSrv, hora1
+    print("Acionada a função que realiza a carga de dados do Ação Fiscal/DW - TDPFS.")
+    if os.path.exists(dirExcel+"REALIZACARGA.TXT"): #apagamos esse arquivo que serve como indicador de que é para fazer a carga dos dados imediatamente
+        os.remove(dirExcel+"REALIZACARGA.TXT")    
     try:
         dfTdpf = pd.read_excel(dirExcel+"TDPFS.xlsx", dtype={'Porte':object, 'Acompanhamento':object, 'Receita Programada(Tributo) Código': int})
         dfAloc = pd.read_excel(dirExcel+"ALOCACOES.xlsx")
@@ -718,7 +721,7 @@ def realizaCargaDados():
         print("Erro ao tentar renomear os arquivos")            
         logging.error("Erro ao tentar renomear os arquivos")   
         textoUNacionais += "Houve um erro ao tentar renomear os arquivos."                       
-    print("Carga finalizada")
+    print("Carga finalizada ", datetime.now())
     textoUNacionais = "Sr. Usuário,\n\n" + textoUNacionais + "\n\nAtenciosamente,\n\nCofis/Disav"
     avisaUsuariosNacionais(textoUNacionais, cursor) #avisamos os usuários nacionais da realização da carga
     avisaUsuariosRegionais(conn) #avisamos usuários regionais dos TDPFs vincendos em curto prazo (pedido da Débora Difis07)
@@ -1240,9 +1243,13 @@ def realizaCargaCasosEspeciais(): #atualização da tabela TDPFs com casos espec
 
 
 def disparador():
-    global termina
+    global termina, dirExcel
     while not termina:
         schedule.run_pending() 
+        time.sleep(5) #aguardo um pouco para começar a rodar as tarefas, inclusive realizaCargaDados que apagará o arquivo abaixo
+        if os.path.exists(dirExcel+"REALIZACARGA.TXT"): #a existência deste arquivo indica que é para fazer a carga dos dados imediatamente
+            #os.remove(dirExcel+"REALIZACARGA.TXT") #o próprio realizaCargaDados apaga este arquivo
+            realizaCargaDados()        
         time.sleep(60*60) #a cada hora, vê o que tem de tarefa pendente
     return 
    
@@ -1257,6 +1264,7 @@ else:
     dirLog = '/Log/' 
     dirExcel = '/Excel/'
 
+print("Bot Carga ativo.")
 logging.basicConfig(filename=dirLog+datetime.now().strftime('%Y-%m-%d %H_%M')+' Carga'+sistema+'.log', format='%(asctime)s - %(message)s', level=logging.INFO)
 hora1 = "09:30"
 schedule.every().day.at(hora1).do(realizaCargaDados) #a cada 24 horas, verifica se há arquivos para fazer a carga
@@ -1267,6 +1275,9 @@ schedule.every().day.at(hora3).do(realizaCargaCienciasPendentes)
 hora4 = "10:30"
 schedule.every().day.at(hora4).do(realizaCargaIndicadores)
 termina = False
+if os.path.exists(dirExcel+"REALIZACARGA.TXT"): #a existência deste arquivo indica que é para fazer a carga dos dados imediatamente
+    #os.remove(dirExcel+"REALIZACARGA.TXT") #o próprio realizaCargaDados apaga este arquivo
+    realizaCargaDados()  
 threadDisparador = threading.Thread(target=disparador, daemon=True) #encerra thread quando sair do programa sem esperá-la
 threadDisparador.start()
 #realizaCargaDados() #faz a primeira tentativa de carga das planilhas logo no acionamento do programa

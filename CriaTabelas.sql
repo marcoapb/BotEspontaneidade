@@ -374,6 +374,7 @@ CREATE TABLE `ControlePostal` (
   `DataEnvio` DATETIME,
   `SituacaoAtual` VARCHAR(100),
   `DataSituacao` DATETIME,
+  `DataRecebimento` DATETIME,
   PRIMARY KEY (`Codigo`), 
   INDEX (`TDPF`),
   INDEX (`CodRastreamento`)

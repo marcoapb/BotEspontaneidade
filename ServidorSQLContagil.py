@@ -770,7 +770,7 @@ def trataMsgRecebida(msgRecebida, c, addr): #c é o socket estabelecido com o cl
                     return                
                 if not estaoChavesValidas(addr): #meio difícil de ocorrer aqui, pq tem lá no servidor, mas ...
                     geraChaves(addr) 
-                versaoScript = "150" #versão mínima do Script (X.XX, sem o ponto; colocar o zero ao final, se for o caso) - só informa na mensagem abaixo (não restringe nas requisições)
+                versaoScript = "16d" #versão mínima do Script (X.XX, sem o ponto; colocar o zero ao final, se for o caso) - só informa na mensagem abaixo (não restringe nas requisições)
                 enviaRespostaSemFechar("0000"+chavesCripto[segmentoIP(addr)][2].strftime("%d/%m/%Y %H:%M:%S")+versaoScript+dataExtracao.strftime("%d/%m/%Y %H:%M"), c) #envia a validade da chave e a versão mínima exigida do Script
                 try:
                     msg = c.recv(1024).decode("utf-8") #só aguarda um 00
@@ -4823,14 +4823,20 @@ def trataMsgRecebida(msgRecebida, c, addr): #c é o socket estabelecido com o cl
         return
 
     if codigo==45: #exclui informação de postagem; já foi verificado ao início se TDPF existe, está em andamento e se cpf é de fiscal ou supervisor
-        if len(msgRecebida)!=(44+tamChave):
+        if len(msgRecebida)!=(45+tamChave):
             resposta = "99REQUISIÇÃO INVÁLIDA (45A)"
             enviaResposta(resposta, c) 
             conn.close()
             return
-        rastreamento = msgRecebida[-15:].strip()
+        rastreamento = msgRecebida[-16:-1].strip()
         if len(rastreamento)<13:
             resposta = "99TAMANHO DO CÓDIGO DE RASTREAMENTO DEVE SER IGUAL OU SUPERIOR A 13 (45B)"
+            enviaResposta(resposta, c) 
+            conn.close()
+            return
+        informaAR = msgRecebida[-1:]      
+        if not informaAR in ['S', 'N']:
+            resposta = "99INDICADOR DE INFORMAÇÃO DE AR INVÁLIDO (45C)"
             enviaResposta(resposta, c) 
             conn.close()
             return            
@@ -4843,7 +4849,10 @@ def trataMsgRecebida(msgRecebida, c, addr): #c é o socket estabelecido com o cl
             conn.close()
             return         
         codigo = linha[0]
-        cursor.execute("Delete ControlePostal Where Codigo=%s", (codigo, ))
+        if informaAR=='N': #apaga o registro
+            cursor.execute("Delete From ControlePostal Where Codigo=%s", (codigo, ))
+        else:
+            cursor.execute("Update ControlePostal Set DataRecebimento=%s Where Codigo=%s", (datetime.now().date(), codigo))
         try:
             conn.commit()
             resposta = "45S"
@@ -4885,12 +4894,12 @@ def trataMsgRecebida(msgRecebida, c, addr): #c é o socket estabelecido com o cl
                 enviaResposta(resposta, c) 
                 conn.close()
                 return  
-            comando = """Select TDPFS.Numero, TDPFS.Nome, Documento, Data, CodRastreamento, DataEnvio, SituacaoAtual, DataSituacao 
+            comando = """Select TDPFS.Numero, TDPFS.Nome, Documento, Data, CodRastreamento, DataEnvio, SituacaoAtual, DataSituacao, DataRecebimento
                          From ControlePostal, TDPFS, Alocacoes 
                          Where Alocacoes.Fiscal=%s and Alocacoes.Desalocacao Is Null and Alocacoes.TDPF=TDPFS.Codigo and 
                          TDPFS.Codigo=ControlePostal.TDPF and Data>=%s and Data<=%s and TDPFS.Encerramento Is Null
                          UNION
-                         Select TDPFS.Numero, TDPFS.Nome, Documento, Data, CodRastreamento, DataEnvio, SituacaoAtual, DataSituacao 
+                         Select TDPFS.Numero, TDPFS.Nome, Documento, Data, CodRastreamento, DataEnvio, SituacaoAtual, DataSituacao, DataRecebimento
                          From ControlePostal, TDPFS, Supervisores 
                          Where Supervisores.Fiscal=%s and Supervisores.Fim Is Null and Supervisores.Equipe=TDPFS.Grupo and 
                          TDPFS.Codigo=ControlePostal.TDPF and Data>=%s and Data<=%s and TDPFS.Encerramento Is Null
@@ -4928,7 +4937,8 @@ def trataMsgRecebida(msgRecebida, c, addr): #c é o socket estabelecido com o cl
                 situacao = ""
             situacao = situacao.ljust(100)
             dataSituacao = dataTexto(linha[7])
-            registro += tdpf + nome + documento + data + rastreamento + envio + situacao + dataSituacao
+            dataRecebimento = dataTexto(linha[8])
+            registro += tdpf + nome + documento + data + rastreamento + envio + situacao + dataSituacao + dataRecebimento
             if total%50==0 or total==nnn: #enviamos de 50 em 50 registros ou no final
                 if total<nnn:
                     enviaRespostaSemFechar(resposta+registro, c)
@@ -5113,13 +5123,14 @@ def trataMsgRecebida(msgRecebida, c, addr): #c é o socket estabelecido com o cl
         return                                                        
 
     if codigo==60: #Solicita DCCs vinculados aos TDPFs em andamento (somente usuários autorizados - CPF1, CPF2 e CPF3 [variáveis de ambiente] - e demanda mais uma senha)
+                   #somente são enviados DCCs de TDPFs que tenham usuários registrados e ativos no serviço
         if len(msgRecebida)!=(23+tamChave):
             resposta = "99REQUISIÇÃO INVÁLIDA (60A)"
             enviaResposta(resposta, c) 
             conn.close()
             return 
         hora = datetime.now().hour
-        if 8<hora<10:
+        if 8<hora<10 and datetime.today().weekday()==0: #às segundas, há restrição de horário por conta da carga dos TDPFs
             resposta = "60H"
             enviaResposta(resposta, c) 
             conn.close()
@@ -5131,12 +5142,14 @@ def trataMsgRecebida(msgRecebida, c, addr): #c é o socket estabelecido com o cl
             return
         senha = msgRecebida[-10:]
         horaSenha = str(int(int(datetime.now().strftime('%H%M'))/10)).rjust(3,"0")
-        if senha[-10:-3]!=SENHADCCS or senha[-3:]!=horaSenha or SENHADCCS==None: #senha é DIS@V71 seguida da hora e a dezena dos minutos (ex.: são 11:35, a senha é DIS@V71113)
+        if senha[-10:-3]!=SENHADCCS or senha[-3:]!=horaSenha or SENHADCCS==None: #senha é ----- seguida da hora e a dezena dos minutos (ex.: são 11:35, a senha é -----113)
             resposta = "60N"
             enviaResposta(resposta, c) 
             conn.close()
             return
-        comando = "Select DCC from TDPFS Where DCC Is Not Null and DCC<>'' and Encerramento Is Null"
+        comando = """Select Distinctrow DCC from TDPFS, Alocacoes, Fiscais, Usuarios 
+                     Where DCC Is Not Null and DCC!='' and Encerramento Is Null and TDPFS.Codigo=Alocacoes.TDPF and Alocacoes.Desalocacao Is Null and
+                     Alocacoes.Fiscal=Fiscais.Codigo and Fiscais.CPF=Usuarios.CPF and Usuarios.Adesao Is Not Null and Usuarios.Saida Is Null"""
         cursor.execute(comando)
         rows = cursor.fetchall()
         tam = len(rows)
@@ -5369,8 +5382,8 @@ def consultaCorreios(): #faz a atualização da situação nos correios dos term
     comando = """Select ControlePostal.Codigo, CodRastreamento, SituacaoAtual, DataSituacao
                  from ControlePostal, TDPFS
                  Where TDPFS.Encerramento Is Null and ControlePostal.TDPF=TDPFS.Codigo and DataEnvio>cast((now() - interval 75 day) as date)
-                 and Upper(SituacaoAtual) Not Like '%ENTREGUE%'""" 
-                 #consultamos a situação somente dos enviados há até 75 dias e de TDPFs em andamento
+                 and Upper(SituacaoAtual) Not Like '%ENTREGUE%' and DataRecebimento Is Null""" 
+                 #consultamos a situação somente dos enviados há até 75 dias e de TDPFs em andamento, sem que o AR ou correspondência tenha sido recebido(a)
     conn = conecta() 
     if conn==None:      
         logging.info("Erro ao conectar ao BD para consultar os correios.")  
