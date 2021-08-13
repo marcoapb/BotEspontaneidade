@@ -69,6 +69,9 @@ CREATE TABLE `TDPFS` (
   `Pontos` DECIMAL(8,2),
   `DataPontos` DATETIME, 
   `SemExame` CHAR(1),
+  `TDPFPrincipal` BIGINT DEFAULT NULL, 
+  `Tipo` CHAR(1) DEFAULT 'F',
+  `FAPE` CHAR(1) DEFAULT 'N',
   PRIMARY KEY (`Codigo`), 
   UNIQUE (`Numero`), 
   UNIQUE (`Numero`, `Grupo`),
@@ -93,6 +96,7 @@ CREATE TABLE `Usuarios` (
   `DataEnvio` DATETIME,
   `Orgao` INTEGER DEFAULT 0,
   `BloqueiaTelegram` CHAR(1) DEFAULT `N`,
+  `Ativo` CHAR(1) DEFAULT `S`,
   INDEX (`CPF`), 
   INDEX (`idTelegram`), 
   PRIMARY KEY (`Codigo`), 
@@ -378,4 +382,168 @@ CREATE TABLE `ControlePostal` (
   PRIMARY KEY (`Codigo`), 
   INDEX (`TDPF`),
   INDEX (`CodRastreamento`)
+) ENGINE=innodb DEFAULT CHARSET=utf8;
+
+DROP TABLE IF EXISTS `Fatores`;
+
+CREATE TABLE `Fatores` (
+  `Codigo` BIGINT UNSIGNED NOT NULL AUTO_INCREMENT, 
+  `TDPF` BIGINT,
+  `Sequencia` INT,
+  `Descricao` VARCHAR(300),
+  `Elementos` DECIMAL(8,2),
+  `Percentual` DECIMAL(5,2),
+  `Pontos` DECIMAL(8,2),
+  PRIMARY KEY (`Codigo`), 
+  INDEX (`TDPF`),
+  UNIQUE (`TDPF`, `Sequencia`)
+) ENGINE=innodb DEFAULT CHARSET=utf8;
+
+DROP TABLE IF EXISTS `Equipes`;
+
+CREATE TABLE `Equipes` (
+  `Codigo` BIGINT NOT NULL AUTO_INCREMENT, 
+  `Equipe` VARCHAR(25),
+  `Nome` VARCHAR(200),
+  `UL` VARCHAR(150),
+  `Malha` CHAR(1) Default 'N',
+  `Criacao` DATETIME,
+  `Extincao` DATETIME
+  `Sistema` SMALLINT,
+  `Tipo` SMALLINT,
+  `QtdeRH` INT,
+  PRIMARY KEY (`Codigo`), 
+  UNIQUE (`Equipe`)
+) ENGINE=innodb DEFAULT CHARSET=utf8;
+
+-- Alter Table Equipes Add Column Malha CHAR(1) Default 'N', Add Column Criacao Datetime, Add Column Extincao Datetime, Add Column Sistema Smallint, Add Column Tipo Smallint
+
+DROP TABLE IF EXISTS `TipoEquipes`;
+
+CREATE TABLE `TipoEquipes` (
+  `Codigo` INTEGER NOT NULL AUTO_INCREMENT, 
+  `Tipo` SMALLINT,
+  `Descricao` VARCHAR(100),
+  PRIMARY KEY (`Codigo`), 
+  UNIQUE (`Tipo`)
+) ENGINE=innodb DEFAULT CHARSET=utf8;
+
+DROP TABLE IF EXISTS `Metas`;
+
+CREATE TABLE `Metas` (
+  `Codigo` BIGINT NOT NULL AUTO_INCREMENT, 
+  `Fiscal` INTEGER,
+  `Ano` INTEGER,
+  `Trimestre` SMALLINT,
+  `Pontuacao` DECIMAL(8,2),
+  `DataMetas` DATETIME,
+  `Atualizacao` DATETIME,
+  PRIMARY KEY (`Codigo`), 
+  INDEX (`Fiscal`),
+  UNIQUE (`Fiscal`, `Ano`, `Trimestre`)
+) ENGINE=innodb DEFAULT CHARSET=utf8;
+
+DROP TABLE IF EXISTS `FiscaisEquipes`;
+
+CREATE TABLE `FiscaisEquipes` (
+  `Codigo` BIGINT NOT NULL AUTO_INCREMENT, 
+  `Fiscal` INTEGER,
+  `Equipe` BIGINT,
+  `Ano` INTEGER,
+  `Trimestre` SMALLINT,
+  `AnoTrimestre` CHAR(5),
+  `Regra` VARCHAR(100),
+  `Processamento` DATETIME,
+  PRIMARY KEY (`Codigo`), 
+  INDEX (`Equipe`),
+  INDEX (`Fiscal`, `Equipe`),
+  INDEX (`Fiscal`),
+  UNIQUE (`Fiscal`, `Equipe`, `Ano`, `Trimestre`),
+  INDEX (`Fiscal`, `Ano`, `Trimestre`),
+  INDEX (`Equipe`, `Ano`, `Trimestre`),
+  INDEX (`AnoTrimestre`)
+) ENGINE=innodb DEFAULT CHARSET=utf8;
+
+DROP TABLE IF EXISTS `PontosMetas`;
+
+CREATE TABLE `PontosMetas` (
+  `Codigo` BIGINT NOT NULL AUTO_INCREMENT, 
+  `Fiscal` INTEGER,
+  `Equipe` BIGINT,
+  `Trimestre` SMALLINT,
+  `Ano` INTEGER,
+  `Pontos` DECIMAL(8,2),
+  `PontosMalha` DECIMAL(8,2),
+  `MetaFiscal` DECIMAL(8,2),
+  `MetaAnual` DECIMAL(8,2),
+  `Regra` VARCHAR(100),
+  `Atualizacao` DATETIME,
+  PRIMARY KEY (`Codigo`), 
+  INDEX (`Fiscal`),
+  UNIQUE (`Fiscal`, `Trimestre`, `Ano`),
+  INDEX (`Equipe`, `Trimestre`, `Ano`)
+) ENGINE=innodb DEFAULT CHARSET=utf8;
+
+DROP TABLE IF EXISTS `Vinculos`;
+
+CREATE TABLE `Vinculos` (
+  `Codigo` BIGINT NOT NULL AUTO_INCREMENT, 
+  `Fiscal` INTEGER,
+  `Equipe` BIGINT,
+  `Vinculo` VARCHAR(50),
+  `Inicio` DATETIME,
+  `Fim` DATETIME,
+  `Registro` DATETIME,
+  `InicioSupervisao` DATETIME,
+  `FimSupervisao` DATETIME,
+  `Processamento` DATETIME,
+  PRIMARY KEY (`Codigo`), 
+  INDEX (`Equipe`),
+  INDEX (`Fiscal`, `Equipe`),
+  INDEX (`Fiscal`),
+  INDEX (`Fiscal`, `Equipe`, `Inicio`, `Vinculo`),
+  INDEX (`Fiscal`, `Equipe`, `Inicio`)
+) ENGINE=innodb DEFAULT CHARSET=utf8;
+
+DROP TABLE IF EXISTS `Malha`;
+
+CREATE TABLE `Malha` (
+  `Codigo` BIGINT NOT NULL AUTO_INCREMENT, 
+  `Fiscal` INTEGER,
+  `Tipo` INTEGER,
+  `Recibo` VARCHAR(50),
+  `Data` DATETIME,
+  `Processamento` DATETIME,
+  PRIMARY KEY (`Codigo`), 
+  INDEX (`Fiscal`),
+  INDEX (`Fiscal`, `Data`),
+  INDEX (`Fiscal`, `Data`, `Tipo`),  
+  INDEX (`Fiscal`, `Tipo`)
+) ENGINE=innodb DEFAULT CHARSET=utf8;
+
+DROP TABLE IF EXISTS `InfoMalha`;
+
+CREATE TABLE `InfoMalha` (
+  `Codigo` INTEGER NOT NULL AUTO_INCREMENT, 
+  `Tipo` VARCHAR(3),
+  `Valor` DECIMAL(6,2),
+  `Inicio` DATETIME,
+  `Fim` DATETIME,
+  PRIMARY KEY (`Codigo`), 
+  INDEX (`Tipo`),
+  UNIQUE (`Tipo`, `Inicio`)
+) ENGINE=innodb DEFAULT CHARSET=utf8;
+
+DROP TABLE IF EXISTS `PontosFiscais`;
+
+CREATE TABLE `PontosFiscais` (
+  `Codigo` BIGINT UNSIGNED NOT NULL AUTO_INCREMENT, 
+  `TDPF` BIGINT,
+  `Fiscal` INT,
+  `Atualizacao` DATETIME,
+  `Pontos` DECIMAL(8,2),
+  PRIMARY KEY (`Codigo`), 
+  INDEX (`TDPF`),
+  UNIQUE (`TDPF`, `Fiscal`),
+  INDEX (`Fiscal`)
 ) ENGINE=innodb DEFAULT CHARSET=utf8;

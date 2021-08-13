@@ -17,8 +17,7 @@ def geraChave(): #gera a chave (par) do usuário, coloca no dicionário de valid
 def descriptografa(msgCripto):
     global chaveCripto
     try:
-        decrypted = chaveCripto[1].decrypt(msgCripto)#.decode("utf-8")
-        #decrypted = decryptor.decrypt(msgCripto)
+        decrypted = chaveCripto[1].decrypt(msgCripto)#.decode("utf-8")        
         return True, decrypted
     except:
         return False, ""      
@@ -48,7 +47,6 @@ def servidorArquivo():
     # put the socket into listening mode 
     s.listen(5)     
     print("socket is listening")
-      
     #só fica escutando a rede, pega a mensagem e encaminha para tratamento 
     while True:  
         c, addr = s.accept()      
@@ -71,7 +69,7 @@ def servidorArquivo():
             if sucesso:
                 msgRecebida = msgDescripto.decode('utf-8')
                 horaSenha = str(int(int(datetime.now().strftime('%H%M'))/10)).rjust(3, "0") #da hhmm, pega a hhm para complementar a senha
-                print(SENHAIMPORTACAO+horaSenha)
+                #print(SENHAIMPORTACAO+horaSenha)
                 if msgRecebida!="ENVIAARQUIVOS"+SENHAIMPORTACAO+horaSenha and SENHAIMPORTACAO!=None:
                     print(msgRecebida)
                     print("Senha inválida ou requisição estranha")
@@ -92,7 +90,7 @@ def servidorArquivo():
             texto = b""
             nomeArq = ""
             bPrim = False
-            buffer = 20480 #tamanho máximo de cada mensagem (a inicial, criptografada, só tem 400)           
+            buffer = 90000 #tamanho máximo de cada mensagem (a inicial, criptografada, só tem 400)           
             while True:
                 if chaveCripto[2]<datetime.now():
                     print("Chave venceu ...")
@@ -103,7 +101,7 @@ def servidorArquivo():
                 msgRecebida = msgRecebida[5:]
                 tamEfetivo = len(msgRecebida)
                 while tamEfetivo<tam:
-                    msgRecebida = msgRecebida+c.recv(buffer) 
+                    msgRecebida = msgRecebida+c.recv(buffer)
                     tamEfetivo = len(msgRecebida)
                 if bPrim: #primeiro pedaço do arquivo vem criptografado
                     bPrim = False
@@ -129,8 +127,16 @@ def servidorArquivo():
                         #print(msgUtf)
                         if msgUtf[:25]=="ARQUIVONOME1234509876MAPB":
                             nomeArq = msgUtf[25:].strip()
-                            if nomeArq in ["TDPFS", "ALOCACOES", "OPERACOES", "DCCS", "CIENCIASPENDENTES", "INDICADORES"]:
-                                nomeArq = nomeArq+".xlsx"
+                            arquivos = ["TDPFSRPFS", "ALOCACOESRPFS", "OPERACOES", "DCCS", "CIENCIASPENDENTES", "EQUIPES", "PONTUACAOSERPRO", 
+                                        "PONTUACAOSERPRORH","SUPERVISORES", "FISCAIS", "EQUIPESDADOSAD", "MALHAIDF"]
+                            for ano in range(2021, datetime.now().year+1, 1):
+                                arquivos.append("METAS"+str(ano))
+                            if nomeArq in arquivos:
+
+                                if nomeArq=="SUPERVISORES":
+                                    nomeArq = nomeArq + ".csv"
+                                else:
+                                    nomeArq = nomeArq+".xlsx"
                             else:
                                 print("Nome de arquivo inválido ...")
                                 break #arquivo de nome inválido
@@ -150,7 +156,10 @@ def servidorArquivo():
                     except:
                         pass                
                 if bCaptura:
-                    texto = texto + msgRecebida #(pedaços do arquivo vem descriptografados, exceto o primeiro)
+                    try:
+                        texto = texto + msgRecebida #(pedaços do arquivo vem descriptografados, exceto o primeiro)
+                    except:
+                        print("Erro na descompressão do texto")
                     #print("Recebeu um pedaço - "+nomeArq)
                 resposta = "AGUARDANDOMAIS09876MAPB".encode('utf-8')   
                 try:

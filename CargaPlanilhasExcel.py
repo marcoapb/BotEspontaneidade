@@ -94,10 +94,9 @@ def paraData(data):
 def acrescentaZero(numero, n): 
     if numero==None:
         return  ""
-    numero = str(numero)    
-    if len(numero)<n:
-        for i in range(len(numero), n):
-            numero = "0"+numero  
+    if not "STR" in str(type(numero)):
+        numero = str(numero)    
+    numero = numero.rjust(n, "0")
     return numero
 
 def acrescentaZeroCPF(cpf):
@@ -122,7 +121,9 @@ def calculaDVCPF(cpfPar):
     if (restoJ == 0 or restoJ == 1):
        j = 0
     else:
-       j = 11 - restoJ   
+       j = 11 - restoJ  
+    if j==10:
+        j = 0 
     cpf=cpf+str(j)
     # Calculado o segundo DV
     calc2 = lambda i: int(cpf[i]) * (11-i)
@@ -131,29 +132,559 @@ def calculaDVCPF(cpfPar):
     if (restoK == 0 or restoK == 1):
        k = 0
     else:
-       k = 11 - restoK      
+       k = 11 - restoK  
+    if k==10:
+        k = 0    
     cpf = cpf + str(k)
+    if len(cpf)>11:
+        print("Erro CPF:", cpf)
     return cpf
+
+def realizaCargaMalha():
+    global dirExcel, termina, hostSrv
+    print("Acionada a função que realiza a carga do trabalho da malha - ", datetime.now())   
+    if os.path.exists(dirExcel+"REALIZACARGAMALHA.TXT"): #apagamos esse arquivo que serve como indicador de que é para fazer a carga 
+        os.remove(dirExcel+"REALIZACARGAMALHA.TXT")    
+    try:
+        dfMalha = pd.read_excel(dirExcel+"MALHAIDF.xlsx")
+    except:
+        print("Erro no acesso ao arquivo xlsx com o trabalho da malha ou só há arquivos já processados")
+        logging.info("Arquivo Excel MALHAIDF não foi encontrado") 
+        return
+    MYSQL_DATABASE = os.getenv("MYSQL_DATABASE", "databasenormal")
+    MYSQL_USER = os.getenv("MYSQL_USER", "my_user")
+    MYSQL_PASSWORD = os.getenv("MYSQL_PASSWORD", "mypass1234") 
+    try:
+        logging.info("Conectando ao servidor de banco de dados ...")
+        logging.info(MYSQL_DATABASE)
+        logging.info(MYSQL_USER)
+
+        conn = mysql.connector.connect(user=MYSQL_USER, password=MYSQL_PASSWORD,
+                                    host=hostSrv,
+                                    database=MYSQL_DATABASE)
+        logging.info("Conexão efetuada com sucesso ao MySql (CargaMalha)!")                               
+    except mysql.connector.Error as err:
+        print("Erro na conexão com o BD (CargaMalha) - veja Log: "+datetime.now().strftime('%d/%m/%Y %H:%M'))
+        if err.errno == errorcode.ER_ACCESS_DENIED_ERROR:
+            logging.info("Usuário ou senha inválido(s).")
+        elif err.errno == errorcode.ER_BAD_DB_ERROR:
+            logging.error("Banco de dados não existe.")
+        else:
+            logging.error(err)
+            logging.error("Erro na conexão com o Banco de Dados")
+        return           
+    cursor = conn.cursor(buffered=True) 
+    start = time.time() 
+    cursor.execute("Select Max(Data) from Malha")
+    linha = cursor.fetchone()
+    dataAnt = None
+    if linha:
+        dataAnt = linha[0]
+    if dataAnt==None:
+        dataAnt = datetime.strptime("01/01/2000", "%d/%m/%Y")
+    insertMalha = """Insert Into Malha (Fiscal, Tipo, Recibo, Data, Processamento)
+                     Values (%s, %s, %s, %s, %s)"""
+    for linha in range(dfMalha.shape[0]): #percorre a planilha com os dados da malha 
+        cpf = getAlgarismos(dfMalha.at[linha, 'CPF'] )
+        data = paraData(dfMalha.at[linha, 'Data'])
+        if data<=dataAnt: #não incluímos períodos já incluídos
+            continue
+        recibo = dfMalha.at[linha, 'recibo']
+        tipoC = dfMalha.at[linha, 'tipo'].strip()
+        cursor.execute("Select Codigo From InfoMalha Where Tipo=%s and Inicio<=%s and Fim>=%s", (tipoC, data, data))
+        linhaInfo = cursor.fetchone()
+        if linhaInfo==None:
+            print("Tipo "+tipoC+" não foi encontrado")
+            continue
+        tipo = linhaInfo[0]
+        cursor.execute("Select Codigo From Fiscais Where CPF=%s", (cpf, ))
+        linhaFiscal = cursor.fetchone()     
+        if not linhaFiscal: #não achamos o fiscal
+            nomeFiscal = dfMalha.at[linha, 'nome'].strip()
+            cursor.execute("Insert Into Fiscais (CPF, Nome) Values (%s, %s)", (cpf, nomeFiscal))
+            cursor.execute("Select Codigo From Fiscais Where CPF=%s", (cpf,))
+            linhaFiscal = cursor.fetchone()
+            #totalNE+=1
+        chaveFiscal = linhaFiscal[0]
+        dados = (chaveFiscal, tipo, recibo, data, datetime.now())
+        cursor.execute(insertMalha, dados)
+    try:
+        conn.commit()
+        print("Dados da malha trabalhada foram carregados com sucesso!")
+    except:
+        conn.rollback()
+        print("Erro ao atualizar os dados da malha trabalhada")
+    print("Tempo decorrido: "+str(time.time()-start)[:8]+" segundos")       
+    return        
+
+def realizaCargaVinculos():
+    global dirExcel, termina, hostSrv
+    print("Acionada a função que realiza a carga dos vínculos - ", datetime.now())   
+    if os.path.exists(dirExcel+"REALIZACARGAVINCULOS.TXT"): #apagamos esse arquivo que serve como indicador de que é para fazer a carga dos vínculos imediatamente
+        os.remove(dirExcel+"REALIZACARGAVINCULOS.TXT")    
+    try:
+        dfVinculos = pd.read_excel(dirExcel+"VINCULOS.xlsx")
+    except:
+        print("Erro no acesso ao arquivo xlsx com os vínculos ou só há arquivos já processados")
+        logging.info("Arquivo Excel VINCULOS não foi encontrado") 
+        return
+    MYSQL_DATABASE = os.getenv("MYSQL_DATABASE", "databasenormal")
+    MYSQL_USER = os.getenv("MYSQL_USER", "my_user")
+    MYSQL_PASSWORD = os.getenv("MYSQL_PASSWORD", "mypass1234") 
+    try:
+        logging.info("Conectando ao servidor de banco de dados ...")
+        logging.info(MYSQL_DATABASE)
+        logging.info(MYSQL_USER)
+
+        conn = mysql.connector.connect(user=MYSQL_USER, password=MYSQL_PASSWORD,
+                                    host=hostSrv,
+                                    database=MYSQL_DATABASE)
+        logging.info("Conexão efetuada com sucesso ao MySql (CargaVinculos)!")                               
+    except mysql.connector.Error as err:
+        print("Erro na conexão com o BD (CargaVinculos) - veja Log: "+datetime.now().strftime('%d/%m/%Y %H:%M'))
+        if err.errno == errorcode.ER_ACCESS_DENIED_ERROR:
+            logging.info("Usuário ou senha inválido(s).")
+        elif err.errno == errorcode.ER_BAD_DB_ERROR:
+            logging.error("Banco de dados não existe.")
+        else:
+            logging.error(err)
+            logging.error("Erro na conexão com o Banco de Dados")
+        return   
+    cursor = conn.cursor(buffered=True) 
+    start = time.time() 
+    dictEquipes = {}
+    cursor.execute("Select Distinctrow Codigo, Equipe From Equipes")
+    linhasEquipes = cursor.fetchall()
+    for linhaEquipe in linhasEquipes: #adicionamos todas as equipes a um dicionário para não ter que fazer pesquisas repetidas (não fazemos isso com os fiscais pq é uma tabela maior)
+        equipe = linhaEquipe[1].strip()
+        dictEquipes[equipe] = linhaEquipe[0]
+    insertVinculos = """Insert Into Vinculos (Fiscal, Equipe, Vinculo, Inicio, Fim, Registro, InicioSupervisao, FimSupervisao, Processamento)
+                        Values (%s, %s, %s, %s, %s, %s, %s, %s, %s)"""
+    cursor.execute("Delete From Vinculos Where Codigo>=0") #até definir uma forma de apenas atualizar, apagamos tudo (vai depender do commit com tudo abaixo)
+    for linha in range(dfVinculos.shape[0]): #percorre os vínculos na planilha Excel carregada  
+        cpf = getAlgarismos(dfVinculos.at[linha, 'CPF'] )
+        equipe = getAlgarismos(dfVinculos.at[linha, 'Equipe'])
+        inicio = paraData(dfVinculos.at[linha, 'Inicio'])
+        fim = paraData(dfVinculos.at[linha, 'Fim'])
+        registro = paraData(dfVinculos.at[linha, 'Registro'])
+        inicioSupervisao = paraData(dfVinculos.at[linha, 'Inicio_Supervisao'])
+        fimSupervisao = paraData(dfVinculos.at[linha, 'Fim_Supervisao'])
+        vinculo = dfVinculos.at[linha, 'vinculo']
+        cursor.execute("Select Codigo From Fiscais Where CPF=%s", (cpf, ))
+        linhaFiscal = cursor.fetchone()
+        if not linhaFiscal:
+            continue
+        chaveFiscal = linhaFiscal[0]
+        chaveEquipe = dictEquipes.get(equipe, -1)
+        if chaveEquipe==-1: #equipe não existe
+            continue
+        dados = (chaveFiscal, chaveEquipe, vinculo, inicio, fim, registro, inicioSupervisao, fimSupervisao, datetime.now())
+        cursor.execute(insertVinculos, dados)
+    try:
+        conn.commit()
+        print("Vínculos carregados com sucesso!")
+    except:
+        conn.rollback()
+        print("Erro ao atualizar os vínculos")
+    print("Tempo decorrido: "+str(time.time()-start)[:8]+" segundos")       
+    return
+
+def realizaCargaMetas():
+    global dirExcel, termina, hostSrv
+    print("Acionada a função que realiza a carga das metas - ", datetime.now())   
+    if os.path.exists(dirExcel+"CARGAMETAS.TXT"): #a existência deste arquivo indica que é para fazer a atualização das informações das equipes (info RD)
+        os.remove(dirExcel+"CARGAMETAS.TXT")  
+    else: #uma vez por mês
+        if datetime.now().day>7: #toda primeira quarta feira do mês
+            return
+    MYSQL_DATABASE = os.getenv("MYSQL_DATABASE", "databasenormal")
+    MYSQL_USER = os.getenv("MYSQL_USER", "my_user")
+    MYSQL_PASSWORD = os.getenv("MYSQL_PASSWORD", "mypass1234") 
+    try:
+        logging.info("Conectando ao servidor de banco de dados ...")
+        logging.info(MYSQL_DATABASE)
+        logging.info(MYSQL_USER)
+
+        conn = mysql.connector.connect(user=MYSQL_USER, password=MYSQL_PASSWORD,
+                                    host=hostSrv,
+                                    database=MYSQL_DATABASE)
+        logging.info("Conexão efetuada com sucesso ao MySql (CargaMetas)!")                               
+    except mysql.connector.Error as err:
+        print("Erro na conexão com o BD (CargaMetas) - veja Log: "+datetime.now().strftime('%d/%m/%Y %H:%M'))
+        if err.errno == errorcode.ER_ACCESS_DENIED_ERROR:
+            logging.info("Usuário ou senha inválido(s).")
+        elif err.errno == errorcode.ER_BAD_DB_ERROR:
+            logging.error("Banco de dados não existe.")
+        else:
+            logging.error(err)
+            logging.error("Erro na conexão com o Banco de Dados")
+        return   
+    cursor = conn.cursor(buffered=True) 
+    start = time.time()   
+    selectMeta = "Select Codigo, Pontuacao, DataMetas From Metas Where Fiscal=%s and Ano=%s and Trimestre=%s"
+    insereMeta = "Insert Into Metas (Fiscal, Ano, Trimestre, Pontuacao, DataMetas, Atualizacao) Values (%s, %s, %s, %s, %s, %s)" 
+    atualizaMeta = "Update Metas Set Pontuacao=%s, DataMetas=%s, Atualizacao=%s Where Codigo=%s"
+    totalAtualizado = 0
+    totalIncluido = 0
+    #totalNE = 0
+    for ano in range(2021, datetime.now().year+1, 1): #ano de 2021 em diante
+        nomeArq = "METAS"+str(ano)
+        try:
+            dfMetas = pd.read_excel(dirExcel+nomeArq+".xlsx")
+            print("Planilha do ano de "+str(ano)+" foi carregada")
+        except:
+            print("Não foi possível abrir o arquivo "+nomeArq+".xlsx. Prosseguindo ...")
+            continue
+        #print(dfMetas.dtypes)
+        #dfMetas['Sit Fiscal'] = ""
+        dfMetas['Sit Equipe'] = ""
+        dfMetas['CPF']=dfMetas['cpf_auditor_sem_dv'].astype(str).map(calculaDVCPF)   
+        for linha in range(dfMetas.shape[0]): #percorre os fiscais e respectivas metas na planilha Excel carregada
+            if (linha+1)%1000==0:
+                print("Processando Linha nº "+str(linha+1)+" de "+str(dfMetas.shape[0]))            
+            cpfFiscal = dfMetas.at[linha, 'CPF'] 
+            cursor.execute("Select Codigo From Fiscais Where CPF=%s", (cpfFiscal,))
+            rowFiscal = cursor.fetchone()
+            if not rowFiscal:
+                nomeFiscal = dfMetas.at[linha, 'nome_auditor'].strip()
+                cursor.execute("Insert Into Fiscais (CPF, Nome) Values (%s, %s)", (cpfFiscal, nomeFiscal))
+                cursor.execute("Select Codigo From Fiscais Where CPF=%s", (cpfFiscal,))
+                rowFiscal = cursor.fetchone()
+            chaveFiscal = rowFiscal[0]            
+            for col in range(4):
+                trimestre = "meta_"+str(col+1)+"_trim"
+                pontuacao = float(dfMetas.at[linha, trimestre])
+                if pontuacao==np.nan or pontuacao==None or pd.isna(pontuacao):
+                    pontuacao = 0
+                dataMetas = paraData(dfMetas.at[linha, "Data_Metas"])               
+                cursor.execute(selectMeta, (chaveFiscal, ano, col+1)) 
+                rowMeta = cursor.fetchone()
+                if not rowMeta: #devemos incluir a meta
+                    cursor.execute(insereMeta, (chaveFiscal, ano, col+1, pontuacao, dataMetas, datetime.now()))   
+                    totalIncluido+=1   
+                else:
+                    if rowMeta[1]!=pontuacao or rowMeta[2]==None or rowMeta[2]!=dataMetas: #devemos atualizar a meta que mudou algum de seus itens (pontuação ou atualização)
+                        cursor.execute(atualizaMeta, (pontuacao, dataMetas, datetime.now(), rowMeta[0]))
+                        totalAtualizado+=1
+                    else: #pontuação e data são os mesmos - NÃO atualizamos o registro
+                        continue
+            conn.commit()
+        try: #após processar o arquivo (planilha), salvamos o arquivo com informações sobre processamento e apagamos o antigo
+            dfMetas.to_excel(dirExcel+nomeArq+"_Processado_"+datetime.now().strftime('%Y-%m-%d')+".xlsx")
+            os.remove(dirExcel+nomeArq+".xlsx")  
+        except:
+            print("Erro ao salvar (processado) ou apagar o arquivo "+nomeArq+".xlsx")     
+            logging.info("Erro ao salvar (processado) ou apagar o arquivo "+nomeArq+".xlsx")  
+    print("Carga das Metas: ")
+    print("Registros Incluídos:", totalIncluido)
+    logging.info("Registros Incluídos:"+str(totalIncluido))
+    print("Registros Atualizados:", totalAtualizado)
+    logging.info("Registros Atualizados:"+str(totalAtualizado))
+    #print("CPFs NÃO Encontrados:", totalNE)
+    #logging.info("CPFs NÃO Encontrados:"+str(totalNE))
+    print("Tempo de processamento: "+str(time.time()-start)[:8])
+    conn.close()
+    return
+      
+def realizaCargaPontosSerpro():
+    global dirExcel, termina, hostSrv, hora5
+    print("Acionada a função que realiza a carga de pontos calculados pela rotina do Serpro - ", datetime.now())
+    if os.path.exists(dirExcel+"REALIZACARGAPONTOS.TXT"): #apagamos esse arquivo que serve como indicador de que é para fazer a carga dos pontos imediatamente
+        os.remove(dirExcel+"REALIZACARGAPONTOS.TXT")    
+    try:
+        dfPontos = pd.read_excel(dirExcel+"PONTUACAOSERPRO.xlsx")
+        bErro = False
+        print(dfPontos.head())        
+    except:
+        bErro = True
+        print("Erro no acesso ao arquivo xlsx com os pontos calculados pelo Serpro ou só há arquivos já processados; outra tentativa será feita às "+hora5+" (PontosSerpro)")
+        logging.info("Arquivo Excel PONTUACAOSERPRO não foi encontrado; outra tentativa será feita às "+hora5) 
+
+    MYSQL_DATABASE = os.getenv("MYSQL_DATABASE", "databasenormal")
+    MYSQL_USER = os.getenv("MYSQL_USER", "my_user")
+    MYSQL_PASSWORD = os.getenv("MYSQL_PASSWORD", "mypass1234") 
+    try:
+        logging.info("Conectando ao servidor de banco de dados ...")
+        logging.info(MYSQL_DATABASE)
+        logging.info(MYSQL_USER)
+
+        conn = mysql.connector.connect(user=MYSQL_USER, password=MYSQL_PASSWORD,
+                                    host=hostSrv,
+                                    database=MYSQL_DATABASE)
+        logging.info("Conexão efetuada com sucesso ao MySql (PontosSerpro)!")                               
+    except mysql.connector.Error as err:
+        print("Erro na conexão com o BD (PontosSerpro) - veja Log: "+datetime.now().strftime('%d/%m/%Y %H:%M'))
+        if err.errno == errorcode.ER_ACCESS_DENIED_ERROR:
+            logging.info("Usuário ou senha inválido(s).")
+        elif err.errno == errorcode.ER_BAD_DB_ERROR:
+            logging.error("Banco de dados não existe.")
+        else:
+            logging.error(err)
+            logging.error("Erro na conexão com o Banco de Dados")
+        return
+    cursor = conn.cursor(buffered=True)        
+    if not bErro:
+        print("Realizando carga dos PontosSerpro em "+datetime.now().strftime("%d/%m/%Y %H:%M"))
+        start = time.time()
+        dfPontos['atualizacao'] = pd.to_datetime(dfPontos['atualizacao'])
+        dfPontos.sort_values(by=["atualizacao", "RPF", "Sequencia"], ascending=[False, True, True])
+        consultaTDPF = "Select Codigo, Pontos, DataPontos From TDPFS Where Numero=%s"
+        tdpfAuxAnt = ""
+        totalSemPontos = 0
+        totalFatores = 0
+        totalNE = 0
+        totalTdpfsComFatores = 0
+        for linha in range(dfPontos.shape[0]): #percorre os TDPFs e respectivos fatores e pontos na planilha Excel
+            if (linha+1)%1000==0:
+                print("Processando Linha nº "+str(linha+1)+" de "+str(dfPontos.shape[0]))            
+            tdpfAux = dfPontos.iat[linha,0]    
+            if tdpfAux==tdpfAuxAnt: #não repetimos TDPFs, já que as atualizações mais recentes vem primeiro no dataframe
+                continue
+            tdpfAuxAnt = tdpfAux
+            tdpf = getAlgarismos(tdpfAux)
+            cursor.execute(consultaTDPF, (tdpf,))
+            linhaTabela = cursor.fetchone()
+            if not linhaTabela:
+                print("TDPF "+tdpfAux+" não encontrado")
+                totalNE+=1
+                continue
+            chaveTdpf = linhaTabela[0]
+            pontosTabela = linhaTabela[1]               
+            descricao = dfPontos.iat[linha,2]  
+            atualizacao = paraData(dfPontos.iat[linha, 3])        
+            if "não se aplica".upper() in descricao.upper() or "nao se aplica".upper() in descricao.upper():
+                totalSemPontos+=1
+                if pontosTabela!=0 or pontosTabela==None:
+                    cursor.execute("Update TDPFS Set Pontos=0, DataPontos=%s Where Codigo=%s", (atualizacao, chaveTdpf)) #este tipo de TDPF não vai ter fatores
+                    cursor.execute("Delete From Fatores Where TDPF=%s", (chaveTdpf,))
+                    conn.commit()
+                continue        
+            if linhaTabela[2]!=None: #já houve registro de data dos pontos
+                if linhaTabela[2].date()<atualizacao.date(): #a data dos pontos é mais antiga, atualizamos
+                    cursor.execute("Delete From Fatores Where TDPF=%s", (chaveTdpf,)) #apagamos os fatores antigos porventura existentes deste TDPF 
+                else:
+                    continue #TDPF já foi atualizado na mesma data ou mais recentemente - não precisamos atualizar   
+            dfFatores = dfPontos.loc[dfPontos['RPF']==tdpfAux] #filtramos somente o TDPF para obter todos os fatores e incluí-los na tabela de fatores
+            sequencia = 0
+            for linha2 in range(dfFatores.shape[0]):
+                if paraData(dfFatores.iat[linha2, 3])<atualizacao or int(dfFatores.iat[linha2, 1])<=sequencia: #passamos para uma atualização mais antiga do mesmo TDPF - desprezamos 
+                    break
+                sequencia = int(dfFatores.iat[linha2, 1])
+                descricao = str(dfFatores.iat[linha2, 2].strip())
+                pontos = 0 if pd.isna(dfFatores.iat[linha2, 4]) else float(dfFatores.iat[linha2, 4])
+                elementos = 0 if pd.isna(dfFatores.iat[linha2, 5]) else float(dfFatores.iat[linha2, 5])
+                percentual = 0 if pd.isna(dfFatores.iat[linha2, 6]) else float(dfFatores.iat[linha2, 6])
+                percentual = percentual * 100
+                totalFatores+=1
+                cursor.execute("Insert Into Fatores (TDPF, Sequencia, Descricao, Elementos, Percentual, Pontos) Values (%s, %s, %s, %s, %s, %s)",\
+                            (chaveTdpf, sequencia, descricao, elementos, percentual, pontos))
+            
+            cursor.execute("Update TDPFS Set Pontos=%s, DataPontos=%s Where Codigo=%s", (pontos, atualizacao, chaveTdpf)) #este tipo de TDPF não vai ter fatores   
+            conn.commit()        
+            totalTdpfsComFatores+=1         
+        print("Pontos do Serpro atualizados com sucesso.")
+        print("Total de Fatores Incluídos: ", totalFatores)
+        print("Total de TDPFs Com Fatores Incluídos: ", totalTdpfsComFatores)
+        print("Total de TDPFs sem Pontos: ", totalSemPontos)
+        print("Total de TPPFs NÃO Encontrados: ", totalNE)
+        logging.info("Pontos do Serpro atualizados com sucesso.")
+        logging.info("Total de Fatores Incluídos: " +str(totalFatores))
+        logging.info("Total de TDPFs Com Fatores Incluídos: "+str(totalTdpfsComFatores))
+        logging.info("Total de TDPFs sem Pontos: "+str(totalSemPontos))
+        logging.info("Total de TPPFs NÃO Encontrados: "+str(totalNE))
+        end = time.time()
+        print("Carga dos pontos realizada em "+str(end-start)[:10]+" segundos")
+        try:
+            os.rename(dirExcel+"PONTUACAOSERPRO.xlsx", dirExcel+"PONTUACAOSERPRO_Processado_"+datetime.now().strftime('%Y-%m-%d')+".xlsx")
+            logging.info("Arquivo de Pontuação foi renomeado")       
+        except:
+            print("Erro ao tentar renomear o arquivo de pontuação")            
+            logging.error("Erro ao tentar renomear o arquivo de pontuação")    
+    print("Iniciando a carga dos pontos de cada fiscal - TDPFs em andamento ...") 
+    start = time.time()    
+    try:
+        dfPontosFiscal = pd.read_excel(dirExcel+"PONTUACAOSERPRORH.xlsx")
+        print(dfPontosFiscal.head())         
+    except:
+        print("Erro no acesso ao arquivo xlsx com os pontos de cada fiscal calculados pelo Serpro ou só há arquivos já processados; outra tentativa será feita às "+hora5+" (PontosSerpro)")
+        logging.info("Arquivo Excel PONTUACAOSERPRORH não foi encontrado; outra tentativa será feita às "+hora5) 
+        return    
+    consultaTDPF = "Select Codigo From TDPFS Where Numero=%s and Encerramento Is Null"  #apenas TDPFs em andamento  
+    consultaFiscal = "Select Codigo From Fiscais Where CPF=%s"    
+    fiscais = {}
+    tdpfsProc = set()
+    totalAtu = 0
+    totalInc = 0
+    for linha in range(dfPontosFiscal.shape[0]): #percorre os TDPFs e respectivos pontos dos fiscais na planilha Excel
+        if (linha+1)%1000==0:
+            print("Processando Linha nº "+str(linha+1)+" de "+str(dfPontosFiscal.shape[0]))            
+        tdpfAux = dfPontosFiscal.at[linha,"RPF"]    
+        tdpfAuxAnt = tdpfAux
+        tdpf = getAlgarismos(tdpfAux)
+        cpfAux = dfPontosFiscal.at[linha, "CPF"]
+        cpf = getAlgarismos(cpfAux)
+        if (tdpf, cpf) in tdpfsProc: #como a ordem de atualização é descendente, não processamos o mesmo tdpf/cpf outra vez, pois a pontuação é mais antiga
+            continue
+        cursor.execute(consultaTDPF, (tdpf,))
+        linhaTabela = cursor.fetchone()
+        if not linhaTabela:
+            continue 
+        tdpfsProc.add((tdpf, cpf))        
+        chaveTdpf = linhaTabela[0]  
+        if not cpf in fiscais:
+            cursor.execute(consultaFiscal, (cpf, ))
+            linhaTabela = cursor.fetchone()
+            if not linhaTabela:
+                print("Não foi encontrado o fiscal com o CPF "+cpfAux)
+                continue
+            chaveFiscal = linhaTabela[0]
+            fiscais[cpf] = chaveFiscal
+        else:
+            chaveFiscal = fiscais[cpf]
+        pontos = float(dfPontosFiscal.at[linha, "pontos"])
+        atualizacao = paraData(dfPontosFiscal.at[linha, "Data_Atu"])
+        cursor.execute("Select Codigo, Atualizacao, Pontos From PontosFiscais Where TDPF=%s and Fiscal=%s", (chaveTdpf, chaveFiscal))
+        linhaTabela = cursor.fetchone()
+        if linhaTabela:
+            if linhaTabela[1]>atualizacao: #registro na tabela é mais recente
+                continue
+            if linhaTabela[2]!=pontos: # só atualizamos se houver mudado a pontuação
+                cursor.execute("Update PontosFiscais Set Atualizacao=%s, Pontos=%s Where Codigo=%s", (atualizacao, pontos, linhaTabela[0]))
+                totalAtu+=1
+            else:
+                continue
+        else:
+            cursor.execute("Insert Into PontosFiscais (TDPF, Fiscal, Pontos, Atualizacao) Values (%s, %s, %s, %s)", (chaveTdpf, chaveFiscal, pontos, atualizacao))
+            totalInc+=1
+        conn.commit()
+    conn.close()      
+    print("Total de Registros com Pontos Incluídos para Fiscais: ", totalInc)
+    print("Total de Registros com Pontos Atualizados para Fiscais: ", totalAtu)
+    logging.info("Total de Registros com Pontos Incluídos para Fiscais: "+str(totalInc))
+    logging.info("Total de Registros com Pontos Atualizados para Fiscais: "+str(totalAtu))
+    end = time.time()
+    print("Carga dos pontos de cada fiscal (TDPFs em andamento) realizada em "+str(end-start)[:10]+" segundos")
+    try:
+        os.rename(dirExcel+"PONTUACAOSERPRORH.xlsx", dirExcel+"PONTUACAOSERPRORH_Processado_"+datetime.now().strftime('%Y-%m-%d')+".xlsx")
+        logging.info("Arquivo de Pontuação RH foi renomeado")
+    except:
+        print("Erro ao tentar renomear o arquivo de pontuação RH")            
+        logging.error("Erro ao tentar renomear o arquivo de pontuação RH")     
+    return
+
+def atualizaEquipesDadosAd():
+    global dirExcel, termina, hostSrv
+    print("Acionada a função que realiza a carga de dados adicionais das equipes - ", datetime.now())
+    logging.info("Acionada a função que realiza a carga de dados adicionais das equipes - "+str(datetime.now()))
+    if os.path.exists(dirExcel+"CARGADADOSAD.TXT"): #apagamos esse arquivo que serve como indicador de que é para fazer a carga dos dados imediatamente
+        os.remove(dirExcel+"CARGADADOSAD.TXT")    
+    try:
+        dfEquipes = pd.read_excel(dirExcel+"EQUIPESDADOSAD.xlsx", dtype={'Equipe': object, 'grse_dt_criacao': datetime, 'grse_dt_extincao': datetime})
+    except:
+        print("Erro no acesso aos arquivo EQUIPESDADOSAD.xlsx")
+        logging.info("Arquivo Excel EQUIPESDADOSAD.xlsx não foi encontrado") 
+        return
+    dfEquipes['dt_criacao'] = dfEquipes['grse_dt_criacao'].map(pd.Timestamp)
+    dfEquipes['dt_extincao'] = dfEquipes['grse_dt_extincao'].map(pd.Timestamp)
+    print(dfEquipes.dtypes)
+    MYSQL_DATABASE = os.getenv("MYSQL_DATABASE", "databasenormal")
+    MYSQL_USER = os.getenv("MYSQL_USER", "my_user")
+    MYSQL_PASSWORD = os.getenv("MYSQL_PASSWORD", "mypass1234") 
+    try:
+        logging.info("Conectando ao servidor de banco de dados ...")
+        logging.info(MYSQL_DATABASE)
+        logging.info(MYSQL_USER)
+
+        conn = mysql.connector.connect(user=MYSQL_USER, password=MYSQL_PASSWORD,
+                                    host=hostSrv,
+                                    database=MYSQL_DATABASE)
+        logging.info("Conexão efetuada com sucesso ao MySql!")                               
+    except mysql.connector.Error as err:
+        print("Erro na conexão com o BD atualizaEquipesDadosAd - veja Log: "+datetime.now().strftime('%d/%m/%Y %H:%M'))
+        if err.errno == errorcode.ER_ACCESS_DENIED_ERROR:
+            logging.info("Usuário ou senha inválido(s).")
+        elif err.errno == errorcode.ER_BAD_DB_ERROR:
+            logging.error("Banco de dados não existe.")
+        else:
+            logging.error(err)
+            logging.error("Erro na conexão com o Banco de Dados")
+        return 
+    cursor = conn.cursor(buffered=True)
+    totalInc = 0
+    totalAtu = 0
+    totalDesp = 0
+    start = time.time()
+    for linha in range(dfEquipes.shape[0]):
+        equipe = getAlgarismos(dfEquipes.at[linha, "Equipe"].strip())
+        sistema = int(dfEquipes.at[linha, "grse_sgrp_sist_cd"])  
+        malha = dfEquipes.at[linha, "grse_in_ativ_malha"]
+        criacao = paraData(dfEquipes.at[linha, "dt_criacao"])       
+        extincao = paraData(dfEquipes.at[linha, "dt_extincao"])
+        if extincao!=None:
+            extinta = 'S'
+        else:
+            extinta = 'N'   
+        tipoEquipe = int(dfEquipes.at[linha, "grse_sgrp_tgtr_cd"])
+        descTipoEquipe = dfEquipes.at[linha, "Tipo Equipe"].strip()
+        cursor.execute("Select Codigo From TipoEquipes Where Tipo=%s", (tipoEquipe, ))
+        rowTipoEquipe = cursor.fetchone()
+        if not rowTipoEquipe:
+            cursor.execute("Insert Into TipoEquipes (Tipo, Descricao) Values (%s, %s)", (tipoEquipe, descTipoEquipe))
+            cursor.execute("Select Codigo From TipoEquipes Where Tipo=%s", (tipoEquipe, ))
+            rowTipoEquipe = cursor.fetchone()   
+        codTipoEquipe = rowTipoEquipe[0]         
+        cursor.execute("Select Codigo From Equipes Where Equipe=%s", (equipe,))
+        rowEquipe = cursor.fetchone()
+        if not rowEquipe:
+            if sistema!=6: #se não for da fiscalização, vamos para a próxima equipe
+                print("Equipe "+equipe+", sistema "+str(sistema)+" ("+extinta+"), não existe na tabela de Equipes")
+                totalDesp+=1
+                continue #equipe não existe
+            #senão, incluímos a equipe com os dados disponíveis
+            nomeEquipe = dfEquipes.at[linha, "grse_nm"]
+            cursor.execute("Insert Into Equipes (Equipe, Nome, Malha, Criacao, Extincao, Sistema, Tipo) Values (%s, %s, %s, %s, %s, %s, %s)", (equipe, nomeEquipe, malha, criacao, extincao, sistema, codTipoEquipe))
+            totalInc+=1
+        else:
+            cursor.execute("Update Equipes Set Malha=%s, Criacao=%s, Extincao=%s, Sistema=%s, Tipo=%s Where Codigo=%s", (malha, criacao, extincao, sistema, codTipoEquipe, rowEquipe[0]))
+            totalAtu+=1            
+        conn.commit()
+    print(str(totalAtu)+" equipes atualizadas")
+    logging.info(str(totalAtu)+" equipes atualizadas")
+    print(str(totalInc)+" equipes incluídas")
+    logging.info(str(totalInc)+" equipes incluídas")
+    print(str(totalDesp)+" equipes desprezadas")
+    logging.info(str(totalDesp)+" equipes desprezadas")
+    print("Tempo de processamento: "+str(time.time()-start)[:8]+" segundos")
+    conn.close()
+    return
 
 def realizaCargaDados():
     global dirExcel, termina, hostSrv, hora1
-    print("Acionada a função que realiza a carga de dados do Ação Fiscal/DW - TDPFS.")
+    print("Acionada a função que realiza a carga de dados do Ação Fiscal/DW - TDPFS ", datetime.now())
     if os.path.exists(dirExcel+"REALIZACARGA.TXT"): #apagamos esse arquivo que serve como indicador de que é para fazer a carga dos dados imediatamente
         os.remove(dirExcel+"REALIZACARGA.TXT")    
     try:
-        dfTdpf = pd.read_excel(dirExcel+"TDPFS.xlsx", dtype={'Porte':object, 'Acompanhamento':object, 'Receita Programada(Tributo) Código': int})
-        dfAloc = pd.read_excel(dirExcel+"ALOCACOES.xlsx")
-        dfFiscais = pd.read_excel(dirExcel+"Fiscais.xlsx")
-        dfSupervisores = pd.read_csv(dirExcel+"Supervisores.CSV", sep=";", encoding = "ISO-8859-1")
+        dfTdpf = pd.read_excel(dirExcel+"TDPFSRPFS.xlsx", dtype={'Porte':object, 'Acompanhamento':object, 'Receita Programada(Tributo) Código': int})
+        print("Carregou TDPFSRPFS.xlsx")
+        dfAloc = pd.read_excel(dirExcel+"ALOCACOESRPFS.xlsx")
+        print("Carregou ALOCACOSRPFS.xlsx")
+        dfFiscais = pd.read_excel(dirExcel+"FISCAIS.xlsx")
+        print("Carregou FISCAIS.xlsx")
+        dfSupervisores = pd.read_csv(dirExcel+"SUPERVISORES.csv", sep=";", encoding = "ISO-8859-1")
+        print("Carregou SUPERVISORES.csv")
         dfOperacoes = pd.read_excel(dirExcel+"OPERACOES.xlsx")
+        print("Carregou OPERACOES.xlsx")
+        dfEquipes = pd.read_excel(dirExcel+"EQUIPES.xlsx", dtype={'Qtde RH Equipe Fiscal': int})
+        print("Carregou EQUIPES.xlsx")
     except:
         print("Erro no acesso aos arquivos xlsx e/ou csv ou só há arquivos já processados; outra tentativa será feita às "+hora1)
-        logging.info("Arquivos Excel não foram encontrados (um ou mais) - TDPFs.xlsx, ALOCACOES.xlsx, Fiscais.xlsx, OPERACOES.xlsx ou Supervisores.CSV; outra tentativa será feita às "+hora1) 
+        logging.info("Arquivos Excel não foram encontrados (um ou mais) - TDPFSRPFS.xlsx, ALOCACOESRPFS.xlsx, Fiscais.xlsx, OPERACOES.xlsx ou Supervisores.CSV; outra tentativa será feita às "+hora1) 
         return
     dfFiscais['CPF']=dfFiscais['CPF'].astype(str).map(acrescentaZeroCPF) 
     dfAloc['Ind. RH Superv. Gr. Fiscal RPF'] = dfAloc['Ind. RH Superv. Gr. Fiscal RPF'].astype(str)
     dfSupervisores['CPF']=dfSupervisores['R028_RH_PF_NR'].astype(str).map(calculaDVCPF)
-    dfSupervisores['Grupo Fiscal']=dfSupervisores.apply(montaGrupoFiscal, axis=1)
+    dfSupervisores['Grupo Fiscal']=dfSupervisores.apply(montaGrupoFiscal, axis=1) 
+    dfEquipes['Equipe Fiscal Código']=dfEquipes['Equipe Fiscal Código'].astype(str)
     #dfTdpf['Porte']=dfTdpf['Porte'].astype(str)
     #dfTdpf['Acompanhamento']=dfTdpf['Acompanhamento'].astype(str)
     #MYSQL_ROOT_PASSWORD = os.getenv("MYSQL_ROOT_PASSWORD", "EXAMPLE")
@@ -162,8 +693,8 @@ def realizaCargaDados():
     MYSQL_PASSWORD = os.getenv("MYSQL_PASSWORD", "mypass1234") 
     #print(dfTdpf.head())
     #print(dfTdpf.dtypes)
-    #print(dfAloc.head())
-    #print(dfAloc.dtypes)
+    #print(dfSupervisores.head())
+    #print(dfSupervisores.dtypes)
     #return
     try:
         logging.info("Conectando ao servidor de banco de dados ...")
@@ -195,16 +726,16 @@ def realizaCargaDados():
     #    cursor.execute("Delete from AvisosVencimento")
     #    cursor.execute("Delete from CadastroTDPFs")
     #    conn.commit()
-
-
     selectFisc = "Select Codigo, CPF, Nome from Fiscais Where CPF=%s"
     insereFisc = "Insert Into Fiscais (CPF, Nome) Values (%s, %s)"
 
     selectTDPF = "Select Codigo, Grupo, Encerramento, Vencimento, SemExame from TDPFS Where Numero=%s"
-    insereTDPF = "Insert Into TDPFS (Numero, Grupo, Emissao, Nome, NI, Vencimento, Porte, Acompanhamento, Encerramento, CasoEspecial, SemExame, Pontos, DataPontos) Values (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)"
+    insereTDPF = "Insert Into TDPFS (Numero, Grupo, Emissao, Nome, NI, Vencimento, Porte, Acompanhamento, Encerramento, CasoEspecial, SemExame, Pontos, DataPontos, TDPFPrincipal, Tipo, FAPE) Values (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)"
     atualizaTDPFEnc = "Update TDPFS Set Encerramento=%s, SemExame=%s Where Codigo=%s"
     atualizaTDPFEncSemExame = "Update TDPFS Set Encerramento=%s, SemExame=%s, Pontos=0, DataPontos=%s Where Codigo=%s"
     atualizaTDPFGrupoVencto = "Update TDPFS Set Grupo=%s, Vencimento=%s Where Codigo=%s"
+
+    pesquisaTDPFPrincipal ="Select Codigo from TDPFS Where Numero=%s"
 
     selectAloc = "Select Codigo, Desalocacao, Supervisor from Alocacoes Where TDPF=%s and Fiscal=%s"
     insereAloc = "Insert Into Alocacoes (TDPF, Fiscal, Alocacao, Supervisor, Horas) Values (%s, %s, %s, %s, %s)"
@@ -234,7 +765,7 @@ def realizaCargaDados():
     selectCaso = "Select Codigo from CasosEspeciais Where CasoEspecial=%s"
     insereCaso = "Insert Into CasosEspeciais (CasoEspecial, Descricao) Values (%s, %s)"
 
-    #tentei criar um trigger, mas não deu certo (Grasiella está de licença) - 14 %s
+    #tentei criar um trigger, mas não deu certo (Grasiella está de licença) - 14 %s (utilizado quando o TDPF é cancelado)
     apagaTDPF = """
                 Delete from Alocacoes Where TDPF=%s;
                 Delete from Atividades Where TDPF=%s;
@@ -266,304 +797,345 @@ def realizaCargaDados():
     if termina:
         return
     logging.info("Iniciando loop na carga.")
-    atualizou = False    
-    for linha in range(dfTdpf.shape[0]): #percorre os TDPFs das planilhas Excel
-        if (linha+1)%500==0:
-            print("Processando TDPF nº "+str(linha+1)+" de "+str(dfTdpf.shape[0]))
-        tdpfAux = dfTdpf.iat[linha,0]
-        if tdpfAux=='9999999.9999.99999': #última linha, referente à data de extração dos dados
-            dataExtracao = dfTdpf.iat[linha,9]
-            cursor.execute(cursor.execute("Insert Into Extracoes (Data) Values (%s)", (paraData(dataExtracao),)))
-            break
-        tdpf = getAlgarismos(tdpfAux)
-        distribuicao = dfTdpf.iat[linha, 9] #na verdade, aqui é a data de assinatura/emissão do TDPF (antes tinha apenas a distribuição) 
-                                            #<- a assinatura revelou-se pior que a distribuição - voltei a usar esta
-        inicio = dfTdpf.iat[linha, 11]
-        encerramento = dfTdpf.iat[linha, 12]
-        situacao = dfTdpf.iat[linha, 15]
-        if situacao!=None:
-            situacao = situacao.upper()
-        if "SEM EXAME" in situacao:
-            tipoEnc = "S"
-        elif 'COM EXAME' in situacao:
-            tipoEnc = "N"        
-        else:
-            tipoEnc = None
-        ni = dfTdpf.iat[linha, 17]
-        nome = dfTdpf.iat[linha, 18]
-        porte = dfTdpf.iat[linha, 27]
-        acompanhamento = dfTdpf.iat[linha, 28]
-        if porte==np.nan or pd.isna(porte) or porte=="":
-            porte = None
-        if acompanhamento==np.nan or pd.isna(acompanhamento) or acompanhamento=="":
-            acompanhamento = None    
-        #busca o caso especial, se houver, ou o insere     
-        casoEspecial = dfTdpf.iat[linha, 19]
-        if casoEspecial=="" or pd.isna(casoEspecial) or casoEspecial==None or casoEspecial==np.nan:
-            casoEspecialCod = None
-        else:
-            casoEspecialDesc = dfTdpf.iat[linha, 20].strip()
-            casoEspecial = int(casoEspecial)
-            cursor.execute(selectCaso, (casoEspecial, ))
-            linhaCaso = cursor.fetchone()
-            if linhaCaso:
-                casoEspecialCod = linhaCaso[0]
+    atualizou = False   
+    if datetime.now().strftime("%d/%m/%Y")!="06/08/2021": #nesta data, já fizemos a carga dos RPFs
+        for linha in range(dfTdpf.shape[0]): #percorre os TDPFs das planilhas Excel
+            if (linha+1)%500==0:
+                print("Processando TDPF nº "+str(linha+1)+" de "+str(dfTdpf.shape[0]))
+            if atualizou:
+                conn.commit()
+                atualizou = False
+            tdpfAux = dfTdpf.iat[linha,0]
+            if tdpfAux=='9999999.9999.99999': #última linha, referente à data de extração dos dados
+                dataExtracao = dfTdpf.iat[linha,9]
+                cursor.execute(cursor.execute("Insert Into Extracoes (Data) Values (%s)", (paraData(dataExtracao),)))
+                break
+            tdpf = getAlgarismos(tdpfAux)
+            distribuicao = dfTdpf.iat[linha, 9] #na verdade, aqui é a data de assinatura/emissão do TDPF (antes tinha apenas a distribuição) 
+                                                #<- a assinatura revelou-se pior que a distribuição - voltei a usar esta
+            inicio = dfTdpf.iat[linha, 11]
+            encerramento = dfTdpf.iat[linha, 12]
+            situacao = dfTdpf.iat[linha, 15]
+            if situacao!=None:
+                situacao = situacao.upper()
+            if "SEM EXAME" in situacao:
+                tipoEnc = "S"
+            elif 'COM EXAME' in situacao:
+                tipoEnc = "N"        
             else:
-                atualizou = True
-                cursor.execute(insereCaso, (casoEspecial, casoEspecialDesc))
+                tipoEnc = None
+            ni = dfTdpf.iat[linha, 17]
+            nome = dfTdpf.iat[linha, 18]
+            porte = dfTdpf.iat[linha, 27]
+            acompanhamento = dfTdpf.iat[linha, 28]
+            if porte==np.nan or pd.isna(porte) or porte=="":
+                porte = None
+            if acompanhamento==np.nan or pd.isna(acompanhamento) or acompanhamento=="":
+                acompanhamento = None    
+            tipoProc = dfTdpf.iat[linha, 22][:1] #tipo do procedimento
+            if tipoProc in ['D', 'F'] and paraData(dfTdpf.iat[linha, 10])==None: #TDPF não assinado - não o incluímos no BD         
+                continue
+            tdpfPrincipal = dfTdpf.iat[linha, 26]
+            if tdpfPrincipal!=None and not pd.isna(tdpfPrincipal) and tdpfPrincipal!=np.nan:
+                tdpfPrincipal = getAlgarismos(tdpfPrincipal)
+                cursor.execute(pesquisaTDPFPrincipal, (tdpfPrincipal,))
+                rowTdpfPrincipal = cursor.fetchone()
+                if rowTdpfPrincipal:
+                    chaveTdpfPrincipal = rowTdpfPrincipal[0]
+                else:
+                    chaveTdpfPrincipal = None
+            else:
+                chaveTdpfPrincipal = None
+            fape = dfTdpf.iat[linha, 29]
+            if not fape in ['S', 'N']:
+                fape = 'N'            
+            #busca o caso especial, se houver, ou o insere     
+            casoEspecial = dfTdpf.iat[linha, 19]
+            if casoEspecial=="" or pd.isna(casoEspecial) or casoEspecial==None or casoEspecial==np.nan:
+                casoEspecialCod = None
+            else:
+                casoEspecialDesc = dfTdpf.iat[linha, 20].strip()
+                casoEspecial = int(casoEspecial)
                 cursor.execute(selectCaso, (casoEspecial, ))
                 linhaCaso = cursor.fetchone()
                 if linhaCaso:
-                    casoEspecialCod = linhaCaso[0]    
+                    casoEspecialCod = linhaCaso[0]
                 else:
-                    casoEspecialCod = 0            
+                    atualizou = True
+                    cursor.execute(insereCaso, (casoEspecial, casoEspecialDesc))
+                    cursor.execute(selectCaso, (casoEspecial, ))
+                    linhaCaso = cursor.fetchone()
+                    if linhaCaso:
+                        casoEspecialCod = linhaCaso[0]    
+                    else:
+                        casoEspecialCod = 0            
 
-        #comentei o trecho abaixo pq já vem certinho na planilha do Excel
-        #tipo = str(type(porte)).upper()
-        #if "STR" in tipo or "UNICODE" in tipo: 
-        #    porte = porte[:3]    
-        #tipo = str(type(acompanhamento)).upper()
-        #if "STR" in tipo or "UNICODE" in tipo: 
-        #    acompanhamento = acompanhamento[:1]                       
-        cursor.execute(selectTDPF, (tdpf,))
-        regTdpf = cursor.fetchone()  
-        #precisamos incluir os TDPFs encerrados a partir do ano de entrada em produção (2021)
-        if not regTdpf and encerramento!="SD" and encerramento!="" and paraData(encerramento)!=None:    #TDPF não existe
-            if paraData(encerramento).year<2021: #se foi encerrado antes de 2021 (entrada em produção), desprezamos
+            #comentei o trecho abaixo pq já vem certinho na planilha do Excel
+            #tipo = str(type(porte)).upper()
+            #if "STR" in tipo or "UNICODE" in tipo: 
+            #    porte = porte[:3]    
+            #tipo = str(type(acompanhamento)).upper()
+            #if "STR" in tipo or "UNICODE" in tipo: 
+            #    acompanhamento = acompanhamento[:1]                       
+            cursor.execute(selectTDPF, (tdpf,))
+            regTdpf = cursor.fetchone()  
+            #precisamos incluir os TDPFs encerrados a partir do ano de entrada em produção (2021) e do ano de 2020
+            if not regTdpf and encerramento!="SD" and encerramento!="" and paraData(encerramento)!=None:    #TDPF não existe
+                if paraData(encerramento).year<2020: #se foi encerrado antes de 2020, desprezamos                
+                    continue
+                if "CANCELADA" in situacao or tipoEnc=='S': #não devemos cadastrar TDPFs que não constem da base, mas que já estão cancelados ou foram encerrados sem exame                    
+                    continue            
+            if regTdpf: #TDPF consta da base
+                chaveTdpf = regTdpf[0]  #chave do registro do TDPF  - para poder atualizar o registro, se for necessário   
+                if "CANCELADA" in situacao: #TDPF existe, mas foi cancelado - devemos apagar tudo a respeito dele
+                    parametrosApaga = [chaveTdpf for i in range(14)]
+                    print("Apagando ", tdpfAux, situacao)
+                    for result in cursor.execute(apagaTDPF, tuple(parametrosApaga), multi=True):
+                        pass                
+                    #conn.commit()
+                    cursor.close()   #se não fecho, dá erro de "out of sync"
+                    cursor = conn.cursor(buffered=True)                   
+                    continue #apagamos - vamos ao próximo TDPF
+                ##cursor.execute("Update TDPFS Set FAPE=%s Where Codigo=%s", (fape, chaveTdpf)) #  <-- APAGAR depois da primeira execução            <----------
+                if regTdpf[2]!=None: #TDPF já estava encerrado
+                    if regTdpf[4]==None: #está encerrado, mas sem sinalizar se é sem exame ou com <--manter na produção
+                        if tipoEnc=='S':
+                            cursor.execute("Update TDPFS Set SemExame=%s, Pontos=0, DataPontos=%s Where Codigo=%s", (tipoEnc, datetime.now(), chaveTdpf))
+                        else:
+                            cursor.execute("Update TDPFS Set SemExame=%s Where Codigo=%s", (tipoEnc, chaveTdpf))
+                        atualizou = True
+                    if datetime.now().date()>datetime(2021, 8, 12).date():
+                        intervalo = timedelta(days=90)
+                    else:
+                        intervalo = timedelta(days=240)    #retrocedemos mais se acabar de entrar em produção 
+                    if regTdpf[2].date()<(datetime.now()-intervalo).date() and regTdpf[2]==paraData(encerramento): #TDPF já encerrado na base há mais de INTERVALO dias - não há interesse em atualizar as demais tabelas                               
+                        continue  
+            else: #TDPF não existe na base - pedi para ajustar o relatório do gerencial para incluir os encerrados a partir de 2020 (o problema abaixo não deve ocorrer)
+                if porte==None or acompanhamento==None: #porte ou acompanhamento especial não foram obtidos do gerencial Ação Fiscal no DW - significa que não há necessidade de 
+                                                        #incluir o TDPF na base pois já está encerrado (por isso não consta do gerencial)
+                    logging.info(f"TDPFs: {tdpfAux} não tem monitoramento e/ou porte sem constar na base - TDPF foi desprezado.")                     
+                    continue            
+            df = dfAloc.loc[dfAloc['Número do RPF Expresso']==tdpfAux] #selecionamos as alocações do TDPF
+            if df.shape[0]==0:
+                logging.info(f"TDPFs: {tdpfAux} não tem fiscal alocado - TDPF foi desprezado.")
+                #mas temos que atualizar o status de encerramento dele, caso tenha sido (relatório de alocações não foi atualizado com TDPFs encerrados sem exame ou cancelados)
+                if (regTdpf[2]==None or regTdpf[2]!=paraData(encerramento)) and encerramento!="SD" and encerramento!="" and paraData(encerramento)!=None: #TDPF existia na base em andamento, agora é encerrado
+                    tabTdpfsAtu+=1
+                    atualizou = True
+                    if tipoEnc=="S": #Sem exame - zeramos os pontos
+                        cursor.execute(atualizaTDPFEncSemExame, (paraData(encerramento), tipoEnc, datetime.now(), chaveTdpf))            
+                    else: #com exame
+                        cursor.execute(atualizaTDPFEnc, (paraData(encerramento), tipoEnc, chaveTdpf))                                                 
                 continue
-            if "CANCELADA" in situacao or tipoEnc=='S': #não devemos cadastrar TDPFs que não constem da base, mas que já estão cancelados ou foram encerrados sem exame
-                continue            
-        if regTdpf: #TDPF consta da base
-            chaveTdpf = regTdpf[0]  #chave do registro do TDPF  - para poder atualizar o registro, se for necessário   
-            if "CANCELADA" in situacao: #TDPF existe, mas foi cancelado - devemos apagar tudo a respeito dele
-                parametrosApaga = [chaveTdpf for i in range(14)]
-                print("Apagando ", tdpfAux, situacao)
-                for result in cursor.execute(apagaTDPF, tuple(parametrosApaga), multi=True):
-                    pass                
-                #conn.commit()
-                cursor.close()   #se não fecho, dá erro de "out of sync"
-                cursor = conn.cursor(buffered=True)
-                continue #apagamos - vamos ao próximo TDPF
-            if regTdpf[2]!=None: #TDPF já estava encerrado
-                #if regTdpf[4]==None: #está encerrado, mas sem sinalizar se é sem exame ou com <--manter na produção
-                if tipoEnc=='S':
-                    cursor.execute("Update TDPFS Set SemExame=%s, Pontos=0, DataPontos=%s Where Codigo=%s", (tipoEnc, datetime.now(), chaveTdpf))
+            if distribuicao: #calculamos a data de vencimento a partir da data de distribuição - o ideal seria calcular a partir da data de emissão, mas o DW não tem a informação
+                distData = paraData(distribuicao)             
+                if tipoProc in ['F', 'D']:
+                    if tipoProc=='F':
+                        diasValidade = 120
+                    else:
+                        diasValidade = 60
+                    vencimento = distData + timedelta(days=(diasValidade-1)) #funciona assim no Ação Fiscal - o primeiro vencimento, ocorre 119/59 dias (conta o dia da emissão); os subsequentes, 120/60 dias
+                    while vencimento.date()<datetime.now().date():
+                        vencimento = vencimento + timedelta(days=diasValidade)
+                        if encerramento!="SD" and encerramento!="" and paraData(encerramento)!=None:
+                            if vencimento.date()>paraData(encerramento).date(): #assim que passou do encerramento, paramos de acrescentar 120/60 dias ao vencimento
+                                break
                 else:
-                    cursor.execute("Update TDPFS Set SemExame=%s Where Codigo=%s", (tipoEnc, chaveTdpf))
+                    vencimento = None
+            else: #distribuição nulo? Não deve acontecer, mas ...
+                vencimento = None   
+                distData = None   
+            #precisamos percorrer as alocações para descobrir o grupo atual
+            grupoAtu = None 
+            for linha2 in range(df.shape[0]):
+                grupo = df.iat[linha2, 4]
+                tipoGrupo = str(type(grupo)).upper()
+                if "STR" in tipoGrupo or "UNICODE" in tipoGrupo:
+                    grupo = getAlgarismos(grupo)
+                else:
+                    grupo = None
+                desalocacao = df.iat[linha2, 10]            
+                if (desalocacao=="SD" or desalocacao=="" or paraData(desalocacao)==None) and grupo!="" and grupo!=None:
+                    grupoAtu = grupo 
+                    break 
+            bInseriuCiencia = False                
+            if not regTdpf: #TDPF não consta da base
+                tabTdpfs+=1
                 atualizou = True
-                continue #TDPF já encerrado na base - não há interesse em atualizar as demais tabelas
-        else: #TDPF não existe na base - pedi para ajustar o relatório do gerencial para incluir os encerrados a partir de 2021 (o problema abaixo não deve ocorrer)
-            if porte==None or acompanhamento==None: #porte ou acompanhamento especial não foram obtidos do gerencial Ação Fiscal no DW - significa que não há necessidade de 
-                                                    #incluir o TDPF na base pois já está encerrado (por isso não consta do gerencial)
-                logging.info(f"TDPFs: {tdpfAux} não tem monitoramento e/ou porte sem constar na base - TDPF foi desprezado.")
-                continue            
-        df = dfAloc.loc[dfAloc['Número do RPF Expresso']==tdpfAux] #selecionamos as alocações do TDPF
-        if df.shape[0]==0:
-            logging.info(f"TDPFs: {tdpfAux} não tem fiscal alocado - TDPF foi desprezado.")
-            #mas temos que atualizar o status de encerramento dele, caso tenha sido (relatório de alocações não foi atualizado com TDPFs encerrados sem exame ou cancelados)
-            if regTdpf[2]==None and encerramento!="SD" and encerramento!="" and paraData(encerramento)!=None: #TDPF existia na base em andamento, agora é encerrado
+                if tipoEnc=='S' and encerramento!="SD" and encerramento!="" and paraData(encerramento)!=None:
+                    pontos = 0
+                    dataPontos = datetime.now()
+                else:
+                    pontos = None
+                    dataPontos = None    
+                cursor.execute(insereTDPF, (tdpf, grupoAtu, distData, nome, ni, vencimento, porte, acompanhamento, paraData(encerramento), casoEspecialCod, tipoEnc, pontos, dataPontos, chaveTdpfPrincipal, tipoProc, fape))
+                cursor.execute(selectTDPF, (tdpf,))
+                regTdpf = cursor.fetchone()   
+                chaveTdpf = regTdpf[0]  #chave do registro do TDPF                      
+                if inicio!="SD" and inicio!="" and paraData(inicio)!=None:
+                    tabCiencias+=1
+                    cursor.execute(insereCiencia, (chaveTdpf, paraData(inicio), "ACÃO FISCAL"))
+                    bInseriuCiencia = True
+            elif (regTdpf[2]==None or regTdpf[2]!=paraData(encerramento)) and encerramento!="SD" and encerramento!="" and paraData(encerramento)!=None: #TDPF existia na base em andamento, agora é encerrado
                 tabTdpfsAtu+=1
                 atualizou = True
                 if tipoEnc=="S": #Sem exame - zeramos os pontos
-                    cursor.execute(atualizaTDPFEncSemExame, (paraData(encerramento), tipoEnc, datetime.now(), chaveTdpf))            
-                else: #com exame
-                    cursor.execute(atualizaTDPFEnc, (paraData(encerramento), tipoEnc, chaveTdpf))                        
-            continue
-        if distribuicao: #calculamos a data de vencimento a partir da data de distribuição - o ideal seria calcular a partir da data de emissão, mas o DW não tem a informação
-            distData = paraData(distribuicao) 
-            vencimento = distData + timedelta(days=(120-1)) #funciona assim no Ação Fiscal - o primeiro vencimento, ocorre 119 dias (conta o dia da emissão); os subsequentes, 120 dias
-            while vencimento.date()<datetime.now().date():
-                vencimento = vencimento + timedelta(days=120)
-                if encerramento!="SD" and encerramento!="" and paraData(encerramento)!=None:
-                    if vencimento.date()>paraData(encerramento).date(): #assim que passou do encerramento, paramos de acrescentar 120 dias ao vencimento
-                        break
-        else: #distribuição nulo? Não deve acontecer, mas ...
-            vencimento = None   
-            distData = None   
-        #precisamos percorrer as alocações para descobrir o grupo atual
-        grupoAtu = None 
-        for linha2 in range(df.shape[0]):
-            grupo = df.iat[linha2, 4]
-            tipoGrupo = str(type(grupo)).upper()
-            if "STR" in tipoGrupo or "UNICODE" in tipoGrupo:
-                grupo = getAlgarismos(grupo)
-            else:
-                grupo = None
-            desalocacao = df.iat[linha2, 10]            
-            if (desalocacao=="SD" or desalocacao=="" or paraData(desalocacao)==None) and grupo!="" and grupo!=None:
-                grupoAtu = grupo 
-                break 
-        bInseriuCiencia = False                
-        if not regTdpf: #TDPF não consta da base
-            tabTdpfs+=1
-            atualizou = True
-            if tipoEnc=='S' and encerramento!="SD" and encerramento!="" and paraData(encerramento)!=None:
-                pontos = 0
-                dataPontos = datetime.now()
-            else:
-                pontos = None
-                dataPontos = None    
-            cursor.execute(insereTDPF, (tdpf, grupoAtu, distData, nome, ni, vencimento, porte, acompanhamento, paraData(encerramento), casoEspecialCod, tipoEnc, pontos, dataPontos))
-            cursor.execute(selectTDPF, (tdpf,))
-            regTdpf = cursor.fetchone()   
-            chaveTdpf = regTdpf[0]  #chave do registro do TDPF                      
-            if inicio!="SD" and inicio!="" and paraData(inicio)!=None:
-                tabCiencias+=1
-                cursor.execute(insereCiencia, (chaveTdpf, paraData(inicio), "ACÃO FISCAL"))
-                bInseriuCiencia = True
-        elif regTdpf[2]==None and encerramento!="SD" and encerramento!="" and paraData(encerramento)!=None: #TDPF existia na base em andamento, agora é encerrado
-            tabTdpfsAtu+=1
-            atualizou = True
-            if tipoEnc=="S": #Sem exame - zeramos os pontos
-                cursor.execute(atualizaTDPFEncSemExame, (paraData(encerramento), tipoEnc, datetime.now(), chaveTdpf))              
-            else:
-                cursor.execute(atualizaTDPFEnc, (paraData(encerramento), tipoEnc, chaveTdpf))
-        elif regTdpf[1]!=grupoAtu or regTdpf[3].date()<datetime.now().date(): #mudou o grupo e/ou TDPF está vencido, mas, em ambos os casos, NÃO encerrado - atualiza grupo e vencimento
-            gruposAtu+=1
-            atualizou = True
-            cursor.execute(atualizaTDPFGrupoVencto, (grupoAtu, vencimento, chaveTdpf))
-        if regTdpf and inicio!="SD" and inicio!="" and paraData(inicio)!=None and not bInseriuCiencia:
-            cursor.execute(selectCiencias, (chaveTdpf,))
-            regCiencia = cursor.fetchone()
-            if not regCiencia:
-                tabCiencias+=1
+                    cursor.execute(atualizaTDPFEncSemExame, (paraData(encerramento), tipoEnc, datetime.now(), chaveTdpf))              
+                else:
+                    cursor.execute(atualizaTDPFEnc, (paraData(encerramento), tipoEnc, chaveTdpf))
+            elif regTdpf[1]!=grupoAtu or regTdpf[3]==None: #mudou o grupo e/ou TDPF está sem data de vencimento, mas, em ambos os casos, NÃO encerrado - atualiza grupo e vencimento
+                gruposAtu+=1
                 atualizou = True
-                cursor.execute(insereCiencia, (chaveTdpf, paraData(inicio), "ACÃO FISCAL"))                
-        for linha2 in range(df.shape[0]): #percorre as alocações na planilhas Excel relativas ao TDPF do loop externo
-            cpf = getAlgarismos(df.iat[linha2, 6])
-            fiscal = df.iat[linha2, 7] #nome do fiscal
-            alocacao = df.iat[linha2, 9]
-            desalocacao = df.iat[linha2, 10]  
-            supervisor = df.iat[linha2, 12]
-            if supervisor==np.nan or pd.isna(supervisor) or supervisor=="" or supervisor==None:
-                supervisor = "N"
-            else:
-                supervisor = supervisor[:1]
-            horas = df.iat[linha2, 16]
-            try:    
-                horas = int(horas)    
-            except:
-                horas = 0    
-            dfFiscal = dfFiscais.loc[dfFiscais['CPF']==cpf]
-            email = None
-            if dfFiscal.shape[0]>0:
-                if dfFiscal.iat[0, 4]!=np.nan and not pd.isna(dfFiscal.iat[0, 4]) and dfFiscal.iat[0, 4]!="": #email está na coluna 4 (coluna 'E' do Excel)
-                    email = dfFiscal.iat[0, 4]
-            #print(email)        
-            cursor.execute(selectUsuario, (cpf,))
-            regUser = cursor.fetchone()
-            if regUser!=None: #achou o usuário - vemos se tem e-mail cadastrado
-                if (regUser[2]==None or regUser[2]=='') and email!=None: #regUser[2] é o email
-                    cursor.execute(updateUsuario, (email, regUser[0]))
-                    tabUsuariosAtu+=1
+                cursor.execute(atualizaTDPFGrupoVencto, (grupoAtu, vencimento, chaveTdpf))
+            elif regTdpf[3]!=None: 
+                if regTdpf[3].date()<datetime.now().date(): #TDPF está vencido - atualizamos
                     atualizou = True
-            else: #inserimos o novo usuário
-                cursor.execute(insereUsuario, (cpf, email))       
-                tabUsuarios+=1 
-                atualizou = True
-            cursor.execute(selectFisc, (cpf,))
-            regFisc = cursor.fetchone()
-            if not regFisc:
-                tabFiscais+=1
-                atualizou = True
-                cursor.execute(insereFisc, (cpf, fiscal))
+                    cursor.execute(atualizaTDPFGrupoVencto, (grupoAtu, vencimento, chaveTdpf))                
+            if regTdpf and inicio!="SD" and inicio!="" and paraData(inicio)!=None and not bInseriuCiencia:
+                cursor.execute(selectCiencias, (chaveTdpf,))
+                regCiencia = cursor.fetchone()
+                if not regCiencia:
+                    tabCiencias+=1
+                    atualizou = True
+                    cursor.execute(insereCiencia, (chaveTdpf, paraData(inicio), "ACÃO FISCAL"))                
+            for linha2 in range(df.shape[0]): #percorre as alocações na planilhas Excel relativas ao TDPF do loop externo
+                cpf = getAlgarismos(df.iat[linha2, 6])
+                fiscal = df.iat[linha2, 7] #nome do fiscal
+                alocacao = df.iat[linha2, 9]
+                desalocacao = df.iat[linha2, 10]  
+                supervisor = df.iat[linha2, 12]
+                if supervisor==np.nan or pd.isna(supervisor) or supervisor=="" or supervisor==None:
+                    supervisor = "N"
+                else:
+                    supervisor = supervisor[:1]
+                horas = df.iat[linha2, 16]
+                try:    
+                    horas = int(horas)    
+                except:
+                    horas = 0                  
+                dfFiscal = dfFiscais.loc[dfFiscais['CPF']==cpf]
+                email = None
+                if dfFiscal.shape[0]>0:
+                    if dfFiscal.iat[0, 4]!=np.nan and not pd.isna(dfFiscal.iat[0, 4]) and dfFiscal.iat[0, 4]!="": #email está na coluna 4 (coluna 'E' do Excel)
+                        email = dfFiscal.iat[0, 4]
+                #print(email)        
+                cursor.execute(selectUsuario, (cpf,))
+                regUser = cursor.fetchone()
+                if regUser!=None: #achou o usuário - vemos se tem e-mail cadastrado
+                    if (regUser[2]==None or regUser[2]=='') and email!=None: #regUser[2] é o email
+                        cursor.execute(updateUsuario, (email, regUser[0]))
+                        tabUsuariosAtu+=1
+                        atualizou = True
+                else: #inserimos o novo usuário
+                    cursor.execute(insereUsuario, (cpf, email))       
+                    tabUsuarios+=1 
+                    atualizou = True
                 cursor.execute(selectFisc, (cpf,))
                 regFisc = cursor.fetchone()
-            chaveFiscal = regFisc[0] #chave do registro do Fiscal (inserido ou consultado anteriormente)
-            cursor.execute(selectAloc, (chaveTdpf, chaveFiscal))
-            regAloc = cursor.fetchone()
-            if not regAloc:
-                tabAloc+=1
-                if desalocacao=="SD" or desalocacao=="" or paraData(desalocacao)==None:
+                if not regFisc:
+                    tabFiscais+=1
                     atualizou = True
-                    cursor.execute(insereAloc, (chaveTdpf, chaveFiscal, paraData(alocacao), supervisor, horas))
+                    cursor.execute(insereFisc, (cpf, fiscal))
+                    cursor.execute(selectFisc, (cpf,))
+                    regFisc = cursor.fetchone()
+                chaveFiscal = regFisc[0] #chave do registro do Fiscal (inserido ou consultado anteriormente)
+                cursor.execute(selectAloc, (chaveTdpf, chaveFiscal))
+                regAloc = cursor.fetchone()                  
+                if not regAloc:
+                    tabAloc+=1
+                    if desalocacao=="SD" or desalocacao=="" or paraData(desalocacao)==None:
+                        atualizou = True
+                        cursor.execute(insereAloc, (chaveTdpf, chaveFiscal, paraData(alocacao), supervisor, horas))
+                    else:
+                        atualizou = True
+                        cursor.execute(insereAlocDesaloc, (chaveTdpf, chaveFiscal, paraData(alocacao), paraData(desalocacao), supervisor, horas))
+                elif regAloc[1]==None and desalocacao!="SD" and desalocacao!="" and paraData(desalocacao)!=None:
+                    tabAlocAtu+=1
+                    atualizou = True
+                    cursor.execute(atualizaAloc, (paraData(desalocacao), supervisor, horas, regAloc[0])) 
+                elif regAloc[1]!=None and (desalocacao=="SD" or desalocacao=="" or paraData(desalocacao)==None):
+                    tabAlocAtu+=1
+                    atualizou = True
+                    cursor.execute(atualizaAloc, (None, supervisor, horas, regAloc[0]))    
+                elif regAloc[2]!=supervisor:
+                    tabAlocAtu+=1
+                    atualizou = True
+                    cursor.execute(atualizaAloc, (regAloc[1], supervisor, horas, regAloc[0]))  
                 else:
-                    atualizou = True
-                    cursor.execute(insereAlocDesaloc, (chaveTdpf, chaveFiscal, paraData(alocacao), paraData(desalocacao), supervisor, horas))
-            elif regAloc[1]==None and desalocacao!="SD" and desalocacao!="" and paraData(desalocacao)!=None:
-                tabAlocAtu+=1
-                atualizou = True
-                cursor.execute(atualizaAloc, (paraData(desalocacao), supervisor, horas, regAloc[0]))
-            elif regAloc[1]!=None and (desalocacao=="SD" or desalocacao=="" or paraData(desalocacao)==None):
-                tabAlocAtu+=1
-                atualizou = True
-                cursor.execute(atualizaAloc, (None, supervisor, horas, regAloc[0]))                
-            elif regAloc[2]!=supervisor:
-                tabAlocAtu+=1
-                atualizou = True
-                cursor.execute(atualizaAloc, (regAloc[1], supervisor, horas, regAloc[0]))  
-            else:
-                cursor.execute(atualizaAlocHoras, (horas, regAloc[0]))    
-                tabAlocAtu+=1
-                atualizou = True 
-        #percorremos as operações do TDPF - excluímos as que não mais existirem e incluímos as que não existirem
-        dfOp = dfOperacoes.loc[dfOperacoes['Número do RPF Expresso']==tdpfAux] #selecionamos as operações do TDPF
-        #Operacoes.Codigo, OperacoesFiscais.Operacao, PeriodoInicial, PeriodoFinal, Tributos.Tributo, Operacoes.Operacao, Operacoes.Tributo
-        cursor.execute(selectOperacoes, (chaveTdpf,))
-        regOperacoes = cursor.fetchall()
-        opExistentes = []
-        if dfOp.shape[0]>0: #desde que tenhamos localizado alguma operação do TDPF (se não, o problema está na planilha de operações)
-            for regOperacao in regOperacoes: #atualizamos as operações que mudaram algo no período ou excluímos aquelas que não existem mais
-                operacao = regOperacao[1]
-                codigoOperacao = regOperacao[0]
-                perInicial = regOperacao[2]
-                perFinal = regOperacao[3]
-                tributo = regOperacao[4]
+                    cursor.execute(atualizaAlocHoras, (horas, regAloc[0]))    
+                    tabAlocAtu+=1
+                    atualizou = True 
+            if not tipoProc in ['F', 'R', 'L']:
+                continue #não processamos operações, a não ser em caso de fiscalização, revisão e lançamento de multa
+            #percorremos as operações do TDPF - excluímos as que não mais existirem e incluímos as que não existirem
+            dfOp = dfOperacoes.loc[dfOperacoes['Número do RPF Expresso']==tdpfAux] #selecionamos as operações do TDPF
+            #Operacoes.Codigo, OperacoesFiscais.Operacao, PeriodoInicial, PeriodoFinal, Tributos.Tributo, Operacoes.Operacao, Operacoes.Tributo
+            cursor.execute(selectOperacoes, (chaveTdpf,))
+            regOperacoes = cursor.fetchall()
+            opExistentes = []
+            if dfOp.shape[0]>0: #desde que tenhamos localizado alguma operação do TDPF (se não, o problema está na planilha de operações)
+                for regOperacao in regOperacoes: #atualizamos as operações que mudaram algo no período ou excluímos aquelas que não existem mais
+                    operacao = regOperacao[1]
+                    codigoOperacao = regOperacao[0]
+                    perInicial = regOperacao[2]
+                    perFinal = regOperacao[3]
+                    tributo = regOperacao[4]
+                    operTrib = str(operacao).rjust(6, "0")+str(tributo).rjust(5, "0")
+                    dfOpAux = dfOp.loc[(dfOp['Operação Fiscal Atual Código']==operacao) & (dfOp['Receita Programada(Tributo) Código']==tributo)]
+                    if dfOpAux.shape[0]>0: #operação/tributo existe no TDPF - temos que ver se há alguma divergência no período (aumentou ou diminuiu)
+                        if not operTrib in opExistentes: #não foi atualizada/incluída
+                            opExistentes.append(operTrib)
+                            menorMes = paraData(dfOpAux.loc[dfOpAux['Mês Início'].idxmin()]["Mês Início"])
+                            maiorMes = paraData(dfOpAux.loc[dfOpAux['Mês Fim'].idxmax()]["Mês Fim"])
+                            if maiorMes!=perFinal or menorMes!=perInicial:
+                                #print("Atualizando período da operação ", tdpfAux, codigoOperacao, operacao, tributo, menorMes.date(), maiorMes.date())
+                                comando = "Update Operacoes Set PeriodoInicial=%s, PeriodoFinal=%s Where Codigo=%s"
+                                try:
+                                    cursor.execute(comando, (menorMes, maiorMes, codigoOperacao))
+                                except: #provavelmente já existe um outro registro para este tdpf com esta Operacao/Tributo
+                                    apaga = "Delete From Operacoes Where Codigo!=%s, TDPF=%s, Operacao=%s, Tributo=%s"
+                                    cursor.execute(apaga, (codigoOperacao, chaveTdpf, regOperacao[5], regOperacao[6])) #apagamos os demais registros
+                                    #tentamos novamente atualizar
+                                    cursor.execute(comando, (menorMes, maiorMes, codigoOperacao))
+                        else: #como já foi incluída, apagamos da tabela, pq senão ficará uma operação repetida
+                            comando = "Delete From Operacoes Where Codigo=%s"
+                            cursor.execute(comando, (codigoOperacao, ))                            
+                    else:
+                        cursor.execute(apagaOperacao, (codigoOperacao,)) #operação foi removida do TDPF - removemos ela da base
+            #incluímos as operações do TDPF (as que não tiverem sido cadastradas)
+            for linha2 in range(dfOp.shape[0]):
+                operacao = int(dfOp.iat[linha2, 8])
+                valor = dfOp.iat[linha2, 11] #peso/valor da operação
+                tributo = int(dfOp.iat[linha2, 1])
                 operTrib = str(operacao).rjust(6, "0")+str(tributo).rjust(5, "0")
-                dfOpAux = dfOp.loc[(dfOp['Operação Fiscal Atual Código']==operacao) & (dfOp['Receita Programada(Tributo) Código']==tributo)]
-                if dfOpAux.shape[0]>0: #operação/tributo existe no TDPF - temos que ver se há alguma divergência no período (aumentou ou diminuiu)
-                    if not operTrib in opExistentes: #não foi atualizada/incluída
-                        opExistentes.append(operTrib)
-                        menorMes = paraData(dfOpAux.loc[dfOpAux['Mês Início'].idxmin()]["Mês Início"])
-                        maiorMes = paraData(dfOpAux.loc[dfOpAux['Mês Fim'].idxmax()]["Mês Fim"])
-                        if maiorMes!=perFinal or menorMes!=perInicial:
-                            print(tdpfAux, codigoOperacao, operacao, tributo, menorMes, maiorMes)
-                            comando = "Update Operacoes Set PeriodoInicial=%s, PeriodoFinal=%s Where Codigo=%s"
-                            try:
-                                cursor.execute(comando, (menorMes, maiorMes, codigoOperacao))
-                            except: #provavelmente já existe um outro registro para este tdpf com esta Operacao/Tributo
-                                apaga = "Delete From Operacoes Where Codigo!=%s, TDPF=%s, Operacao=%s, Tributo=%s"
-                                cursor.execute(apaga, (codigoOperacao, chaveTdpf, regOperacao[5], regOperacao[6])) #apagamos os demais registros
-                                #tentamos novamente atualizar
-                                cursor.execute(comando, (menorMes, maiorMes, codigoOperacao))
-                    else: #como já foi incluída, apagamos da tabela, pq senão ficará uma operação repetida
-                        comando = "Delete From Operacoes Where Codigo=%s"
-                        cursor.execute(comando, (codigoOperacao, ))                            
-                else:
-                    cursor.execute(apagaOperacao, (codigoOperacao,)) #operação foi removida do TDPF - removemos ela da base
-        #incluímos as operações do TDPF (as que não tiverem sido cadastradas)
-        for linha2 in range(dfOp.shape[0]):
-            operacao = int(dfOp.iat[linha2, 8])
-            valor = dfOp.iat[linha2, 11] #peso/valor da operação
-            tributo = int(dfOp.iat[linha2, 1])
-            operTrib = str(operacao).rjust(6, "0")+str(tributo).rjust(5, "0")
-            if operTrib in opExistentes: #operação/tributo já está na base
-                continue
-            opExistentes.append(operTrib)
-            #não está na base - temos que incluí-la
-            #consultamos o tributo e o incluímos, se não existir           
-            cursor.execute(selectTributo, (tributo,))
-            rowTributo = cursor.fetchone()
-            if not rowTributo:
-                cursor.execute(insertTributo, (tributo, dfOp.iat[linha2, 2].upper()))
+                if operTrib in opExistentes: #operação/tributo já está na base
+                    continue
+                opExistentes.append(operTrib)
+                #não está na base - temos que incluí-la
+                #consultamos o tributo e o incluímos, se não existir           
                 cursor.execute(selectTributo, (tributo,))
                 rowTributo = cursor.fetchone()
-            codTributo = rowTributo[0]
-            #consultamos a operação fiscal e a incluímos, se não existir
-            cursor.execute(selectOpFiscal, (operacao,))
-            rowOperacao = cursor.fetchone()
-            if not rowOperacao:
-                cursor.execute(insertOpFiscal, (operacao, dfOp.iat[linha2, 9].upper(), float(valor))) #tirei o tributo
+                if not rowTributo:
+                    cursor.execute(insertTributo, (tributo, dfOp.iat[linha2, 2].upper()))
+                    cursor.execute(selectTributo, (tributo,))
+                    rowTributo = cursor.fetchone()
+                codTributo = rowTributo[0]
+                #consultamos a operação fiscal e a incluímos, se não existir
                 cursor.execute(selectOpFiscal, (operacao,))
                 rowOperacao = cursor.fetchone()
-            codOperacao = rowOperacao[0]
-            #inserimos a operação vinculada ao TDPF
-            dfOpAux = dfOp.loc[(dfOp['Operação Fiscal Atual Código']==operacao) & (dfOp['Receita Programada(Tributo) Código']==tributo)]
-            #selecionamos o menor e o maior mês do período da operação deste TDPF            
-            if dfOpAux.shape[0]>0:
-                perInicial = paraData(dfOpAux.loc[dfOpAux['Mês Início'].idxmin()]["Mês Início"])
-                perFinal = paraData(dfOpAux.loc[dfOpAux['Mês Fim'].idxmax()]["Mês Fim"])            
-            cursor.execute(insereOperacao, (chaveTdpf, codOperacao, perInicial, perFinal, codTributo)) #incluí o tributo
+                if not rowOperacao:
+                    cursor.execute(insertOpFiscal, (operacao, dfOp.iat[linha2, 9].upper(), float(valor))) #tirei o tributo
+                    cursor.execute(selectOpFiscal, (operacao,))
+                    rowOperacao = cursor.fetchone()
+                codOperacao = rowOperacao[0]
+                #inserimos a operação vinculada ao TDPF
+                dfOpAux = dfOp.loc[(dfOp['Operação Fiscal Atual Código']==operacao) & (dfOp['Receita Programada(Tributo) Código']==tributo)]
+                #selecionamos o menor e o maior mês do período da operação deste TDPF            
+                if dfOpAux.shape[0]>0:
+                    perInicial = paraData(dfOpAux.loc[dfOpAux['Mês Início'].idxmin()]["Mês Início"])
+                    perFinal = paraData(dfOpAux.loc[dfOpAux['Mês Fim'].idxmax()]["Mês Fim"])            
+                cursor.execute(insereOperacao, (chaveTdpf, codOperacao, perInicial, perFinal, codTributo)) #incluí o tributo
+        conn.commit()
     if termina:
         return
     #atualizamos a tabela de supervisões de grupos/equipes fiscais (Supervisores)
@@ -578,8 +1150,11 @@ def realizaCargaDados():
     superv = 0 #número de supervisores que não fazem parte de nenhum grupo - são incluídos na tabela de usuários pq supervisionam ativamente alguma equipe
     for grupoRow in gruposRows:
         df = dfSupervisores.loc[dfSupervisores['Grupo Fiscal']==grupoRow[0]].sort_values(by=['R028_DT_INI_VINCULO'], ascending=False)
+        df = df.reset_index(drop=True)       
         if df.shape[0]>0: #pega só o último registro da supervisão da equipe (mais recente início na supervisão)
-            cpf = df.iat[0, 12] 
+            cpf = df.at[0, 'CPF']
+            if not "STR" in str(type(cpf)):
+                cpf = str(cpf).rjust(11,"0")
             nomeSuperv = df.iat[0, 8]
             dataIni = df.iat[0, 9]
             dataFim = df.iat[0, 10]
@@ -591,8 +1166,9 @@ def realizaCargaDados():
                 cursor.execute(insereFisc, (cpf, nomeSuperv))
                 cursor.execute(selectFisc, (cpf,))     
                 fiscalRow = cursor.fetchone()
-            chaveFiscal = fiscalRow[0]               
-            if dataFim==None or dataFim=="" or np.isnan(dataFim) or dataFim==float(0): #é supervisor da equipe
+                atualizouSuperv = True  
+            chaveFiscal = fiscalRow[0]   
+            if dataFim==None or dataFim=="" or dataFim==np.nan or pd.isna(dataFim) or dataFim==float(0): #é supervisor da equipe
                 #print(grupoRow[0]+" - "+cpf)                     
                 comando = "Select Codigo, Fiscal, Inicio, Fim from Supervisores Where Equipe=%s and Fiscal=%s and Fim Is Null"
                 cursor.execute(comando, (grupoRow[0], chaveFiscal))
@@ -683,6 +1259,30 @@ def realizaCargaDados():
             conn.rollback()
             conn.close()
             return 
+    #atualizando as equipes
+    print("Iniciando a atualização das equipes ...")
+    for linha in range(dfEquipes.shape[0]):
+        equipe = dfEquipes.iat[linha, 0]
+        if equipe==None:
+            continue
+        equipe = getAlgarismos(equipe.strip())
+        if equipe=="":
+            continue
+        equipe = equipe.rjust(14,"0")
+        nomeEquipe = dfEquipes.iat[linha, 1].strip().upper()
+        UL = dfEquipes.iat[linha, 2].strip().upper()
+        qtdeRH = dfEquipes.iat[linha, 3]
+        if qtdeRH==np.nan or pd.isna(qtdeRH) or qtdeRH==None:
+            qtdeRH = 0
+        qtdeRH = int(qtdeRH)
+        cursor.execute("Select Codigo From Equipes Where Equipe=%s", (equipe,))
+        rowEquipe = cursor.fetchone()
+        if rowEquipe: #equipe existe - atualizamos informações
+            codigoEquipe = rowEquipe[0]
+            cursor.execute("Update Equipes Set Nome=%s, UL=%s, QtdeRH=%s Where Codigo=%s", (nomeEquipe, UL, qtdeRH, codigoEquipe))
+        else: #não existe - incluímos a equipe
+            cursor.execute ("Insert Into Equipes (Equipe, Nome, UL, QtdeRH) Values(%s, %s, %s, %s)", (equipe, nomeEquipe, UL, qtdeRH)) 
+            
     print("Iniciando atualização do indicador de supervisor nos TDPFs")
     select = """Select Alocacoes.Codigo From Alocacoes, TDPFS, Supervisores 
                 Where Alocacoes.TDPF=TDPFS.Codigo and TDPFS.Encerramento Is Null and 
@@ -713,21 +1313,25 @@ def realizaCargaDados():
             logging.error(mysql.connector.Error)
             print(mysql.connector.Error)      
     try:
-        os.rename(dirExcel+"TDPFS.xlsx", dirExcel+"TDPFS_Processado_"+datetime.now().strftime('%Y-%m-%d')+".xlsx")
-        os.rename(dirExcel+"ALOCACOES.xlsx", dirExcel+"ALOCACOES_Processado_"+datetime.now().strftime('%Y-%m-%d')+".xlsx")
+        os.rename(dirExcel+"TDPFSRPFS.xlsx", dirExcel+"TDPFSRPFS_Processado_"+datetime.now().strftime('%Y-%m-%d')+".xlsx")
+        os.rename(dirExcel+"ALOCACOESRPFS.xlsx", dirExcel+"ALOCACOESRPFS_Processado_"+datetime.now().strftime('%Y-%m-%d')+".xlsx")
         logging.info("Arquivos renomeados")
-        textoUNacionais += "Arquivos foram renomeados."
+        if tabGrupos>0 or tabGruposAtu>0 or atualizouSuperv or atualizou:
+            textoUNacionais += "Arquivos foram renomeados."
     except:
         print("Erro ao tentar renomear os arquivos")            
         logging.error("Erro ao tentar renomear os arquivos")   
-        textoUNacionais += "Houve um erro ao tentar renomear os arquivos."                       
+        if tabGrupos>0 or tabGruposAtu>0 or atualizouSuperv or atualizou:
+            textoUNacionais += "Houve um erro ao tentar renomear os arquivos."                       
     print("Carga finalizada ", datetime.now())
-    textoUNacionais = "Sr. Usuário,\n\n" + textoUNacionais + "\n\nAtenciosamente,\n\nCofis/Disav"
-    avisaUsuariosNacionais(textoUNacionais, cursor) #avisamos os usuários nacionais da realização da carga
+    if tabGrupos>0 or tabGruposAtu>0 or atualizouSuperv or atualizou:
+        textoUNacionais = "Sr. Usuário,\n\n" + textoUNacionais + "\n\nAtenciosamente,\n\nCofis/Disav"
+        avisaUsuariosNacionais(textoUNacionais, cursor) #avisamos os usuários nacionais da realização da carga
     avisaUsuariosRegionais(conn) #avisamos usuários regionais dos TDPFs vincendos em curto prazo (pedido da Débora Difis07)
     cursor.close()
     conn.close() 
     return
+
 
 def avisaUsuariosNacionais(texto, cursor): #avisamos os usuários nacionais do resultado da carga
     AMBIENTE = os.getenv("AMBIENTE", "TESTE") 
@@ -737,9 +1341,12 @@ def avisaUsuariosNacionais(texto, cursor): #avisamos os usuários nacionais do r
     rows = cursor.fetchall()
     #avisamos todos os usuários nacionais que houve uma carga de dados
     for row in rows:
-        if enviaEmail(row[0], texto,"Carga de Dados Alertas Fiscalização")!=3: #se der erro
-            logging.info("Erro no envio do e-mail para usuário NACIONAL "+row[0])   
-            print("Erro no envio do e-mail para usuário NACIONAL "+row[0]) 
+        if AMBIENTE=="PRODUÇÃO":
+            if enviaEmail(row[0], texto,"Carga de Dados Alertas Fiscalização")!=3: #se der erro
+                logging.info("Erro no envio do e-mail para usuário NACIONAL "+row[0])   
+                print("Erro no envio do e-mail para usuário NACIONAL "+row[0]) 
+        else:
+            print(row[0], texto)
     return
 
 def avisaUsuariosRegionais(conn): #avisamos usuários regionais dos TDPFs vincendos em curto prazo (4 a 10 dias - vai apenas um aviso, portanto, pois a carga é semanal)
@@ -754,11 +1361,12 @@ def avisaUsuariosRegionais(conn): #avisamos usuários regionais dos TDPFs vincen
     consultaTdpfs = """
                   Select Distinctrow TDPFS.Codigo, TDPFS.Numero, TDPFS.Grupo, Fiscais.Nome, TDPFS.Vencimento, TDPFS.Emissao from Orgaos, TDPFS, Jurisdicao, Supervisores, Fiscais
                   Where TDPFS.Encerramento Is Null and Jurisdicao.Orgao=%s and Jurisdicao.Equipe=TDPFS.Grupo and Supervisores.Equipe=Jurisdicao.Equipe 
-                  and Supervisores.Fim Is Null and Fiscais.Codigo=Supervisores.Fiscal and 
-                  TDPFS.Emissao<cast((now() - interval 180 day) as date) and
+                  and Supervisores.Fim Is Null and Fiscais.Codigo=Supervisores.Fiscal and Supervisores.Titular Is Null and
+                  TDPFS.Emissao<cast((now() - interval 180 day) as date) and TDPFS.Tipo='F' and
                   (TDPFS.Vencimento>=cast((now() + interval 4 day) as date) and TDPFS.Vencimento<=cast((now() + interval 10 day) as date)) 
-                  Order by TDPFS.Grupo, TDPFS.Vencimento,TDPFS.Numero"""  #TDPFs que vencem de 4 a 10 dias (avisamos apenas uma vez, pois na próxima carga estará vencido, faltará menos de 4 dias ou terá sido renovado)
-                                                         #mas somente TDPFs emitidos há mais de 180 dias (60 dias de margem), pois só nos interessa da 2a prorrogação em diante
+                  Order by TDPFS.Grupo, TDPFS.Vencimento,TDPFS.Numero"""  
+                  #TDPFs Fiscalização que vencem de 4 a 10 dias (avisamos apenas uma vez, pois na próxima carga estará vencido, faltará menos de 4 dias ou terá sido renovado)
+                  #mas somente TDPFs emitidos há mais de 180 dias (60 dias de margem), pois só nos interessa da 2a prorrogação em diante
     consultaAviso = "Select Codigo, Data from AvisosVencimentoDifis Where TDPF=%s"    
     insere = set()
     atualiza = set()              
@@ -832,13 +1440,14 @@ def avisaUsuariosRegionais(conn): #avisamos usuários regionais dos TDPFs vincen
             texto += "\nDevido a restrições do DW, o vencimento no Ação Fiscal pode estar um pouco mais distante. Ressaltamos também que a carga de dados neste serviço ocorre semanalmente.\n"
             texto += "\nAtenciosamente,\n\nCofis/Disav"
             nomeArq = "Regiao_"+row[2].strip()+"_"+datetime.now().strftime("%Y_%m_%d_%H_%M_%S_%f")[:-3]+".xlsx"
-            book.save(nomeArq)              
-            if enviaEmail(email, texto, "TDPFs Vincendos Entre 4 e 10 Dias - Região", nomeArq)!=3:
-                print("Erro no envio do e-mail para usuário REGIONAL "+email)
-                if AMBIENTE!="PRODUÇÃO":
-                    print(texto)
-                logging.info("Erro no envio do e-mail para usuário REGIONAL "+email) 
-            os.remove(nomeArq) 
+            book.save(nomeArq)     
+            if AMBIENTE=="PRODUÇÃO":         
+                if enviaEmail(email, texto, "TDPFs Vincendos Entre 4 e 10 Dias - Região", nomeArq)!=3:
+                    print("Erro no envio do e-mail para usuário REGIONAL "+email)
+                    logging.info("Erro no envio do e-mail para usuário REGIONAL "+email) 
+                os.remove(nomeArq) 
+            else:
+                print(texto)                
     insereTuplas = []
     atualizaTuplas = []
     for chaveTdpf in insere:
@@ -854,7 +1463,6 @@ def avisaUsuariosRegionais(conn): #avisamos usuários regionais dos TDPFs vincen
         conn.rollback()
         logging.info("Atualização da tabela AvisosVencimentoDifis FALHOU!")
     return
-
 
 def realizaCargaDCCs():
     global dirExcel, termina, hostSrv, hora2
@@ -1248,8 +1856,15 @@ def disparador():
         schedule.run_pending() 
         time.sleep(5) #aguardo um pouco para começar a rodar as tarefas, inclusive realizaCargaDados que apagará o arquivo abaixo
         if os.path.exists(dirExcel+"REALIZACARGA.TXT"): #a existência deste arquivo indica que é para fazer a carga dos dados imediatamente
-            #os.remove(dirExcel+"REALIZACARGA.TXT") #o próprio realizaCargaDados apaga este arquivo
-            realizaCargaDados()        
+            realizaCargaDados()   
+        if os.path.exists(dirExcel+"REALIZACARGAPONTOS.TXT"): #a existência deste arquivo indica que é para fazer a carga dos dados imediatamente
+            realizaCargaPontosSerpro()  
+        if os.path.exists(dirExcel+"CARGADADOSAD.TXT"): #a existência deste arquivo indica que é para fazer a atualização das informações das equipes (info RD)
+            atualizaEquipesDadosAd()
+        if os.path.exists(dirExcel+"CARGAMETAS.TXT"): #a existência deste arquivo indica que é para fazer a atualização das informações das equipes (info RD)
+            realizaCargaMetas()    
+        if os.path.exists(dirExcel+"CARGAVINCULOS.TXT"): #a existência deste arquivo indica que é para fazer a atualização das informações das equipes (info RD)
+            realizaCargaVinculos()            
         time.sleep(60*60) #a cada hora, vê o que tem de tarefa pendente
     return 
    
@@ -1270,21 +1885,38 @@ hora1 = "09:30"
 schedule.every().day.at(hora1).do(realizaCargaDados) #a cada 24 horas, verifica se há arquivos para fazer a carga
 hora2 = "14:30"
 schedule.every().day.at(hora2).do(realizaCargaDCCs)
-hora3 = "11:30"
+hora3 = "12:00"
 schedule.every().day.at(hora3).do(realizaCargaCienciasPendentes)
-hora4 = "10:30"
-schedule.every().day.at(hora4).do(realizaCargaIndicadores)
+hora4 = "10:15"
+#schedule.every().day.at(hora4).do(realizaCargaIndicadores)
+hora5 = "11:00"
+schedule.every().day.at(hora5).do(realizaCargaPontosSerpro)
+schedule.every().wednesday.at("12:00").do(realizaCargaMetas)
 termina = False
-if os.path.exists(dirExcel+"REALIZACARGA.TXT"): #a existência deste arquivo indica que é para fazer a carga dos dados imediatamente
-    #os.remove(dirExcel+"REALIZACARGA.TXT") #o próprio realizaCargaDados apaga este arquivo
-    realizaCargaDados()  
 threadDisparador = threading.Thread(target=disparador, daemon=True) #encerra thread quando sair do programa sem esperá-la
 threadDisparador.start()
 #realizaCargaDados() #faz a primeira tentativa de carga das planilhas logo no acionamento do programa
+if os.path.exists(dirExcel+"REALIZACARGA.TXT"): #a existência deste arquivo indica que é para fazer a carga dos dados imediatamente
+    realizaCargaDados()  
 #realizaCargaDCCs() #idem para os DCCs
 #realizaCargaCienciasPendentes() #ciencias pendentes de AI 
-#realizaCargaIndicadores() #carga de indicadores (parâmetros) dos TDPFs encerrados
+###realizaCargaIndicadores() #carga de indicadores (parâmetros) dos TDPFs encerrados <--NÃO descomentar
 #realizaCargaCasosEspeciais() #só vai executar no dia 20/05/2021
+#atualizaEquipesDadosAd()    
+if os.path.exists(dirExcel+"CARGADADOSAD.TXT"): #a existência deste arquivo indica que é para fazer a atualização das informações das equipes (info RD)
+    atualizaEquipesDadosAd()  
+realizaCargaMalha()
+if os.path.exists(dirExcel+"CARGAMALHA.TXT"): #a existência deste arquivo indica que é para fazer a atualização dos pontos da malha (info RD)
+    realizaCargaMalha()          
+realizaCargaVinculos()  
+if os.path.exists(dirExcel+"CARGAVINCULOS.TXT"): #a existência deste arquivo indica que é para fazer a atualização dos vínculos de fiscais com equipes (info RD)
+    realizaCargaVinculos()  
+realizaCargaPontosSerpro()
+if os.path.exists(dirExcel+"REALIZACARGAPONTOS.TXT"): #a existência deste arquivo indica que é para fazer a carga dos dados imediatamente
+    realizaCargaPontosSerpro()   
+#realizaCargaMetas()
+if os.path.exists(dirExcel+"CARGAMETAS.TXT"): #a existência deste arquivo indica que é para fazer a atualização das metas (info RD)
+    realizaCargaMetas()      
 while not termina:
     entrada = input("Digite QUIT para terminar o serviço Carga BOT: ")
     if entrada:

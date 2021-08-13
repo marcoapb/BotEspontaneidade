@@ -1,0 +1,5 @@
+F - Fiscalização
+D - Diligência
+L - Lançamento de Multa
+R - Revisão de Declaração
+I - Informação Fiscal
